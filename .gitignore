@@ -1,37 +1,28 @@
-HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
-
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### VS Code ###
-.vscode/
-
+# IDE and System Files
 .idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.DS_Store
 out/
 gen/
+HELP.md
+
+# --- Backend (Java/Maven) ---
+target/
+bin/
+*.class
+*.log
+# Keep the wrapper jar so others can run the app
+!.mvn/wrapper/maven-wrapper.jar
+
+# --- Frontend (Vue/Node) ---
+node_modules/
+dist/
+dist-ssr/
+*.local
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
