@@ -57,3 +57,34 @@
     </div>
   </div>
 </template>
+
+<script setup>
+import { ref, onMounted } from 'vue';
+import axios from 'axios'
+
+const questions = ref([]);
+const loading = ref(true);
+
+// Will store user's selected option IDs or text
+const answers = ref({});
+
+const fetchQuestions = async () => {
+  try{
+    const response = await axios.get('http://localhost:8080/questions/all');
+    questions.value = reponse.data;
+  } catch (error) {
+    console.error("Error fetching questions: ", error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const submitAnswers = () => {
+  console.log("Current Answers Ready to Send:", answers.value);
+  alert("Check you browser console to see the collected answers!");
+};
+
+onMounted(() => {
+  fetchQuestions();
+});
+</script>
