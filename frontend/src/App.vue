@@ -1,11 +1,11 @@
 <template>
   <div class="app-container">
-    <Survey />
+    <RouterView />
   </div>
 </template>
 
 <script setup>
-import Survey from "./components/Survey";
+import { RouterView } from 'vue-router'
 </script>
 
 <style>

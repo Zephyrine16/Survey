@@ -164,10 +164,10 @@ onMounted(() => {
 }
 
 .icon {
-  color: #ff6b6b; //Placeholder icon colour
+  color: #ff6b6b;
 }
 
-.ptionis-container {
+.options-container {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -203,7 +203,6 @@ onMounted(() => {
   margin-top: 4px;
 }
 
-// Vue variable matches this options's ID
 .option-card.selected {
   border-color: #6a8dff;
   background-color: #f0f4ff;
@@ -235,7 +234,6 @@ onMounted(() => {
   font-style: italic;
 }
 
-//Main button
 .submit-btn {
   width: 100%;
   padding: 16px;
