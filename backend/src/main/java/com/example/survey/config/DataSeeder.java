@@ -21,7 +21,6 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // First, check if the table is already populated so we don't insert duplicates
         Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM questions", Integer.class);
 
         if (count != null && count == 0) {
