@@ -14,7 +14,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/analytics")
-@CrossOrigin(origins = "http:localhost:5173")
 public class AnalyticsController {
 
     @Autowired
