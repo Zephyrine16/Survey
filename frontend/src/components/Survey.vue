@@ -1,254 +1,358 @@
 <template>
   <div class="survey-container">
-    <div class="survey-card">
 
-      <div class="food-header">
-        <div class="food-image-placeholder">🍽️</div>
-        <div class="food-details">
-          <h2>Sample Food Item</h2>
-          <span class="price">₱185.00</span>
-        </div>
+    <div v-if="menuItems.length === 0 || questions.length === 0" class="loading">
+      <h2>Loading your survey...</h2>
+    </div>
+
+    <div v-else class="carousel-wrapper">
+      <div class="header">
+        <span class="progress-badge">Item {{ currentIndex + 1 }} of {{ menuItems.length }}</span>
+
+        <div class="food-image-placeholder">
+          <span class="placeholder-icon">🍽️</span> </div>
+
+        <h1 class="food-title">{{ currentItem.name }}</h1>
+        <p class="food-desc">{{ currentItem.description }}</p>
+        <span class="food-price">₱{{ currentItem.price }}</span>
       </div>
 
-      <hr class="divider"/>
+      <div class="questions-card">
+        <div v-for="(q, index) in questions" :key="q.id" class="question-block">
+          <p class="question-text"><strong>{{ index + 1 }}.</strong> {{ q.text }}</p>
 
-      <div v-if="loading" class="loading-text">Loading survey questions...</div>
-
-      <div v-else class="questions-list">
-        <div v-for="question in questions" :key="question.id" class="question-block">
-
-          <h3 class="questions-list">
-            <span class="icon">✨</span> {{ question.text }}
-          </h3>
-
-          <div v-if="question.questionType === 'RADIO' " class="options-container">
+          <div v-if="q.questionType === 'RADIO'" class="options-grid">
             <label
-              v-for="option in question.options"
-              :key="option.id"
-              class="option-card"
-              :class ="{ 'selected': answers[question.id] === option.id }"
+              v-for="opt in q.options"
+              :key="opt.id"
+              class="option-label"
+              :class="{ 'selected': answers[currentItem.id]?.[q.id]?.id === opt.id }"
             >
               <input
                 type="radio"
-                :name="'question_' + question.id"
-                :value="option.id"
-                v-model="answers[question.id]"
-                class="hidden-ratio"
+                :name="'q_' + q.id + '_item_' + currentItem.id"
+                :value="opt"
+                v-model="answers[currentItem.id][q.id]"
+                class="hidden-radio"
               />
-              <span class="option-label">{{ optioni.label }}</span>
-              <span class="option-sub" v-if="option.sub_description">{{ option.sub_description }}</span>
+              <span class="opt-main">{{ opt.label }}</span>
+              <span v-if="opt.subDescription" class="opt-sub">{{ opt.subDescription }}</span>
             </label>
           </div>
 
-          <div v-else-if="question.questionType === 'TEXT'" class="text-container">
+          <div v-else-if="q.questionType === 'TEXT'" class="text-input-wrapper">
             <input
               type="text"
-              v-model="answers[question.id]"
-              placeholder="e.g. Creamy, Warm, Heavy"
+              v-model="answers[currentItem.id][q.id]"
+              placeholder="Tell us what you think..."
               class="text-input"
             />
-            <small class="helper-text">Keywords help NLP identify this dish in natural conversation.</small>
           </div>
-
         </div>
       </div>
-      <button class="submit-btn" type="submit" @click="submitAnswers">Submit Survey Tag</button>
+
+      <div class="navigation-buttons">
+        <button
+          @click="prevItem"
+          :disabled="currentIndex === 0"
+          class="nav-btn prev-btn"
+        >
+          ⬅️ Previous Item
+        </button>
+
+        <button
+          v-if="currentIndex < menuItems.length - 1"
+          @click="nextItem"
+          class="nav-btn next-btn"
+        >
+          Next Item ➡️
+        </button>
+
+        <button
+          v-else
+          @click="submitSurvey"
+          class="nav-btn submit-btn"
+        >
+          ✅ Submit Survey
+        </button>
+      </div>
 
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue';
-import axios from 'axios'
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue';
+import axios from 'axios';
 
-const questions = ref([]);
-const loading = ref(true);
+const menuItems = ref<any[]>([]);
+const questions = ref<any[]>([]);
+const currentIndex = ref(0);
 
-// Will store user's selected option IDs or text
-const answers = ref({});
+const answers = ref<Record<number, Record<number, any>>>({});
 
-const fetchQuestions = async () => {
-  try{
-    const response = await axios.get('http://localhost:8080/questions/all');
-    questions.value = reponse.data;
+const currentItem = computed(() => menuItems.value[currentIndex.value]);
+
+const fetchData = async () => {
+  try {
+    const qRes = await axios.get('http://localhost:8080/questions/all');
+    questions.value = qRes.data;
+
+    try {
+      const mRes = await axios.get('http://localhost:8080/menu-items');
+      menuItems.value = mRes.data;
+    } catch (e) {
+      console.warn("Using fallback menu items until the backend controller is built!");
+      menuItems.value = [
+        { id: 1, name: "Chicken Creamy Mushroom n Aglio Olio Rice", description: "A comforting classic.", price: 150.00 },
+        { id: 2, name: "Salisbury Steak n Mushroom Sauce", description: "Savory and filling.", price: 180.00 }
+      ];
+    }
+
+    menuItems.value.forEach(item => {
+      answers.value[item.id] = {};
+    });
+
   } catch (error) {
-    console.error("Error fetching questions: ", error);
-  } finally {
-    loading.value = false;
+    console.error("Error fetching survey data:", error);
   }
 };
 
-const submitAnswers = () => {
-  console.log("Current Answers Ready to Send:", answers.value);
-  alert("Check you browser console to see the collected answers!");
+const nextItem = () => {
+  if (currentIndex.value < menuItems.value.length - 1) {
+    currentIndex.value++;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+};
+
+const prevItem = () => {
+  if (currentIndex.value > 0) {
+    currentIndex.value--;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+};
+
+const submitSurvey = async () => {
+  const payload = [];
+
+  const userEmail = "student_" + Math.floor(Math.random() * 1000) + "@university.edu";
+
+  for (const itemId in answers.value) {
+    for (const qId in answers.value[itemId]) {
+      const answerData = answers.value[itemId][qId];
+
+      if (answerData) {
+        const isText = typeof answerData === 'string';
+
+        payload.push({
+          menuItemId: Number(itemId),
+          questionId: Number(qId),
+          selectedOptionId: isText ? null : answerData.id,
+          response: isText ? answerData : null,
+          userEmail: userEmail
+        });
+      }
+    }
+  }
+
+  console.log("🚀 THE 1 HTTP REQUEST PAYLOAD:", payload);
+  alert("Survey Complete! Open your browser console (F12) to see the massive JSON payload ready to be sent to Spring Boot!");
+
+  /* Back-end endpoint connection is ready for activation! */
+  /* await axios.post('http://localhost:8080/answers/batch', payload); */
 };
 
 onMounted(() => {
-  fetchQuestions();
+  fetchData();
 });
 </script>
 
 <style scoped>
 .survey-container {
-  display: flex;
-  justify-content: center;
-  padding: 20px;
-  background-color: #f4f7f6;
-  min-height: 100vh;
-  font-family: sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: 'Inter', sans-serif;
+  color: #333;
+  padding-bottom: 50px;
 }
 
-.survey-card {
+.loading {
+  text-align: center;
+  margin-top: 100px;
+  color: #666;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 30px;
   background: white;
-  width: 100%;
-  max-width: 450px;
-  border-radius: 16px;
-  box-shaodw: 0 8px 24px rgba(0, 0, 0, 0.08);
-  padding: 24px;
-}
-
-.food-header {
-  display: flex;
-  gap: 16px;
-  aligh-items: center;
-  background-color: #f9fbfd;
-  padding: 16px;
   border-radius: 12px;
-  border: 1px solid #edf2f7;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
 }
 
+.progress-badge {
+  background: #e0e7ff;
+  color: #4F46E5;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* NEW STYLES FOR IMAGE PLACEHOLDER */
 .food-image-placeholder {
-  font-size: 50px;
-  background: white;
-  padding: 10px;
+  background-color: #f1f5f9; /* Light grey background */
+  height: 150px; /* Adjust height as needed */
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  margin: 20px auto; /* Margin above/below, auto horizontally */
+  display: flex; /* Flexbox for centering content */
+  align-items: center; /* Vertical centering */
+  justify-content: center; /* Horizontal centering */
+  border: 2px dashed #e2e8f0; /* Dashed border for placeholder look */
+  max-width: 100%; /* Responsive width */
 }
 
-.food-details h2 {
-  margin: 0 0 4px 0;
-  font-size: 18px;
-  color: #2c3e50;
+.placeholder-icon {
+  font-size: 3rem; /* Large icon size */
+  color: #94a3b8; /* Medium grey icon color */
 }
 
-.food-details p {
-  margin: 0 0 8px 0;
-  font-size: 12px;
-  color: #7f8c8d;
+/* Optional text-based placeholder styling:
+.placeholder-text {
+  font-size: 1rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+*/
+
+.food-title {
+  margin: 15px 0 5px 0;
+  font-size: 1.8rem;
+  color: #111;
 }
 
-.price {
+.food-desc {
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.food-price {
   font-weight: bold;
-  color: #34495e;
-}
-
-.divider {
-  border: 0;
-  height: 1px;
-  background: #edf2f7;
-  margin: 24px 0;
+  font-size: 1.2rem;
+  color: #10B981;
 }
 
 .question-block {
-  margin-bottom: 28px;
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+  border: 1px solid #f0f0f0;
 }
 
 .question-text {
-  font-size: 15px;
-  color: #2c3e50;
-  margin-bottom: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 15px;
 }
 
-.icon {
-  color: #ff6b6b;
-}
-
-.options-container {
+.options-grid {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 10px;
 }
 
-.options-card {
-  flex: 1 1 calc(50% - 10px);
-  min-width: 120px;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 14px 10px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.option-label {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.hidden-ratio {
+.option-label:hover {
+  border-color: #a5b4fc;
+  background-color: #f8fafc;
+}
+
+.option-label.selected {
+  border-color: #4F46E5;
+  background-color: #eef2ff;
+}
+
+.hidden-radio {
   display: none;
 }
 
-.option-label {
-  font-weight: bold;
-  font-size: 13px;
-  color: #4a5568;
+.opt-main {
+  font-weight: 500;
 }
 
-.option-sub {
-  font-size: 10px;
-  color: #a0aec0;
-  margin-top: 4px;
-}
-
-.option-card.selected {
-  border-color: #6a8dff;
-  background-color: #f0f4ff;
-}
-
-.option-card.selected .option-label, .option-card.selected .option-sub {
-  color: #4a6ee0;
+.opt-sub {
+  font-size: 0.85rem;
+  color: #666;
 }
 
 .text-input {
   width: 100%;
-  padding: 14px;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 12px;
-  font-size: 14px;
+  padding: 15px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
   box-sizing: border-box;
-  outline: none;
 }
 
 .text-input:focus {
-  border-color: #6a8dff;
+  outline: none;
+  border-color: #4F46E5;
 }
 
-.helper-text {
-  display: block;
-  margin-top: 6ppx;
-  font-size: 11px;
-  color: #a0aec0;
-  font-style: italic;
+.navigation-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 30px;
+}
+
+.nav-btn {
+  padding: 12px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.1s, opacity 0.2s;
+}
+
+.nav-btn:active {
+  transform: scale(0.97);
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.prev-btn {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.next-btn {
+  background: #4F46E5;
+  color: white;
+  margin-left: auto;
 }
 
 .submit-btn {
-  width: 100%;
-  padding: 16px;
-  background-color: #8bb0ff;
+  background: #10B981;
   color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 10px;
-  transition: background-color 0.2s;
-}
-
-.submit-btn.hover {
-  background-color: #6a8dff;
+  margin-left: auto;
 }
 </style>
