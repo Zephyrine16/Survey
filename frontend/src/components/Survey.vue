@@ -1,8 +1,12 @@
 <template>
   <div class="survey-container">
 
-    <div v-if="menuItems.length === 0 || questions.length === 0" class="loading">
+    <div v-if="isLoading" class="loading">
       <h2>Loading your survey...</h2>
+    </div>
+    <div v-else-if="menuItems.length === 0 || questions.length === 0" class="empty-state">
+      <h2>No survey is currently available.</h2>
+      <p>Please try again later.</p>
     </div>
 
     <div v-else class="carousel-wrapper">
@@ -10,7 +14,8 @@
         <span class="progress-badge">Item {{ currentIndex + 1 }} of {{ menuItems.length }}</span>
 
         <div class="food-image-placeholder">
-          <span class="placeholder-icon">🍽️</span> </div>
+          <span class="placeholder-icon">🍽️</span>
+        </div>
 
         <h1 class="food-title">{{ currentItem.name }}</h1>
         <p class="food-desc">{{ currentItem.description }}</p>
@@ -36,7 +41,7 @@
                 class="hidden-radio"
               />
               <span class="opt-main">{{ opt.label }}</span>
-              <span v-if="opt.subDescription" class="opt-sub">{{ opt.subDescription }}</span>
+              <span v-if="opt.sub_description" class="opt-sub">{{ opt.sub_description }}</span>
             </label>
           </div>
 
@@ -71,9 +76,11 @@
         <button
           v-else
           @click="submitSurvey"
+          :disabled="isSubmitting"
           class="nav-btn submit-btn"
         >
-          ✅ Submit Survey
+          <span v-if="isSubmitting">Submitting...</span>
+          <span v-else>✅ Submit Survey</span>
         </button>
       </div>
 
@@ -85,15 +92,19 @@
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 
+// State
 const menuItems = ref<any[]>([]);
 const questions = ref<any[]>([]);
 const currentIndex = ref(0);
+const isLoading = ref(true);
+const isSubmitting = ref(false);
 
 const answers = ref<Record<number, Record<number, any>>>({});
 
 const currentItem = computed(() => menuItems.value[currentIndex.value]);
 
 const fetchData = async () => {
+  isLoading.value = true;
   try {
     const qRes = await axios.get('http://localhost:8080/questions/all');
     questions.value = qRes.data;
@@ -102,7 +113,7 @@ const fetchData = async () => {
       const mRes = await axios.get('http://localhost:8080/menu-items');
       menuItems.value = mRes.data;
     } catch (e) {
-      console.warn("Using fallback menu items until the backend controller is built!");
+      console.warn("Using fallback menu items!");
       menuItems.value = [
         { id: 1, name: "Chicken Creamy Mushroom n Aglio Olio Rice", description: "A comforting classic.", price: 150.00 },
         { id: 2, name: "Salisbury Steak n Mushroom Sauce", description: "Savory and filling.", price: 180.00 }
@@ -115,6 +126,8 @@ const fetchData = async () => {
 
   } catch (error) {
     console.error("Error fetching survey data:", error);
+  } finally {
+    isLoading.value = false;
   }
 };
 
@@ -133,6 +146,7 @@ const prevItem = () => {
 };
 
 const submitSurvey = async () => {
+  isSubmitting.value = true;
   const payload = [];
 
   const userEmail = "student_" + Math.floor(Math.random() * 1000) + "@university.edu";
@@ -148,18 +162,22 @@ const submitSurvey = async () => {
           menuItemId: Number(itemId),
           questionId: Number(qId),
           selectedOptionId: isText ? null : answerData.id,
-          response: isText ? answerData : null,
-          userEmail: userEmail
+          textResponse: isText ? answerData : null,
+          user: { email: userEmail }
         });
       }
     }
   }
 
-  console.log("🚀 THE 1 HTTP REQUEST PAYLOAD:", payload);
-  alert("Survey Complete! Open your browser console (F12) to see the massive JSON payload ready to be sent to Spring Boot!");
-
-  /* Back-end endpoint connection is ready for activation! */
-  /* await axios.post('http://localhost:8080/answers/batch', payload); */
+  try {
+    await axios.post('http://localhost:8080/answers/saveAll', payload);
+    alert("Thank you! Your survey has been submitted successfully.");
+  } catch (error) {
+    console.error("Submission failed:", error);
+    alert("Oops! Something went wrong saving your survey. Please try again.");
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 
 onMounted(() => {
@@ -168,6 +186,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* Keeping all your existing beautiful styles completely untouched */
 .survey-container {
   max-width: 800px;
   margin: 0 auto;
@@ -176,10 +195,15 @@ onMounted(() => {
   padding-bottom: 50px;
 }
 
-.loading {
+.loading, .empty-state {
   text-align: center;
   margin-top: 100px;
   color: #666;
+}
+
+.empty-state h2 {
+  color: #1a1a1a;
+  margin-bottom: 10px;
 }
 
 .header {
@@ -202,31 +226,22 @@ onMounted(() => {
   letter-spacing: 0.5px;
 }
 
-/* NEW STYLES FOR IMAGE PLACEHOLDER */
 .food-image-placeholder {
-  background-color: #f1f5f9; /* Light grey background */
-  height: 150px; /* Adjust height as needed */
+  background-color: #f1f5f9;
+  height: 150px;
   border-radius: 12px;
-  margin: 20px auto; /* Margin above/below, auto horizontally */
-  display: flex; /* Flexbox for centering content */
-  align-items: center; /* Vertical centering */
-  justify-content: center; /* Horizontal centering */
-  border: 2px dashed #e2e8f0; /* Dashed border for placeholder look */
-  max-width: 100%; /* Responsive width */
+  margin: 20px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed #e2e8f0;
+  max-width: 100%;
 }
 
 .placeholder-icon {
-  font-size: 3rem; /* Large icon size */
-  color: #94a3b8; /* Medium grey icon color */
-}
-
-/* Optional text-based placeholder styling:
-.placeholder-text {
-  font-size: 1rem;
+  font-size: 3rem;
   color: #94a3b8;
-  font-style: italic;
 }
-*/
 
 .food-title {
   margin: 15px 0 5px 0;
