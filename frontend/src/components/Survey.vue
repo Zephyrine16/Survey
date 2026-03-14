@@ -19,7 +19,6 @@
 
         <h1 class="food-title">{{ currentItem.name }}</h1>
         <p class="food-desc">{{ currentItem.description }}</p>
-        <span class="food-price">₱{{ currentItem.price }}</span>
       </div>
 
       <div class="questions-card">
@@ -65,23 +64,28 @@
           ⬅️ Previous Item
         </button>
 
-        <button
-          v-if="currentIndex < menuItems.length - 1"
-          @click="nextItem"
-          class="nav-btn next-btn"
-        >
-          Next Item ➡️
-        </button>
+        <div class="nav-right-group">
+          <span v-if="!canProceed" class="required-warning">Please answer all questions to proceed</span>
 
-        <button
-          v-else
-          @click="submitSurvey"
-          :disabled="isSubmitting"
-          class="nav-btn submit-btn"
-        >
-          <span v-if="isSubmitting">Submitting...</span>
-          <span v-else>✅ Submit Survey</span>
-        </button>
+          <button
+            v-if="currentIndex < menuItems.length - 1"
+            @click="nextItem"
+            :disabled="!canProceed"
+            class="nav-btn next-btn"
+          >
+            Next Item ➡️
+          </button>
+
+          <button
+            v-else
+            @click="submitSurvey"
+            :disabled="isSubmitting || !canProceed"
+            class="nav-btn submit-btn"
+          >
+            <span v-if="isSubmitting">Submitting...</span>
+            <span v-else>✅ Submit Survey</span>
+          </button>
+        </div>
       </div>
 
     </div>
@@ -99,10 +103,33 @@ const currentIndex = ref(0);
 const isLoading = ref(true);
 const isSubmitting = ref(false);
 
+// This object remembers everything! Format: { menuItemId: { questionId: answerValue } }
 const answers = ref<Record<number, Record<number, any>>>({});
 
+// Computed property to always know which item we are looking at
 const currentItem = computed(() => menuItems.value[currentIndex.value]);
 
+// NEW: Computed property to check if EVERY question is answered
+const canProceed = computed(() => {
+  if (!currentItem.value || questions.value.length === 0) return false;
+
+  const currentAnswers = answers.value[currentItem.value.id];
+  if (!currentAnswers) return false;
+
+  // Check every single question in the database
+  return questions.value.every(q => {
+    const ans = currentAnswers[q.id];
+    if (q.questionType === 'TEXT') {
+      // Must not be empty, and not just blank spaces
+      return ans !== undefined && ans !== null && ans.trim().length > 0;
+    } else {
+      // Must have selected an option object
+      return ans !== undefined && ans !== null;
+    }
+  });
+});
+
+// Fetch Data when the page loads
 const fetchData = async () => {
   isLoading.value = true;
   try {
@@ -131,6 +158,7 @@ const fetchData = async () => {
   }
 };
 
+// Navigation Logic
 const nextItem = () => {
   if (currentIndex.value < menuItems.value.length - 1) {
     currentIndex.value++;
@@ -145,6 +173,7 @@ const prevItem = () => {
   }
 };
 
+// The HTTP Request
 const submitSurvey = async () => {
   isSubmitting.value = true;
   const payload = [];
@@ -186,7 +215,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Keeping all your existing beautiful styles completely untouched */
 .survey-container {
   max-width: 800px;
   margin: 0 auto;
@@ -252,12 +280,6 @@ onMounted(() => {
 .food-desc {
   color: #666;
   margin-bottom: 15px;
-}
-
-.food-price {
-  font-weight: bold;
-  font-size: 1.2rem;
-  color: #10B981;
 }
 
 .question-block {
@@ -332,7 +354,20 @@ onMounted(() => {
 .navigation-buttons {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   margin-top: 30px;
+}
+
+.nav-right-group {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.required-warning {
+  font-size: 0.85rem;
+  color: #ef4444;
+  font-style: italic;
 }
 
 .nav-btn {
@@ -342,16 +377,18 @@ onMounted(() => {
   border-radius: 8px;
   cursor: pointer;
   border: none;
-  transition: transform 0.1s, opacity 0.2s;
+  transition: transform 0.1s, opacity 0.2s, background-color 0.2s;
 }
 
-.nav-btn:active {
+.nav-btn:active:not(:disabled) {
   transform: scale(0.97);
 }
 
 .nav-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  background-color: #cbd5e1 !important;
+  color: #64748b !important;
 }
 
 .prev-btn {
@@ -362,12 +399,10 @@ onMounted(() => {
 .next-btn {
   background: #4F46E5;
   color: white;
-  margin-left: auto;
 }
 
 .submit-btn {
   background: #10B981;
   color: white;
-  margin-left: auto;
 }
 </style>
