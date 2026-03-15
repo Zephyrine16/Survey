@@ -2,6 +2,8 @@ package com.example.survey.repository;
 
 import com.example.survey.dto.OptionCountDTO;
 import com.example.survey.dto.TextFeedbackDTO;
+import com.example.survey.model.Answer;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -9,13 +11,13 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface AnswerRepository {
+public interface AnswerRepository extends JpaRepository<Answer, Long> {
     @Query("""
         SELECT new com.example.survey.dto.OptionCountDTO(o.label, COUNT(a))
         FROM Answer a
         JOIN a.selectedOption o
         WHERE a.menuItem.id = :menuItemId
-        AND a.question.id = :questionid
+        AND a.question.id = :questionId
         GROUP BY o.label
     """)
     List<OptionCountDTO> countVotesByOption(
