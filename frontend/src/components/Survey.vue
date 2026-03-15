@@ -191,8 +191,8 @@ const submitSurvey = async () => {
           menuItemId: Number(itemId),
           questionId: Number(qId),
           selectedOptionId: isText ? null : answerData.id,
-          textResponse: isText ? answerData : null,
-          user: { email: userEmail }
+          response: isText ? answerData : null,
+          userEmail: userEmail
         });
       }
     }
