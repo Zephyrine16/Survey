@@ -1,7 +1,12 @@
 package com.example.survey.config;
 
+import com.example.survey.model.Answer;
+import com.example.survey.model.Option;
 import com.example.survey.model.MenuItem;
+import com.example.survey.model.Question;
+import com.example.survey.repository.AnswerRepository;
 import com.example.survey.repository.MenuItemRepository;
+import com.example.survey.repository.QuestionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -19,8 +24,16 @@ public class DataSeeder implements CommandLineRunner {
     @Autowired
     private MenuItemRepository menuItemRepository;
 
+    @Autowired
+    private AnswerRepository answerRepository;
+
+    @Autowired
+    private QuestionRepository questionRepository;
+
     @Override
     public void run(String... args) throws Exception {
+        jdbcTemplate.execute("UPDATE questions SET text = 'How would you describe this dish to the AI Chatbot?' WHERE question_type = 'TEXT'");
+
         Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM questions", Integer.class);
 
         if (count != null && count == 0) {
@@ -32,7 +45,7 @@ public class DataSeeder implements CommandLineRunner {
                 ('In what weather condition does this item feel most satisfying?', 'RADIO'),
                 ('What is the "vibe" of this specific dish?', 'RADIO'),
                 ('Looking at this item, what do you think is a fair "Student-Friendly" price for it?', 'RADIO'),
-                ('If you had to describe this dish to the AI Chatbot in 3 words, what would they be?', 'TEXT');
+                ('If you had to describe this dish to the AI Chatbot, what would they be?', 'TEXT');
                 
                 INSERT INTO options (label, sub_description, question_id) VALUES
                 ('Stressed/Overwhelmed', '(I need comfort/energy)', 1),
