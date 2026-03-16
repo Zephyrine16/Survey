@@ -1,94 +1,148 @@
 <template>
-  <div class="survey-container">
+  <div class="survey-layout">
 
-    <div v-if="isLoading" class="loading">
-      <h2>Loading your survey...</h2>
-    </div>
-    <div v-else-if="menuItems.length === 0 || questions.length === 0" class="empty-state">
-      <h2>No survey is currently available.</h2>
-      <p>Please try again later.</p>
-    </div>
-
-    <div v-else class="carousel-wrapper">
-      <div class="header">
-        <span class="progress-badge">Item {{ currentIndex + 1 }} of {{ menuItems.length }}</span>
-
-        <div class="food-image-placeholder">
-          <span class="placeholder-icon">🍽️</span>
+    <header class="top-nav">
+      <div class="nav-content">
+        <div class="logo">
+          <span class="logo-icon">🍴</span>
+          <h1>CaféRater</h1>
         </div>
-
-        <h1 class="food-title">{{ currentItem.name }}</h1>
-        <p class="food-desc">{{ currentItem.description }}</p>
-      </div>
-
-      <div class="questions-card">
-        <div v-for="(q, index) in questions" :key="q.id" class="question-block">
-          <p class="question-text"><strong>{{ index + 1 }}.</strong> {{ q.text }}</p>
-
-          <div v-if="q.questionType === 'RADIO'" class="options-grid">
-            <label
-              v-for="opt in q.options"
-              :key="opt.id"
-              class="option-label"
-              :class="{ 'selected': answers[currentItem.id]?.[q.id]?.id === opt.id }"
-            >
-              <input
-                type="radio"
-                :name="'q_' + q.id + '_item_' + currentItem.id"
-                :value="opt"
-                v-model="answers[currentItem.id][q.id]"
-                class="hidden-radio"
-              />
-              <span class="opt-main">{{ opt.label }}</span>
-              <span v-if="opt.sub_description" class="opt-sub">{{ opt.sub_description }}</span>
-            </label>
-          </div>
-
-          <div v-else-if="q.questionType === 'TEXT'" class="text-input-wrapper">
-            <input
-              type="text"
-              v-model="answers[currentItem.id][q.id]"
-              placeholder="Tell us what you think..."
-              class="text-input"
-            />
-          </div>
+        <div class="global-progress">
+          <strong>{{ totalRatedItems }}</strong> of {{ menuItems.length }} rated
         </div>
       </div>
+    </header>
 
-      <div class="navigation-buttons">
+    <div class="tabs-container">
+      <div class="tabs-scroll">
         <button
-          @click="prevItem"
-          :disabled="currentIndex === 0"
-          class="nav-btn prev-btn"
+          v-for="cat in categories"
+          :key="cat"
+          class="tab-btn"
+          :class="{ active: activeCategory === cat }"
+          @click="selectCategory(cat)"
         >
-          ⬅️ Previous Item
+          {{ cat }}
         </button>
+      </div>
+    </div>
 
-        <div class="nav-right-group">
-          <span v-if="!canProceed" class="required-warning">Please answer all questions to proceed</span>
+    <main class="main-content">
 
-          <button
-            v-if="currentIndex < menuItems.length - 1"
-            @click="nextItem"
-            :disabled="!canProceed"
-            class="nav-btn next-btn"
-          >
-            Next Item ➡️
-          </button>
+      <div v-if="isLanding" class="landing-view">
+        <div class="landing-card">
+          <div class="category-icon">🍽️</div>
+          <h2>{{ activeCategory }}</h2>
+          <p class="subtitle">{{ filteredItems.length }} items • Scroll to rate each one</p>
 
-          <button
-            v-else
-            @click="submitSurvey"
-            :disabled="isSubmitting || !canProceed"
-            class="nav-btn submit-btn"
-          >
-            <span v-if="isSubmitting">Submitting...</span>
-            <span v-else>✅ Submit Survey</span>
+          <div class="question-preview-list">
+            <div v-for="(q, index) in questions" :key="q.id" class="q-preview">
+              <span class="q-num-light">{{ index + 1 }}</span>
+              <span>{{ q.shortText }}</span>
+            </div>
+          </div>
+
+          <button class="primary-btn pulse" @click="startRating">
+            Let's go &rarr;
           </button>
         </div>
       </div>
 
-    </div>
+      <div v-else class="rating-view">
+
+        <div class="left-pane">
+          <div class="sticky-card">
+            <div class="pane-header">
+              <span class="breadcrumb">{{ activeCategory }} — <span class="text-dark">{{ currentItem?.name }}</span></span>
+              <span class="cat-progress"><strong class="green-text">{{ completedInCategory }}</strong>/{{ filteredItems.length }} done</span>
+            </div>
+
+            <div class="item-cover">
+              <div class="cover-img" style="background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800');"></div>
+              <div class="cover-info">
+                <h3>{{ currentItem?.name }}</h3>
+                <span class="badge">🍴 {{ activeCategory }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="right-pane">
+          <div class="questions-list">
+
+            <div v-for="(q, index) in questions" :key="q.id" class="question-card">
+
+              <div class="q-header">
+                <div class="q-bubble" :class="{ 'answered': isAnswered(currentItem?.id, q.id) }">
+                  <span v-if="isAnswered(currentItem?.id, q.id)">✓</span>
+                  <span v-else>{{ index + 1 }}</span>
+                </div>
+                <h4>{{ q.text }}</h4>
+              </div>
+
+              <div v-if="q.type === 'vertical-radio'" class="vertical-options">
+                <button
+                  v-for="opt in q.options"
+                  :key="opt.id"
+                  class="opt-btn-vertical"
+                  :class="{ selected: getAnswer(currentItem?.id, q.id) === opt.id }"
+                  @click="setAnswer(currentItem?.id, q.id, opt.id)"
+                >
+                  <span class="opt-icon">{{ opt.icon }}</span>
+                  <span class="opt-label">{{ opt.label }}</span>
+                  <div class="check-indicator" v-if="getAnswer(currentItem?.id, q.id) === opt.id">✓</div>
+                </button>
+              </div>
+
+              <div v-if="q.type === 'grid-radio'" class="grid-options">
+                <button
+                  v-for="opt in q.options"
+                  :key="opt.id"
+                  class="opt-btn-grid"
+                  :class="{ selected: getAnswer(currentItem?.id, q.id) === opt.id }"
+                  @click="setAnswer(currentItem?.id, q.id, opt.id)"
+                >
+                  <span class="opt-icon-large" v-if="opt.icon">{{ opt.icon }}</span>
+                  <span class="opt-label-main">{{ opt.label }}</span>
+                  <span class="opt-sub" v-if="opt.sub">{{ opt.sub }}</span>
+                  <div class="check-indicator" v-if="getAnswer(currentItem?.id, q.id) === opt.id">✓</div>
+                </button>
+              </div>
+
+              <div v-if="q.type === 'textarea'" class="text-input-wrapper">
+                <textarea
+                  class="styled-textarea"
+                  :class="{ 'has-content': getAnswer(currentItem?.id, q.id)?.length > 0 }"
+                  placeholder="Describe this dish as if you're telling an AI what it tastes, looks, and feels like..."
+                  :value="getAnswer(currentItem?.id, q.id) || ''"
+                  @input="setTextAnswer(currentItem?.id, q.id, $event.target.value)"
+                  maxlength="300"
+                ></textarea>
+                <div class="char-count">
+                  {{ getAnswer(currentItem?.id, q.id)?.length || 0 }} / 300
+                </div>
+                <p class="helper-text">Your description helps train a smarter food recommendation AI.</p>
+              </div>
+
+            </div> <div class="action-footer">
+            <button class="nav-btn secondary" @click="prevItem" :disabled="currentItemIndex === 0">
+              &larr; Previous Item
+            </button>
+
+            <button v-if="currentItemIndex < filteredItems.length - 1" class="nav-btn primary" @click="nextItem">
+              Next Item &rarr;
+            </button>
+
+            <button v-else class="nav-btn success" @click="finishCategory">
+              Submit & Return to Categories
+            </button>
+          </div>
+
+          </div>
+        </div>
+
+      </div>
+    </main>
   </div>
 </template>
 
@@ -96,313 +150,288 @@
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 
-// State
+// --- State ---
 const menuItems = ref<any[]>([]);
-const questions = ref<any[]>([]);
-const currentIndex = ref(0);
-const isLoading = ref(true);
-const isSubmitting = ref(false);
+const isLanding = ref(true);
+const activeCategory = ref('Meal');
+const currentItemIndex = ref(0);
 
-// This object remembers everything! Format: { menuItemId: { questionId: answerValue } }
+// Answers Dictionary: { itemId: { questionId: selectedOptionId / text } }
 const answers = ref<Record<number, Record<number, any>>>({});
 
-// Computed property to always know which item we are looking at
-const currentItem = computed(() => menuItems.value[currentIndex.value]);
+// The specific categories you requested
+const categories = [
+  'Meal', 'Bread', 'Pasta', 'Waffle', 'Coffee', 'Non-coffee',
+  'Frappe Series', 'Float', 'Milktea', 'Sparkling Soda', 'Fruit Tea'
+];
 
-// NEW: Computed property to check if EVERY question is answered
-const canProceed = computed(() => {
-  if (!currentItem.value || questions.value.length === 0) return false;
+// Master list of questions matching your screenshots
+const questions = [
+  {
+    id: 1,
+    shortText: "Which emotion makes you crave it?",
+    text: "Which emotion or physical state most strongly makes you want to order this item?",
+    type: 'vertical-radio',
+    options: [
+      { id: 11, label: "Stressed/Overwhelmed", icon: "😩" },
+      { id: 12, label: "Happy/Celebratory", icon: "😊" },
+      { id: 13, label: "Tired/Low Energy", icon: "😴" },
+      { id: 14, label: "Relaxed/Chilling", icon: "😌" },
+      { id: 15, label: "Focused/Working", icon: "🎯" }
+    ]
+  },
+  {
+    id: 2,
+    shortText: "What weather suits it best?",
+    text: "In what weather condition does this item feel most satisfying?",
+    type: 'grid-radio',
+    options: [
+      { id: 21, label: "Hot/Sunny", icon: "☀️" },
+      { id: 22, label: "Cold/Rainy", icon: "🌧️" },
+      { id: 23, label: "Any Weather", icon: "⛅" }
+    ]
+  },
+  {
+    id: 3,
+    shortText: "What's the vibe of the dish?",
+    text: "What is the vibe of this specific dish?",
+    type: 'grid-radio',
+    options: [
+      { id: 31, label: "Heavy Meal", icon: "🍽️" },
+      { id: 32, label: "Light Snack", icon: "🥗" },
+      { id: 33, label: "Drink/Refreshment", icon: "🥤" }
+    ]
+  },
+  {
+    id: 4,
+    shortText: "What's a fair student price?",
+    text: "What do you think is a fair Student-Friendly price for this item?",
+    type: 'grid-radio',
+    options: [
+      { id: 41, label: "Under ₱150", sub: "Budget" },
+      { id: 42, label: "₱150 - ₱249", sub: "Mid-range" },
+      { id: 43, label: "₱250 and above", sub: "Premium" }
+    ]
+  },
+  {
+    id: 5,
+    shortText: "Describe it to an AI.",
+    text: "How would you describe this dish to the AI chatbot?",
+    type: 'textarea'
+  }
+];
 
-  const currentAnswers = answers.value[currentItem.value.id];
-  if (!currentAnswers) return false;
-
-  // Check every single question in the database
-  return questions.value.every(q => {
-    const ans = currentAnswers[q.id];
-    if (q.questionType === 'TEXT') {
-      // Must not be empty, and not just blank spaces
-      return ans !== undefined && ans !== null && ans.trim().length > 0;
-    } else {
-      // Must have selected an option object
-      return ans !== undefined && ans !== null;
-    }
-  });
+// --- Computed Properties ---
+const filteredItems = computed(() => {
+  return menuItems.value.filter(item => item.category === activeCategory.value);
 });
 
-// Fetch Data when the page loads
-const fetchData = async () => {
-  isLoading.value = true;
-  try {
-    const qRes = await axios.get('http://localhost:8080/questions/all');
-    questions.value = qRes.data;
+const currentItem = computed(() => {
+  if (filteredItems.value.length === 0) return null;
+  return filteredItems.value[currentItemIndex.value];
+});
 
-    try {
-      const mRes = await axios.get('http://localhost:8080/menu-items');
-      menuItems.value = mRes.data;
-    } catch (e) {
-      console.warn("Using fallback menu items!");
-      menuItems.value = [
-        { id: 1, name: "Chicken Creamy Mushroom n Aglio Olio Rice", description: "A comforting classic.", price: 150.00 },
-        { id: 2, name: "Salisbury Steak n Mushroom Sauce", description: "Savory and filling.", price: 180.00 }
-      ];
+// Calculate how many items in the CURRENT category have at least 1 answer
+const completedInCategory = computed(() => {
+  let count = 0;
+  filteredItems.value.forEach(item => {
+    if (answers.value[item.id] && Object.keys(answers.value[item.id]).length > 0) {
+      count++;
     }
+  });
+  return count;
+});
 
-    menuItems.value.forEach(item => {
-      answers.value[item.id] = {};
-    });
+// Calculate total completely rated items globally
+const totalRatedItems = computed(() => {
+  let count = 0;
+  menuItems.value.forEach(item => {
+    if (answers.value[item.id] && Object.keys(answers.value[item.id]).length > 0) {
+      count++;
+    }
+  });
+  return count;
+});
 
+// --- Methods ---
+const fetchMenuItems = async () => {
+  try {
+    const response = await axios.get('http://localhost:8080/menu-items');
+    menuItems.value = response.data;
   } catch (error) {
-    console.error("Error fetching survey data:", error);
-  } finally {
-    isLoading.value = false;
+    console.error("Error fetching menu items:", error);
   }
 };
 
-// Navigation Logic
+const selectCategory = (cat: string) => {
+  activeCategory.value = cat;
+  isLanding.value = true;
+  currentItemIndex.value = 0;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+const startRating = () => {
+  isLanding.value = false;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
 const nextItem = () => {
-  if (currentIndex.value < menuItems.value.length - 1) {
-    currentIndex.value++;
+  if (currentItemIndex.value < filteredItems.value.length - 1) {
+    currentItemIndex.value++;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 };
 
 const prevItem = () => {
-  if (currentIndex.value > 0) {
-    currentIndex.value--;
+  if (currentItemIndex.value > 0) {
+    currentItemIndex.value--;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 };
 
-// The HTTP Request
-const submitSurvey = async () => {
-  isSubmitting.value = true;
-  const payload = [];
+const finishCategory = () => {
+  // Logic to actually save to backend would go here!
+  console.log("Saving answers:", answers.value);
+  isLanding.value = true;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  alert("Awesome! You finished the " + activeCategory.value + " category.");
+};
 
-  const userEmail = "student_" + Math.floor(Math.random() * 1000) + "@university.edu";
+// Answer Management
+const setAnswer = (itemId: number | undefined, questionId: number, optionId: number) => {
+  if (!itemId) return;
+  if (!answers.value[itemId]) answers.value[itemId] = {};
+  answers.value[itemId][questionId] = optionId;
+};
 
-  for (const itemId in answers.value) {
-    for (const qId in answers.value[itemId]) {
-      const answerData = answers.value[itemId][qId];
+const setTextAnswer = (itemId: number | undefined, questionId: number, text: string) => {
+  if (!itemId) return;
+  if (!answers.value[itemId]) answers.value[itemId] = {};
+  answers.value[itemId][questionId] = text;
+};
 
-      if (answerData) {
-        const isText = typeof answerData === 'string';
+const getAnswer = (itemId: number | undefined, questionId: number) => {
+  if (!itemId || !answers.value[itemId]) return null;
+  return answers.value[itemId][questionId];
+};
 
-        payload.push({
-          menuItemId: Number(itemId),
-          questionId: Number(qId),
-          selectedOptionId: isText ? null : answerData.id,
-          response: isText ? answerData : null,
-          userEmail: userEmail
-        });
-      }
-    }
-  }
-
-  try {
-    await axios.post('http://localhost:8080/answers/saveAll', payload);
-    alert("Thank you! Your survey has been submitted successfully.");
-  } catch (error) {
-    console.error("Submission failed:", error);
-    alert("Oops! Something went wrong saving your survey. Please try again.");
-  } finally {
-    isSubmitting.value = false;
-  }
+const isAnswered = (itemId: number | undefined, questionId: number) => {
+  if (!itemId || !answers.value[itemId]) return false;
+  const ans = answers.value[itemId][questionId];
+  if (typeof ans === 'string') return ans.trim().length > 0;
+  return ans !== undefined && ans !== null;
 };
 
 onMounted(() => {
-  fetchData();
+  fetchMenuItems();
 });
 </script>
 
 <style scoped>
-.survey-container {
-  max-width: 800px;
-  margin: 0 auto;
-  font-family: 'Inter', sans-serif;
-  color: #333;
-  padding-bottom: 50px;
-}
+/* GLOBALS */
+.survey-layout { background-color: #f8fafc; min-height: 100vh; font-family: 'Inter', -apple-system, sans-serif; color: #1e293b; padding-bottom: 50px;}
 
-.loading, .empty-state {
-  text-align: center;
-  margin-top: 100px;
-  color: #666;
-}
+/* HEADER */
+.top-nav { background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 50; }
+.nav-content { max-width: 1200px; margin: 0 auto; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon { background: #f97316; color: white; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+.logo h1 { margin: 0; font-size: 1.2rem; color: #0f172a; font-weight: 700; }
+.global-progress { font-size: 0.9rem; color: #64748b; }
+.global-progress strong { color: #0f172a; }
 
-.empty-state h2 {
-  color: #1a1a1a;
-  margin-bottom: 10px;
-}
+/* TABS */
+.tabs-container { background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 63px; z-index: 40; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
+.tabs-scroll { max-width: 1200px; margin: 0 auto; padding: 10px 30px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.tabs-scroll::-webkit-scrollbar { display: none; }
+.tab-btn { padding: 8px 18px; border-radius: 20px; border: 1px solid #cbd5e1; background: white; color: #64748b; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+.tab-btn:hover { background: #f1f5f9; }
+.tab-btn.active { background: #f97316; color: white; border-color: #f97316; }
 
-.header {
-  text-align: center;
-  margin-bottom: 30px;
-  padding: 30px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-}
+.main-content { max-width: 1200px; margin: 40px auto; padding: 0 30px; }
 
-.progress-badge {
-  background: #e0e7ff;
-  color: #4F46E5;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
+/* LANDING VIEW */
+.landing-view { display: flex; justify-content: center; align-items: center; margin-top: 60px; }
+.landing-card { background: white; padding: 50px; border-radius: 24px; text-align: center; max-width: 500px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;}
+.category-icon { font-size: 5rem; margin-bottom: 20px; }
+.landing-card h2 { margin: 0 0 5px 0; font-size: 2rem; color: #0f172a; }
+.subtitle { color: #64748b; margin-bottom: 30px; font-size: 1.1rem; }
+.question-preview-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 40px; text-align: left; }
+.q-preview { display: flex; align-items: center; gap: 15px; background: #f8fafc; padding: 12px 20px; border-radius: 12px; border: 1px solid #e2e8f0; font-size: 0.95rem; font-weight: 500; color: #475569;}
+.q-num-light { background: #ffedd5; color: #ea580c; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; }
+.primary-btn { background: #f97316; color: white; border: none; padding: 16px 40px; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; width: 100%; transition: transform 0.2s, background 0.2s; }
+.primary-btn:hover { background: #ea580c; transform: translateY(-2px); }
 
-.food-image-placeholder {
-  background-color: #f1f5f9;
-  height: 150px;
-  border-radius: 12px;
-  margin: 20px auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px dashed #e2e8f0;
-  max-width: 100%;
-}
+/* RATING VIEW (Split Pane) */
+.rating-view { display: grid; grid-template-columns: 350px 1fr; gap: 40px; align-items: start; }
 
-.placeholder-icon {
-  font-size: 3rem;
-  color: #94a3b8;
-}
+/* LEFT PANE (Sticky Item Card) */
+.left-pane { position: sticky; top: 140px; }
+.sticky-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+.pane-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 0.85rem; }
+.breadcrumb { color: #64748b; font-weight: 500;}
+.text-dark { color: #0f172a; font-weight: 600; }
+.cat-progress { color: #64748b; font-weight: 500;}
+.green-text { color: #16a34a; font-weight: 700; }
+.item-cover { position: relative; }
+.cover-img { height: 250px; background-size: cover; background-position: center; }
+.cover-img::before { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent 70%); }
+.cover-info { position: absolute; bottom: 20px; left: 20px; right: 20px; }
+.cover-info h3 { margin: 0 0 10px 0; color: white; font-size: 1.4rem; font-weight: 700; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.5);}
+.badge { background: #ffedd5; color: #c2410c; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
 
-.food-title {
-  margin: 15px 0 5px 0;
-  font-size: 1.8rem;
-  color: #111;
-}
+/* RIGHT PANE (Questions List) */
+.questions-list { display: flex; flex-direction: column; gap: 20px; }
+.question-card { background: white; padding: 30px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
 
-.food-desc {
-  color: #666;
-  margin-bottom: 15px;
-}
+.q-header { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 25px; }
+.q-bubble { width: 28px; height: 28px; background: #ffedd5; color: #ea580c; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; flex-shrink: 0; transition: all 0.3s;}
+.q-bubble.answered { background: #22c55e; color: white; }
+.q-header h4 { margin: 0; font-size: 1.15rem; color: #0f172a; line-height: 1.4; padding-top: 2px;}
 
-.question-block {
-  background: white;
-  padding: 25px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.03);
-  border: 1px solid #f0f0f0;
-}
+/* Option Buttons Shared */
+.opt-btn-vertical, .opt-btn-grid { position: relative; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; transition: all 0.2s; text-align: left; }
+.opt-btn-vertical:hover, .opt-btn-grid:hover { border-color: #cbd5e1; background: #f1f5f9; }
+.opt-btn-vertical.selected, .opt-btn-grid.selected { border-color: #f97316; background: #fff7ed; }
+.check-indicator { position: absolute; top: 10px; right: 10px; background: #f97316; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; }
 
-.question-text {
-  font-size: 1.1rem;
-  font-weight: 500;
-  margin-bottom: 15px;
-}
+/* Vertical Layout (Q1) */
+.vertical-options { display: flex; flex-direction: column; gap: 10px; }
+.opt-btn-vertical { display: flex; align-items: center; gap: 15px; padding: 15px 20px; }
+.opt-icon { font-size: 1.5rem; }
+.opt-label { font-size: 1rem; font-weight: 600; color: #334155; }
 
-.options-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
+/* Grid Layout (Q2, Q3, Q4) */
+.grid-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+.opt-btn-grid { padding: 20px 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 8px; min-height: 110px;}
+.opt-icon-large { font-size: 2rem; }
+.opt-label-main { font-weight: 700; color: #0f172a; font-size: 1.05rem; }
+.opt-sub { font-size: 0.8rem; color: #64748b; font-weight: 500; }
 
-.option-label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 15px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
+/* Text Area (Q5) */
+.text-input-wrapper { position: relative; }
+.styled-textarea { width: 100%; height: 120px; padding: 20px; border-radius: 12px; border: 2px solid #e2e8f0; background: #f8fafc; font-family: inherit; font-size: 1rem; color: #334155; resize: none; transition: all 0.2s; outline: none; }
+.styled-textarea:focus { border-color: #f97316; background: white; }
+.styled-textarea.has-content { border-color: #f97316; background: #fff7ed; }
+.char-count { position: absolute; bottom: 35px; right: 15px; font-size: 0.8rem; color: #94a3b8; font-weight: 500;}
+.helper-text { margin: 10px 0 0 0; font-size: 0.85rem; color: #64748b; text-align: center; }
 
-.option-label:hover {
-  border-color: #a5b4fc;
-  background-color: #f8fafc;
-}
+/* Footer Actions */
+.action-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 20px; border-top: 1px solid #e2e8f0;}
+.nav-btn { padding: 14px 24px; border-radius: 10px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s; border: none; }
+.nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.nav-btn.secondary { background: white; border: 1px solid #cbd5e1; color: #475569; }
+.nav-btn.secondary:hover:not(:disabled) { background: #f1f5f9; }
+.nav-btn.primary { background: #f97316; color: white; margin-left: auto;}
+.nav-btn.primary:hover { background: #ea580c; }
+.nav-btn.success { background: #22c55e; color: white; margin-left: auto;}
+.nav-btn.success:hover { background: #16a34a; }
 
-.option-label.selected {
-  border-color: #4F46E5;
-  background-color: #eef2ff;
-}
-
-.hidden-radio {
-  display: none;
-}
-
-.opt-main {
-  font-weight: 500;
-}
-
-.opt-sub {
-  font-size: 0.85rem;
-  color: #666;
-}
-
-.text-input {
-  width: 100%;
-  padding: 15px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 1rem;
-  box-sizing: border-box;
-}
-
-.text-input:focus {
-  outline: none;
-  border-color: #4F46E5;
-}
-
-.navigation-buttons {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 30px;
-}
-
-.nav-right-group {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.required-warning {
-  font-size: 0.85rem;
-  color: #ef4444;
-  font-style: italic;
-}
-
-.nav-btn {
-  padding: 12px 24px;
-  font-size: 1rem;
-  font-weight: 600;
-  border-radius: 8px;
-  cursor: pointer;
-  border: none;
-  transition: transform 0.1s, opacity 0.2s, background-color 0.2s;
-}
-
-.nav-btn:active:not(:disabled) {
-  transform: scale(0.97);
-}
-
-.nav-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  background-color: #cbd5e1 !important;
-  color: #64748b !important;
-}
-
-.prev-btn {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.next-btn {
-  background: #4F46E5;
-  color: white;
-}
-
-.submit-btn {
-  background: #10B981;
-  color: white;
+/* Simple entrance animation */
+.pulse { animation: pulse 2s infinite; }
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(249, 115, 22, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
 }
 </style>
