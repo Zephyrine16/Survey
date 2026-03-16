@@ -305,12 +305,53 @@ const prevItem = () => {
   }
 };
 
-const finishCategory = () => {
-  // Logic to actually save to backend would go here!
-  console.log("Saving answers:", answers.value);
-  isLanding.value = true;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  alert("Awesome! You finished the " + activeCategory.value + " category.");
+const finishCategory = async () => {
+  try {
+    // 1. Format the data for Spring Boot
+    // We loop through the items in the CURRENT category and grab their answers
+    const payload: any[] = [];
+
+    filteredItems.value.forEach(item => {
+      const itemAnswers = answers.value[item.id];
+      if (itemAnswers) {
+        Object.entries(itemAnswers).forEach(([qId, ans]) => {
+          // If the answer is a string, it's the text area. Otherwise, it's a radio button ID.
+          const isText = typeof ans === 'string';
+
+          payload.push({
+            userId: 1, // Hardcoded test user for now
+            menuItemId: item.id,
+            questionId: Number(qId),
+            selectedOptionId: isText ? null : ans,
+            textResponse: isText ? ans : null
+          });
+        });
+      }
+    });
+
+    // 2. Send the HTTP POST request to your database
+    // (Note: Make sure this URL matches your actual Spring Boot endpoint!)
+    await axios.post('http://localhost:8080/submit-category', payload);
+
+    // 3. Find the next category and navigate
+    const currentCatIndex = categories.indexOf(activeCategory.value);
+
+    if (currentCatIndex < categories.length - 1) {
+      // Move to the next category in the array
+      activeCategory.value = categories[currentCatIndex + 1];
+      currentItemIndex.value = 0;
+      isLanding.value = true; // Show the nice landing page for the new category
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      // They just finished the very last category!
+      alert("🎉 Amazing! You have completely finished the CafeRater survey!");
+      // You could redirect them to a "Thank You" page here
+    }
+
+  } catch (error) {
+    console.error("Error saving category data:", error);
+    alert("Oops! There was a problem saving your answers. Please try again.");
+  }
 };
 
 // Answer Management
