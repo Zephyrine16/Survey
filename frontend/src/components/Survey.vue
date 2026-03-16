@@ -19,7 +19,7 @@
           v-for="cat in categories"
           :key="cat"
           class="tab-btn"
-          :class="{ active: activeCategory === cat }"
+          :class="[getPillClass(cat), { active: activeCategory === cat }]"
           @click="selectCategory(cat)"
         >
           {{ cat }}
@@ -90,7 +90,6 @@
                 >
                   <span class="opt-icon">{{ opt.icon }}</span>
                   <span class="opt-label">{{ opt.label }}</span>
-                  <div class="check-indicator" v-if="getAnswer(currentItem?.id, q.id) === opt.id">✓</div>
                 </button>
               </div>
 
@@ -105,7 +104,6 @@
                   <span class="opt-icon-large" v-if="opt.icon">{{ opt.icon }}</span>
                   <span class="opt-label-main">{{ opt.label }}</span>
                   <span class="opt-sub" v-if="opt.sub">{{ opt.sub }}</span>
-                  <div class="check-indicator" v-if="getAnswer(currentItem?.id, q.id) === opt.id">✓</div>
                 </button>
               </div>
 
@@ -164,6 +162,24 @@ const categories = [
   'Meal', 'Bread', 'Pasta', 'Waffle', 'Coffee', 'Non-coffee',
   'Frappe Series', 'Float', 'Milktea', 'Sparkling Soda', 'Fruit Tea'
 ];
+
+// Map categories to their pastel colors
+const getPillClass = (cat: string) => {
+  const map: Record<string, string> = {
+    'Meal': 'pill-meal',
+    'Bread': 'pill-bread',
+    'Pasta': 'pill-pasta',
+    'Waffle': 'pill-waffle',
+    'Coffee': 'pill-coffee',
+    'Non-coffee': 'pill-noncoffee',
+    'Frappe Series': 'pill-frappe',
+    'Float': 'pill-float',
+    'Sparkling Soda': 'pill-soda',
+    'Milktea': 'pill-milktea',
+    'Fruit Tea': 'pill-fruittea'
+  };
+  return map[cat] || 'pill-default';
+};
 
 // Master list of questions matching your screenshots
 const questions = [
@@ -344,9 +360,52 @@ onMounted(() => {
 .tabs-container { background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 63px; z-index: 40; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
 .tabs-scroll { max-width: 1200px; margin: 0 auto; padding: 10px 30px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
 .tabs-scroll::-webkit-scrollbar { display: none; }
-.tab-btn { padding: 8px 18px; border-radius: 20px; border: 1px solid #cbd5e1; background: white; color: #64748b; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
-.tab-btn:hover { background: #f1f5f9; }
-.tab-btn.active { background: #f97316; color: white; border-color: #f97316; }
+.tab-btn { padding: 8px 18px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; white-space: nowrap; border: 1px solid; }
+
+/* --- Tab Color Palette --- */
+.pill-meal { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+.pill-meal:hover { background: #fee2e2; }
+.pill-meal.active { background: #fca5a5; color: #7f1d1d; border-color: #f87171; }
+
+.pill-bread { background: #fdf5e6; border-color: #ebd5b3; color: #8b5a2b; }
+.pill-bread:hover { background: #faebd7; }
+.pill-bread.active { background: #deb887; color: #5c3317; border-color: #cdaa7d; }
+
+.pill-pasta { background: #fefce8; border-color: #fde047; color: #854d0e; }
+.pill-pasta:hover { background: #fef9c3; }
+.pill-pasta.active { background: #facc15; color: #422006; border-color: #eab308; }
+
+.pill-waffle { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
+.pill-waffle:hover { background: #ffedd5; }
+.pill-waffle.active { background: #fdba74; color: #9a3412; border-color: #f97316; }
+
+.pill-coffee { background: #fffbeb; border-color: #fde68a; color: #b45309; }
+.pill-coffee:hover { background: #fef3c7; }
+.pill-coffee.active { background: #fcd34d; color: #78350f; border-color: #f59e0b; }
+
+.pill-noncoffee { background: #f0f9ff; border-color: #bae6fd; color: #0284c7; }
+.pill-noncoffee:hover { background: #e0f2fe; }
+.pill-noncoffee.active { background: #7dd3fc; color: #0369a1; border-color: #0ea5e9; }
+
+.pill-frappe { background: #f5f3ff; border-color: #ddd6fe; color: #7c3aed; }
+.pill-frappe:hover { background: #ede9fe; }
+.pill-frappe.active { background: #c4b5fd; color: #5b21b6; border-color: #8b5cf6; }
+
+.pill-float { background: #ecfdf5; border-color: #a7f3d0; color: #059669; }
+.pill-float:hover { background: #d1fae5; }
+.pill-float.active { background: #6ee7b7; color: #064e3b; border-color: #10b981; }
+
+.pill-soda { background: #ecfeff; border-color: #a5f3fc; color: #0891b2; }
+.pill-soda:hover { background: #cffafe; }
+.pill-soda.active { background: #67e8f9; color: #164e63; border-color: #06b6d4; }
+
+.pill-milktea { background: #fdf4ff; border-color: #f5d0fe; color: #c026d3; }
+.pill-milktea:hover { background: #fae8ff; }
+.pill-milktea.active { background: #f0abfc; color: #86198f; border-color: #d946ef; }
+
+.pill-fruittea { background: #fff1f2; border-color: #fecdd3; color: #e11d48; }
+.pill-fruittea:hover { background: #ffe4e6; }
+.pill-fruittea.active { background: #fda4af; color: #9f1239; border-color: #f43f5e; }
 
 .main-content { max-width: 1200px; margin: 40px auto; padding: 0 30px; }
 
@@ -393,7 +452,6 @@ onMounted(() => {
 .opt-btn-vertical, .opt-btn-grid { position: relative; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; transition: all 0.2s; text-align: left; }
 .opt-btn-vertical:hover, .opt-btn-grid:hover { border-color: #cbd5e1; background: #f1f5f9; }
 .opt-btn-vertical.selected, .opt-btn-grid.selected { border-color: #f97316; background: #fff7ed; }
-.check-indicator { position: absolute; top: 10px; right: 10px; background: #f97316; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold; }
 
 /* Vertical Layout (Q1) */
 .vertical-options { display: flex; flex-direction: column; gap: 10px; }
@@ -410,7 +468,7 @@ onMounted(() => {
 
 /* Text Area (Q5) */
 .text-input-wrapper { position: relative; }
-.styled-textarea { width: 100%; height: 120px; padding: 20px; border-radius: 12px; border: 2px solid #e2e8f0; background: #f8fafc; font-family: inherit; font-size: 1rem; color: #334155; resize: none; transition: all 0.2s; outline: none; }
+.styled-textarea { box-sizing: border-box; width: 100%; height: 120px; padding: 20px; border-radius: 12px; border: 2px solid #e2e8f0; background: #f8fafc; font-family: inherit; font-size: 1rem; color: #334155; resize: none; transition: all 0.2s; outline: none; }
 .styled-textarea:focus { border-color: #f97316; background: white; }
 .styled-textarea.has-content { border-color: #f97316; background: #fff7ed; }
 .char-count { position: absolute; bottom: 35px; right: 15px; font-size: 0.8rem; color: #94a3b8; font-weight: 500;}
