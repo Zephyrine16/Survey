@@ -265,10 +265,13 @@ const isDrink = (cat: string) => drinkSubcategories.includes(cat);
 // Maps categories to their pastel color CSS classes
 const getPillClass = (sub: string) => {
   const map: Record<string, string> = {
-    'Meal': 'pill-food',
-    'Bread': 'pill-food',
-    'Pasta': 'pill-food',
-    'Waffle': 'pill-food',
+    // New Individual Food Colors
+    'Meal': 'pill-meal',
+    'Bread': 'pill-bread',
+    'Pasta': 'pill-pasta',
+    'Waffle': 'pill-waffle',
+
+    // Existing Drink Colors
     'Coffee': 'pill-coffee',
     'Non-coffee': 'pill-noncoffee',
     'Frappe Series': 'pill-frappe',
@@ -485,10 +488,25 @@ onMounted(() => {
 /* Base pill styling */
 .f-pill { padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; border: 1px solid; }
 
-/* "All" button styling (Dark Blue Active) */
-.pill-all { background: white; border-color: #cbd5e1; color: #64748b; }
-.pill-all:hover { background: #f1f5f9; }
-.pill-all.active { background: #0f172a; color: white; border-color: #0f172a; }
+/* Meal: Savory Red */
+.pill-meal { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+.pill-meal:hover { background: #fee2e2; }
+.pill-meal.active { background: #fca5a5; color: #7f1d1d; border-color: #f87171; }
+
+/* Bread: Toasted Wheat/Tan */
+.pill-bread { background: #fdf5e6; border-color: #ebd5b3; color: #8b5a2b; }
+.pill-bread:hover { background: #faebd7; }
+.pill-bread.active { background: #deb887; color: #5c3317; border-color: #cdaa7d; }
+
+/* Pasta: Bright Butter Yellow */
+.pill-pasta { background: #fefce8; border-color: #fde047; color: #854d0e; }
+.pill-pasta:hover { background: #fef9c3; }
+.pill-pasta.active { background: #facc15; color: #422006; border-color: #eab308; }
+
+/* Waffle: Sweet Orange */
+.pill-waffle { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
+.pill-waffle:hover { background: #ffedd5; }
+.pill-waffle.active { background: #fdba74; color: #9a3412; border-color: #f97316; }
 
 /* Food Colors (Orange/Yellow) */
 .pill-food { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
