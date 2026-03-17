@@ -1,10 +1,7 @@
 package com.example.survey.controller;
 
 import com.example.survey.dto.CategorySubmissionDTO;
-import com.example.survey.model.User;
-import com.example.survey.model.UserAnswer;
-import com.example.survey.repository.UserAnswerRepository;
-import com.example.survey.repository.UserRepository;
+import com.example.survey.repository.AnswerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,29 +12,23 @@ import java.util.List;
 @CrossOrigin(origins = {"http://localhost:5173", "http://127.0.0.1:5173"})
 public class SurveyController {
 
+    // 1. We swap out the repository so it connects to the Analytics table!
     @Autowired
-    private UserAnswerRepository userAnswerRepository;
-
-    @Autowired
-    private UserRepository userRepository;
+    private AnswerRepository answerRepository;
 
     @PostMapping("/submit-category")
     public ResponseEntity<?> submitCategoryAnswers(@RequestBody List<CategorySubmissionDTO> payload) {
         try {
             for (CategorySubmissionDTO dto : payload) {
-                UserAnswer answer = new UserAnswer();
 
-                User user = userRepository.findById(dto.getUserId())
-                        .orElseThrow(() -> new RuntimeException("User not found with ID: " + dto.getUserId()));
-
-                answer.setUser(user);
-
-                answer.setMenuItemId(dto.getMenuItemId());
-                answer.setQuestionId(dto.getQuestionId());
-                answer.setSelectedOptionId(dto.getSelectedOptionId());
-                answer.setTextResponse(dto.getTextResponse());
-
-                userAnswerRepository.save(answer);
+                // 2. We use our new Native Query to force the data directly into the 'answers' table
+                answerRepository.saveRawAnswer(
+                        "student@example.com",     // Dummy email since Dashboard reads it
+                        dto.getMenuItemId(),
+                        dto.getQuestionId(),
+                        dto.getSelectedOptionId(),
+                        dto.getTextResponse()
+                );
             }
 
             return ResponseEntity.ok().body("{\"message\": \"Category saved successfully!\"}");

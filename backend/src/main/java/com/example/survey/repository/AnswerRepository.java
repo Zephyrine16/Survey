@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -35,5 +37,16 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
     List<TextFeedbackDTO> findTextResponse(
             @Param("menuItemId") Long menuItemId,
             @Param("questionId") Long questionId
+    );
+
+    @Modifying
+    @Transactional
+    @Query(value = "INSERT INTO answers (user_email, menu_item_id, question_id, option_id, response) VALUES (:email, :menuItemId, :questionId, :optionId, :response)", nativeQuery = true)
+    void saveRawAnswer(
+            @Param("email") String email,
+            @Param("menuItemId") Long menuItemId,
+            @Param("questionId") Long questionId,
+            @Param("optionId") Long optionId,
+            @Param("response") String response
     );
 }
