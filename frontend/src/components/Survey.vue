@@ -127,11 +127,21 @@
               &larr; Previous Item
             </button>
 
-            <button v-if="currentItemIndex < filteredItems.length - 1" class="nav-btn primary" @click="nextItem">
+            <button
+              v-if="currentItemIndex < filteredItems.length - 1"
+              class="nav-btn primary"
+              @click="nextItem"
+              :disabled="!isCurrentItemComplete"
+            >
               Next Item &rarr;
             </button>
 
-            <button v-else class="nav-btn success" @click="finishCategory">
+            <button
+              v-else
+              class="nav-btn success"
+              @click="finishCategory"
+              :disabled="!isCurrentItemComplete"
+            >
               Submit & Return to Categories
             </button>
           </div>
@@ -181,7 +191,6 @@ const getPillClass = (cat: string) => {
   return map[cat] || 'pill-default';
 };
 
-// Master list of questions matching your screenshots
 const questions = [
   {
     id: 1,
@@ -189,11 +198,11 @@ const questions = [
     text: "Which emotion or physical state most strongly makes you want to order this item?",
     type: 'vertical-radio',
     options: [
-      { id: 11, label: "Stressed/Overwhelmed", icon: "😩" },
-      { id: 12, label: "Happy/Celebratory", icon: "😊" },
-      { id: 13, label: "Tired/Low Energy", icon: "😴" },
-      { id: 14, label: "Relaxed/Chilling", icon: "😌" },
-      { id: 15, label: "Focused/Working", icon: "🎯" }
+      { id: 1, label: "Stressed/Overwhelmed", icon: "😩" },
+      { id: 2, label: "Happy/Celebratory", icon: "😊" },
+      { id: 3, label: "Tired/Low Energy", icon: "😴" },
+      { id: 4, label: "Relaxed/Chilling", icon: "😌" },
+      { id: 5, label: "Focused/Working", icon: "🎯" }
     ]
   },
   {
@@ -202,9 +211,9 @@ const questions = [
     text: "In what weather condition does this item feel most satisfying?",
     type: 'grid-radio',
     options: [
-      { id: 21, label: "Hot/Sunny", icon: "☀️" },
-      { id: 22, label: "Cold/Rainy", icon: "🌧️" },
-      { id: 23, label: "Any Weather", icon: "⛅" }
+      { id: 6, label: "Hot/Sunny", icon: "☀️" },
+      { id: 7, label: "Cold/Rainy", icon: "🌧️" },
+      { id: 8, label: "Any Weather", icon: "⛅" }
     ]
   },
   {
@@ -213,9 +222,9 @@ const questions = [
     text: "What is the vibe of this specific dish?",
     type: 'grid-radio',
     options: [
-      { id: 31, label: "Heavy Meal", icon: "🍽️" },
-      { id: 32, label: "Light Snack", icon: "🥗" },
-      { id: 33, label: "Drink/Refreshment", icon: "🥤" }
+      { id: 9, label: "Heavy Meal", icon: "🍽️" },
+      { id: 10, label: "Light Snack", icon: "🥗" },
+      { id: 11, label: "Drink/Refreshment", icon: "🥤" }
     ]
   },
   {
@@ -224,9 +233,9 @@ const questions = [
     text: "What do you think is a fair Student-Friendly price for this item?",
     type: 'grid-radio',
     options: [
-      { id: 41, label: "Under ₱150", sub: "Budget" },
-      { id: 42, label: "₱150 - ₱249", sub: "Mid-range" },
-      { id: 43, label: "₱250 and above", sub: "Premium" }
+      { id: 12, label: "Under ₱150", sub: "Budget" },
+      { id: 13, label: "₱150 - ₱249", sub: "Mid-range" },
+      { id: 14, label: "₱250 and above", sub: "Premium" }
     ]
   },
   {
@@ -245,6 +254,27 @@ const filteredItems = computed(() => {
 const currentItem = computed(() => {
   if (filteredItems.value.length === 0) return null;
   return filteredItems.value[currentItemIndex.value];
+});
+
+const isCurrentItemComplete = computed(() => {
+  if (!currentItem.value) return false;
+
+  const itemId = currentItem.value.id;
+  const itemAnswers = answers.value[itemId];
+
+  if (!itemAnswers) return false;
+
+  for (const q of questions) {
+    const ans = itemAnswers[q.id];
+
+    if (q.type === 'textarea') {
+      if (!ans || typeof ans !== 'string' || ans.trim() === '') return false;
+    } else {
+      if (ans === undefined || ans === null) return false;
+    }
+  }
+
+  return true;
 });
 
 // Calculate how many items in the CURRENT category have at least 1 answer
