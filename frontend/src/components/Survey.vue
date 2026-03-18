@@ -563,4 +563,48 @@ onMounted(() => {
   70% { box-shadow: 0 0 0 10px rgba(249, 115, 22, 0); }
   100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
 }
+
+/* --- MOBILE RESPONSIVENESS (Phones & Small Tablets) --- */
+@media (max-width: 850px) {
+  /* 1. Stack the left and right panes on top of each other */
+  .rating-view {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  /* 2. Stop the image from being 'sticky' so users can scroll past it */
+  .left-pane {
+    position: relative;
+    top: 0;
+  }
+
+  /* 3. Make the food image a little shorter so it doesn't take up the whole phone screen */
+  .cover-img {
+    height: 180px;
+  }
+
+  /* 4. Stack the Grid Buttons (Weather, Vibe, Price) into a single vertical column for easy tapping */
+  .grid-options {
+    grid-template-columns: 1fr;
+  }
+
+  /* 5. Adjust padding for smaller screens */
+  .main-content {
+    padding: 0 15px;
+  }
+
+  .landing-card {
+    padding: 30px 20px;
+  }
+
+  .action-footer {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .nav-btn.primary, .nav-btn.success {
+    margin-left: 0;
+    width: 100%;
+  }
+}
 </style>
