@@ -49,4 +49,11 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
             @Param("optionId") Long optionId,
             @Param("response") String response
     );
+
+    @Query(value = "SELECT a.user_email, m.name, q.text, o.label, a.response " +
+            "FROM answers a " +
+            "JOIN menu_items m ON a.menu_item_id = m.id " +
+            "JOIN questions q ON a.question_id = q.id " +
+            "LEFT JOIN options o ON a.option_id = o.id", nativeQuery = true)
+    List<Object[]> getExportData();
 }
