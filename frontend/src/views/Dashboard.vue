@@ -11,7 +11,9 @@
       </div>
       <div class="header-right">
         <span class="live-badge"><span class="dot"></span> Live</span>
-        <button class="export-btn">📥 Export Report</button>
+        <button class="export-btn" @click="downloadReport">
+          📥 Export Report
+        </button>
       </div>
     </header>
 
@@ -437,6 +439,29 @@ const getSentimentData = (index: number) => {
   if (index % 3 === 0 || index % 3 === 1) return { class: 'pos', icon: '👍', label: 'Positive' };
   if (index % 3 === 2 && index % 2 === 0) return { class: 'neu', icon: '—', label: 'Neutral' };
   return { class: 'neg', icon: '👎', label: 'Negative' };
+};
+
+const downloadReport = async () => {
+  try {
+    // We tell Axios we are expecting a 'blob' (a file), not just standard JSON
+    const response = await axios.get('http://localhost:8080/export', {
+      responseType: 'blob'
+    });
+
+    // Create a temporary hidden link in the browser to force the download
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'CafeRater_Report.csv');
+    document.body.appendChild(link);
+    link.click();
+
+    // Clean up the link after the download starts
+    document.body.removeChild(link);
+  } catch (error) {
+    console.error("Error downloading report:", error);
+    alert("Oops! Could not export the report right now.");
+  }
 };
 
 onMounted(() => {
