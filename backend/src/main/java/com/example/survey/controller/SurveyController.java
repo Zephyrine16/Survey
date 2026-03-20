@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @CrossOrigin(origins = {"http://localhost:5173", "http://127.0.0.1:5173"})
@@ -39,24 +40,23 @@ public class SurveyController {
         }
     }
 
+    // ==========================================
+    // 2. THIS EXPORTS THE CSV
+    // ==========================================
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportReport() {
-        // 1. Fetch the readable data from the database
         List<Object[]> data = answerRepository.getExportData();
 
-        // 2. Start building the CSV text, starting with the Header row
-        StringBuilder csv = new StringBuilder("User Email,Menu Item,Question,Selected Option,Text Response\n");
+        // FIX #1: Add \uFEFF at the very beginning so Excel reads special characters (like ₱) correctly!
+        StringBuilder csv = new StringBuilder("\uFEFFUser Email,Menu Item,Question,Selected Option,Text Response\n");
 
-        // 3. Loop through the data and format it
         for (Object[] row : data) {
             String email = row[0] != null ? row[0].toString() : "Anonymous";
-            // We replace commas with spaces so they don't break our CSV format!
             String item = row[1] != null ? row[1].toString().replace(",", "") : "";
             String question = row[2] != null ? row[2].toString().replace(",", "") : "";
             String option = row[3] != null ? row[3].toString().replace(",", "") : "";
             String textResponse = row[4] != null ? row[4].toString().replace("\n", " ").replace(",", "") : "";
 
-            // Add the row to our CSV
             csv.append(email).append(",")
                     .append(item).append(",")
                     .append(question).append(",")
@@ -64,13 +64,28 @@ public class SurveyController {
                     .append(textResponse).append("\n");
         }
 
-        // 4. Convert the text to a file format (bytes)
-        byte[] csvBytes = csv.toString().getBytes();
+        // FIX #2: Explicitly tell Java to format the bytes as UTF-8
+        byte[] csvBytes = csv.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
-        // 5. Send it back to Vue with instructions to download it as a file
         return ResponseEntity.ok()
                 .header("Content-Disposition", "attachment; filename=CafeRater_Analytics.csv")
-                .header("Content-Type", "text/csv")
+                .header("Content-Type", "text/csv; charset=UTF-8")
                 .body(csvBytes);
+    }
+
+    @GetMapping("/ai/training-data")
+    public ResponseEntity<Map<String, List<String>>> getAITrainingData() {
+        List<Object[]> rawData = answerRepository.getAITrainingData();
+        Map<String, List<String>> aiData = new java.util.HashMap<>();
+
+        for(Object[] row : rawData) {
+            String foodName = row[0].toString();
+            String description = row[1].toString();
+
+            aiData.putIfAbsent(foodName, new java.util.ArrayList<>());
+            aiData.get(foodName).add(description);
+        }
+
+        return ResponseEntity.ok(aiData);
     }
 }
