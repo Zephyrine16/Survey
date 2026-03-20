@@ -63,4 +63,16 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
             "WHERE a.question_id = 5 AND a.response IS NOT NULL AND TRIM(a.response) != ''",
             nativeQuery = true)
     List<Object[]> getAITrainingData();
+
+    // 1. Get the total number of people who answered Question 1 for a specific item
+    @Query(value = "SELECT COUNT(*) FROM answers WHERE menu_item_id = :menuItemId AND question_id = 1", nativeQuery = true)
+    Long countTotalResponsesForItem(@org.springframework.data.repository.query.Param("menuItemId") Long menuItemId);
+
+    // 2. Get all the text descriptions (Question 5) for a specific item
+    @Query(value = "SELECT response FROM answers WHERE menu_item_id = :menuItemId AND question_id = 5 AND response IS NOT NULL AND TRIM(response) != ''", nativeQuery = true)
+    List<String> getTextReviewsForItem(@org.springframework.data.repository.query.Param("menuItemId") Long menuItemId);
+
+    // 3. Get global total responses (everyone who answered Question 1 across all items)
+    @Query(value = "SELECT COUNT(*) FROM answers WHERE question_id = 1", nativeQuery = true)
+    Long countGlobalTotalResponses();
 }
