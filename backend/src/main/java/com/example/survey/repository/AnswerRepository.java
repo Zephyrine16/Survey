@@ -56,4 +56,11 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
             "JOIN questions q ON a.question_id = q.id " +
             "LEFT JOIN options o ON a.option_id = o.id", nativeQuery = true)
     List<Object[]> getExportData();
+
+    @Query(value = "SELECT m.name, a.response " +
+            "FROM answers a " +
+            "JOIN menu_items m ON a.menu_item_id = m.id " +
+            "WHERE a.question_id = 5 AND a.response IS NOT NULL AND TRIM(a.response) != ''",
+            nativeQuery = true)
+    List<Object[]> getAITrainingData();
 }
