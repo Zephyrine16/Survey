@@ -123,6 +123,29 @@ public class SurveyController {
             stats.negativePct = Math.round(((double) stats.negativeCount / totalAnalyzed) * 1000.0) / 10.0;
         }
 
+        java.util.List<String> stopWords = java.util.Arrays.asList(
+                "the", "and", "is", "it", "to", "a", "of", "for", "in", "on", "this", "but",
+                "very", "so", "with", "i", "was", "not", "have", "that", "like", "just", "my"
+        );
+
+        java.util.Map<String, Integer> wordCounts = new java.util.HashMap<>();
+        for(String review : reviews) {
+            String[] words = review.toLowerCase().replaceAll("[^a-z\\s]", "").split("\\s");
+            for(String word : words) {
+                if(word.length() > 2 && !stopWords.contains(word)) {
+                    wordCounts.put(word, wordCounts.getOrDefault(word, 0) + 1);
+                }
+            }
+        }
+
+        java.util.List<java.util.Map.Entry<String, Integer>> sortedWords = new java.util.ArrayList<>(wordCounts.entrySet());
+        sortedWords.sort((a, b) -> b.getValue().compareTo(a.getValue()));
+
+        stats.topKeywords = new java.util.ArrayList<>();
+        for(int i = 0; i < Math.min(8, sortedWords.size()); i++) {
+            stats.topKeywords.add(sortedWords.get(i).getKey());
+        }
+
         return ResponseEntity.ok(stats);
     }
 }

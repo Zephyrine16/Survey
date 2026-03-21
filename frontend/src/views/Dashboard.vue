@@ -24,7 +24,7 @@
           <div class="kpi-icon blue">👥</div>
           <div class="kpi-content">
             <p class="kpi-label">TOTAL RESPONSES</p>
-            <h2>{{ totalResponses }}</h2>
+            <h2>{{ globalTotal }}</h2>
             <p class="kpi-subtext">All food items</p>
           </div>
         </div>
@@ -54,22 +54,23 @@
       <div class="kpi-card">
         <div class="kpi-tag"><span class="t-dot orange"></span> CURRENT ITEM</div>
         <div class="kpi-body">
-          <div class="kpi-icon teal">😊</div>
+          <div class="kpi-icon orange">⭐</div>
           <div class="kpi-content">
-            <p class="kpi-label">SATISFACTION</p>
-            <h2>64.9%</h2>
-            <p class="kpi-subtext">Satisfied or Very Satisfied</p>
+            <p class="kpi-label">FAVORABLE RATING</p>
+            <h2>{{ (sentiment.posPct + sentiment.neuPct).toFixed(1) }}%</h2>
+            <p class="kpi-subtext">Positive + Neutral Feedback</p>
           </div>
         </div>
       </div>
+
       <div class="kpi-card">
         <div class="kpi-tag"><span class="t-dot orange"></span> CURRENT ITEM</div>
         <div class="kpi-body">
-          <div class="kpi-icon green">👍</div>
+          <div class="kpi-icon teal">😊</div>
           <div class="kpi-content">
-            <p class="kpi-label">POSITIVE SENTIMENT</p>
-            <h2>67.2%</h2>
-            <p class="kpi-subtext">Open-ended responses</p>
+            <p class="kpi-label">SATISFACTION</p>
+            <h2>{{ sentiment.posPct }}%</h2>
+            <p class="kpi-subtext">Highly Positive Feedback</p>
           </div>
         </div>
       </div>
@@ -186,27 +187,40 @@
             <h4 class="question-title-v2">{{ question }}</h4>
             <p class="response-count-v2">{{ answers.length }} text responses</p>
             <p class="section-label">SENTIMENT BREAKDOWN</p>
+
             <div class="sent-boxes-v2">
-              <div class="s-box-v2 pos"><h2>{{ Math.max(1, Math.floor(answers.length * 0.67)) }}</h2><span>Positive</span></div>
-              <div class="s-box-v2 neu"><h2>{{ Math.floor(answers.length * 0.22) }}</h2><span>Neutral</span></div>
-              <div class="s-box-v2 neg"><h2>{{ Math.floor(answers.length * 0.11) }}</h2><span>Negative</span></div>
+              <div class="s-box-v2 pos"><h2>{{ sentiment.pos }}</h2><span>Positive</span></div>
+              <div class="s-box-v2 neu"><h2>{{ sentiment.neu }}</h2><span>Neutral</span></div>
+              <div class="s-box-v2 neg"><h2>{{ sentiment.neg }}</h2><span>Negative</span></div>
             </div>
+
             <div class="sent-bar-thick">
-              <div class="s-fill-thick pos" style="width: 67.2%"></div>
-              <div class="s-fill-thick neu" style="width: 22.4%"></div>
-              <div class="s-fill-thick neg" style="width: 10.4%"></div>
+              <div class="s-fill-thick pos" :style="{ width: sentiment.posPct + '%' }"></div>
+              <div class="s-fill-thick neu" :style="{ width: sentiment.neuPct + '%' }"></div>
+              <div class="s-fill-thick neg" :style="{ width: sentiment.negPct + '%' }"></div>
             </div>
+
             <div class="sent-legend">
-              <span class="l-pos">● Positive 67.2%</span><span class="l-neu">● Neutral 22.4%</span><span class="l-neg">● Negative 10.4%</span><span class="l-total">= 100%</span>
+              <span class="l-pos">● Positive {{ sentiment.posPct }}%</span>
+              <span class="l-neu">● Neutral {{ sentiment.neuPct }}%</span>
+              <span class="l-neg">● Negative {{ sentiment.negPct }}%</span>
+              <span class="l-total">= 100%</span>
             </div>
           </div>
 
           <div class="text-col-keywords">
             <p class="section-label"># TOP KEYWORDS</p>
-            <p class="section-subtext">Click to filter responses</p>
+            <p class="section-subtext">Automatically extracted from reviews</p>
             <div class="word-cloud-v2">
-              <span class="w-huge">flavor</span><span class="w-med">warm</span><span class="w-large">comfort</span><span class="w-small">salty</span>
-              <span class="w-large">pricey</span><span class="w-med">fresh</span><span class="w-small">serving</span><span class="w-huge">delicious</span>
+              <span v-if="topKeywords.length === 0" class="w-small" style="color: #94a3b8;">Not enough text data yet.</span>
+
+              <span
+                v-for="(word, index) in topKeywords"
+                :key="word"
+                :class="getWordClass(index)"
+              >
+                {{ word }}
+              </span>
             </div>
           </div>
         </div>
@@ -462,6 +476,40 @@ const downloadReport = async () => {
     console.error("Error downloading report:", error);
     alert("Oops! Could not export the report right now.");
   }
+};
+
+const globalTotal = ref(0);
+const itemTota = ref(0);
+const topKeywords = ref([]);
+const sentiment = ref({pos: 0, neu: 0, neg: 0, posPct: 0, neuPct: 0, negPct: 0});
+
+const fetchItemStats = async (menuItemId) => {
+  try {
+    const response = await axios.get(`http://localhost:8080/analytics/stats/${menuItemId}`);
+    const data = response.data;
+
+    globalTotal.value = data.globalTotal;
+    itemTotal.value = data.itemTotal;
+
+    sentiment.value = {
+      pos: data.positiveCount,
+      neu: data.neutralCount,
+      neg: data.negativeCount,
+      posPct: data.positivePct,
+      neuPct: data.neutralPct,
+      negPct: data.negativePct,
+    };
+  } catch (error) {
+    console.error("Failed to load real stats", error);
+  }
+
+  topKeywords.value = data.topKeywords || [];
+  const getWordClass = (index) => {
+    if(index < 2) return 'w-huge';
+    if(index < 4) return 'w-large';
+    if(index < 6) return 'w-med';
+    return 'w-small';
+  };
 };
 
 onMounted(() => {
