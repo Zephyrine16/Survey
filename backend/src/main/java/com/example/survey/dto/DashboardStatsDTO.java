@@ -9,5 +9,6 @@ public class DashboardStatsDTO {
     public double positivePct;
     public double neutralPct;
     public double negativePct;
+    public double engagementPct;
     public java.util.List<String> topKeywords;
 }

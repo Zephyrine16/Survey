@@ -100,15 +100,26 @@ public class SurveyController {
         stats.globalTotal = answerRepository.countGlobalTotalResponses();
         stats.itemTotal = answerRepository.countTotalResponsesForItem(menuItemId);
 
+        stats.globalTotal = answerRepository.countGlobalTotalResponses();
+        stats.itemTotal = answerRepository.countTotalResponsesForItem(menuItemId);
+
+        Long globalTextTotal = answerRepository.countGlobalTextResponses();
+        if(stats.globalTotal > 0) {
+            stats.engagementPct = Math.round(((double) globalTextTotal / stats.globalTotal) * 1000.0) / 10.0;
+        }
+        else {
+            stats.engagementPct = 0.0;
+        }
+
         // Fetch text reviews for sentiment analysis
         List<String> reviews = answerRepository.getTextReviewsForItem(menuItemId);
 
         // Simple Sentiment Analyzer Logic
         for (String review : reviews) {
             String lower = review.toLowerCase();
-            if (lower.matches(".*\\b(good|great|love|best|delicious|yummy|perfect|nice|amazing|sweet|comfort|favorite)\\b.*")) {
+            if (lower.matches(".*\\b(good|great|love|best|delicious|yummy|perfect|nice|amazing|sweet|comfort|favorite|warm|fresh|hot|filling)\\b.*")) {
                 stats.positiveCount++;
-            } else if (lower.matches(".*\\b(bad|hate|awful|terrible|gross|expensive|worse|bland|nasty|disgusting|dry)\\b.*")) {
+            } else if (lower.matches(".*\\b(bad|hate|awful|terrible|gross|expensive|worse|bland|nasty|disgusting|dry|salty|cold|hard|stale)\\b.*")) {
                 stats.negativeCount++;
             } else {
                 stats.neutralCount++;

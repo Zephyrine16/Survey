@@ -34,8 +34,8 @@
         <div class="kpi-body">
           <div class="kpi-icon teal">✅</div>
           <div class="kpi-content">
-            <p class="kpi-label">COMPLETION RATE</p>
-            <h2>94.2%</h2>
+            <p class="kpi-label">ENGAGEMENT RATE</p>
+            <h2>{{ engagementPct }}%</h2>
             <p class="kpi-subtext">Submitted</p>
           </div>
         </div>
@@ -46,7 +46,7 @@
           <div class="kpi-icon orange">⭐</div>
           <div class="kpi-content">
             <p class="kpi-label">FAVORABLE RATING</p>
-            <h2>74.6%</h2>
+            <h2>{{ (sentiment.posPct + sentiment.neuPct).toFixed(1) }}%</h2>
             <p class="kpi-subtext">Excellent + Good</p>
           </div>
         </div>
@@ -355,16 +355,15 @@ const fetchAnalyticsForCurrentItem = async () => {
 };
 
 // Interaction Functions
-const selectItem = async (id: number) => {
-  if (selectedItemId.value !== id) {
-    selectedItemId.value = id;
-    await fetchAnalyticsForCurrentItem();
-  }
+const selectItem = async (itemId) => {
+  selectedItemId.value = itemId;
+  fetchItemStats(itemId);
+  fetchAnalyticsForCurrentItem();
 };
 
 const setCategory = (category: string) => {
   activeCategory.value = category;
-  activeSubcategory.value = 'All'; // Reset subcategory
+  activeSubcategory.value = 'All';
   autoSelectFirstFilteredItem();
 };
 
@@ -479,9 +478,17 @@ const downloadReport = async () => {
 };
 
 const globalTotal = ref(0);
-const itemTota = ref(0);
+const itemTotal = ref(0);
+const engagementPct = ref(0);
 const topKeywords = ref([]);
 const sentiment = ref({pos: 0, neu: 0, neg: 0, posPct: 0, neuPct: 0, negPct: 0});
+
+const getWordClass = (index) => {
+  if(index < 2) return 'w-huge';
+  if(index < 4) return 'w-large';
+  if(index < 6) return 'w-med';
+  return 'w-small';
+};
 
 const fetchItemStats = async (menuItemId) => {
   try {
@@ -490,6 +497,7 @@ const fetchItemStats = async (menuItemId) => {
 
     globalTotal.value = data.globalTotal;
     itemTotal.value = data.itemTotal;
+    engagementPct.value = data.engagementPct;
 
     sentiment.value = {
       pos: data.positiveCount,
@@ -499,17 +507,11 @@ const fetchItemStats = async (menuItemId) => {
       neuPct: data.neutralPct,
       negPct: data.negativePct,
     };
+
+    topKeywords.value = data.topKeywords || [];
   } catch (error) {
     console.error("Failed to load real stats", error);
   }
-
-  topKeywords.value = data.topKeywords || [];
-  const getWordClass = (index) => {
-    if(index < 2) return 'w-huge';
-    if(index < 4) return 'w-large';
-    if(index < 6) return 'w-med';
-    return 'w-small';
-  };
 };
 
 onMounted(() => {
