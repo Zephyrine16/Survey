@@ -88,4 +88,41 @@ public class SurveyController {
 
         return ResponseEntity.ok(aiData);
     }
+
+    // ==========================================
+    // 4. FETCH REAL DASHBOARD STATISTICS
+    // ==========================================
+    @GetMapping("/analytics/stats/{menuItemId}")
+    public ResponseEntity<com.example.survey.dto.DashboardStatsDTO> getItemStats(@PathVariable Long menuItemId) {
+        com.example.survey.dto.DashboardStatsDTO stats = new com.example.survey.dto.DashboardStatsDTO();
+
+        // Fetch base counts
+        stats.globalTotal = answerRepository.countGlobalTotalResponses();
+        stats.itemTotal = answerRepository.countTotalResponsesForItem(menuItemId);
+
+        // Fetch text reviews for sentiment analysis
+        List<String> reviews = answerRepository.getTextReviewsForItem(menuItemId);
+
+        // Simple Sentiment Analyzer Logic
+        for (String review : reviews) {
+            String lower = review.toLowerCase();
+            if (lower.matches(".*\\b(good|great|love|best|delicious|yummy|perfect|nice|amazing|sweet|comfort|favorite)\\b.*")) {
+                stats.positiveCount++;
+            } else if (lower.matches(".*\\b(bad|hate|awful|terrible|gross|expensive|worse|bland|nasty|disgusting|dry)\\b.*")) {
+                stats.negativeCount++;
+            } else {
+                stats.neutralCount++;
+            }
+        }
+
+        // Calculate Percentages (Avoid dividing by zero!)
+        int totalAnalyzed = stats.positiveCount + stats.neutralCount + stats.negativeCount;
+        if (totalAnalyzed > 0) {
+            stats.positivePct = Math.round(((double) stats.positiveCount / totalAnalyzed) * 1000.0) / 10.0;
+            stats.neutralPct = Math.round(((double) stats.neutralCount / totalAnalyzed) * 1000.0) / 10.0;
+            stats.negativePct = Math.round(((double) stats.negativeCount / totalAnalyzed) * 1000.0) / 10.0;
+        }
+
+        return ResponseEntity.ok(stats);
+    }
 }
