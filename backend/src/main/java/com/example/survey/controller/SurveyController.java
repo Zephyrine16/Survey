@@ -100,15 +100,26 @@ public class SurveyController {
         stats.globalTotal = answerRepository.countGlobalTotalResponses();
         stats.itemTotal = answerRepository.countTotalResponsesForItem(menuItemId);
 
+        stats.globalTotal = answerRepository.countGlobalTotalResponses();
+        stats.itemTotal = answerRepository.countTotalResponsesForItem(menuItemId);
+
+        Long globalTextTotal = answerRepository.countGlobalTextResponses();
+        if(stats.globalTotal > 0) {
+            stats.engagementPct = Math.round(((double) globalTextTotal / stats.globalTotal) * 1000.0) / 10.0;
+        }
+        else {
+            stats.engagementPct = 0.0;
+        }
+
         // Fetch text reviews for sentiment analysis
         List<String> reviews = answerRepository.getTextReviewsForItem(menuItemId);
 
         // Simple Sentiment Analyzer Logic
         for (String review : reviews) {
             String lower = review.toLowerCase();
-            if (lower.matches(".*\\b(good|great|love|best|delicious|yummy|perfect|nice|amazing|sweet|comfort|favorite)\\b.*")) {
+            if (lower.matches(".*\\b(good|great|love|best|delicious|yummy|perfect|nice|amazing|sweet|comfort|favorite|warm|fresh|hot|filling)\\b.*")) {
                 stats.positiveCount++;
-            } else if (lower.matches(".*\\b(bad|hate|awful|terrible|gross|expensive|worse|bland|nasty|disgusting|dry)\\b.*")) {
+            } else if (lower.matches(".*\\b(bad|hate|awful|terrible|gross|expensive|worse|bland|nasty|disgusting|dry|salty|cold|hard|stale)\\b.*")) {
                 stats.negativeCount++;
             } else {
                 stats.neutralCount++;
@@ -121,6 +132,29 @@ public class SurveyController {
             stats.positivePct = Math.round(((double) stats.positiveCount / totalAnalyzed) * 1000.0) / 10.0;
             stats.neutralPct = Math.round(((double) stats.neutralCount / totalAnalyzed) * 1000.0) / 10.0;
             stats.negativePct = Math.round(((double) stats.negativeCount / totalAnalyzed) * 1000.0) / 10.0;
+        }
+
+        java.util.List<String> stopWords = java.util.Arrays.asList(
+                "the", "and", "is", "it", "to", "a", "of", "for", "in", "on", "this", "but",
+                "very", "so", "with", "i", "was", "not", "have", "that", "like", "just", "my"
+        );
+
+        java.util.Map<String, Integer> wordCounts = new java.util.HashMap<>();
+        for(String review : reviews) {
+            String[] words = review.toLowerCase().replaceAll("[^a-z\\s]", "").split("\\s");
+            for(String word : words) {
+                if(word.length() > 2 && !stopWords.contains(word)) {
+                    wordCounts.put(word, wordCounts.getOrDefault(word, 0) + 1);
+                }
+            }
+        }
+
+        java.util.List<java.util.Map.Entry<String, Integer>> sortedWords = new java.util.ArrayList<>(wordCounts.entrySet());
+        sortedWords.sort((a, b) -> b.getValue().compareTo(a.getValue()));
+
+        stats.topKeywords = new java.util.ArrayList<>();
+        for(int i = 0; i < Math.min(8, sortedWords.size()); i++) {
+            stats.topKeywords.add(sortedWords.get(i).getKey());
         }
 
         return ResponseEntity.ok(stats);

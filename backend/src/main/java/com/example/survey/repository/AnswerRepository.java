@@ -75,4 +75,8 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
     // 3. Get global total responses (everyone who answered Question 1 across all items)
     @Query(value = "SELECT COUNT(*) FROM answers WHERE question_id = 1", nativeQuery = true)
     Long countGlobalTotalResponses();
+
+    // 4. Get global total of text responses (everyone who answered Question 5)
+    @Query(value = "SELECT COUNT(*) FROM answers WHERE question_id = 5 AND response IS NOT NULL AND TRIM(response) != ''", nativeQuery = true)
+    Long countGlobalTextResponses();
 }
