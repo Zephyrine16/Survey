@@ -73,22 +73,6 @@ public class SurveyController {
                 .body(csvBytes);
     }
 
-    @GetMapping("/ai/training-data")
-    public ResponseEntity<Map<String, List<String>>> getAITrainingData() {
-        List<Object[]> rawData = answerRepository.getAITrainingData();
-        Map<String, List<String>> aiData = new java.util.HashMap<>();
-
-        for(Object[] row : rawData) {
-            String foodName = row[0].toString();
-            String description = row[1].toString();
-
-            aiData.putIfAbsent(foodName, new java.util.ArrayList<>());
-            aiData.get(foodName).add(description);
-        }
-
-        return ResponseEntity.ok(aiData);
-    }
-
     // ==========================================
     // 4. FETCH REAL DASHBOARD STATISTICS
     // ==========================================

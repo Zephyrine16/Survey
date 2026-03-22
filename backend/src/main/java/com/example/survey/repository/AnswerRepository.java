@@ -57,13 +57,6 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
             "LEFT JOIN options o ON a.option_id = o.id", nativeQuery = true)
     List<Object[]> getExportData();
 
-    @Query(value = "SELECT m.name, a.response " +
-            "FROM answers a " +
-            "JOIN menu_items m ON a.menu_item_id = m.id " +
-            "WHERE a.question_id = 5 AND a.response IS NOT NULL AND TRIM(a.response) != ''",
-            nativeQuery = true)
-    List<Object[]> getAITrainingData();
-
     // 1. Get the total number of people who answered Question 1 for a specific item
     @Query(value = "SELECT COUNT(*) FROM answers WHERE menu_item_id = :menuItemId AND question_id = 1", nativeQuery = true)
     Long countTotalResponsesForItem(@org.springframework.data.repository.query.Param("menuItemId") Long menuItemId);
