@@ -151,6 +151,17 @@
 
       </div>
     </main>
+
+    <div v-if="showLimitModal" class="modal-overlay">
+      <div class="modal-card">
+        <div class="modal-icon">🎉</div>
+        <h2>Wow, we are overwhelmed!</h2>
+        <p>Thank you so much for your interest! We have reached our maximum limit of 200 participants, so we are no longer accepting new responses.</p>
+        <button class="primary-btn" @click="showLimitModal = false">
+          Close Window
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -161,6 +172,7 @@ import axios from 'axios';
 // --- State ---
 const menuItems = ref<any[]>([]);
 const isLanding = ref(true);
+const showLimitModal = ref(false);
 const activeCategory = ref('Meal');
 const currentItemIndex = ref(0);
 
@@ -379,8 +391,15 @@ const finishCategory = async () => {
     }
 
   } catch (error) {
-    console.error("Error saving category data:", error);
-    alert("Oops! There was a problem saving your answers. Please try again.");
+    const errorMessage = error.response?.data ? JSON.stringify(error.response.data) : "";
+
+    if(errorMessage.includes("LIMIT_REACHED")) {
+      showLimitModal.value = true;
+    }
+    else {
+      console.error("Error saving category data:", error);
+      alert("Oops! There was a problem saving your answers. Please try again.");
+    }
   }
 };
 
@@ -555,6 +574,17 @@ onMounted(() => {
 .nav-btn.primary:hover { background: #ea580c; }
 .nav-btn.success { background: #22c55e; color: white; margin-left: auto;}
 .nav-btn.success:hover { background: #16a34a; }
+
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(5px); display: flex; align-items: center; jusify-content: center; z-index: 9999; }
+.modal-card { background: white; padding: 40px; border-radius: 24px; text-align: center; max-width: 450px; width: 90%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+.modal-icon { font-size: 4.5rem; margin-bottom: 15px; }
+.modal-card h2 { margin: 0 0 15px 0; color: #0f172a; font-size: 1.8rem; font-weight: 800; }
+.modal-card p { color: #64748b; line-height: 1.6; margin-bottom: 30px; font-size: 1.05rem; }
+
+@keyframes popIn {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1;}
+}
 
 /* Simple entrance animation */
 .pulse { animation: pulse 2s infinite; }
