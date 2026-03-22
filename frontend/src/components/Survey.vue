@@ -151,6 +151,32 @@
 
       </div>
     </main>
+
+    <Teleport to="body">
+      <div v-if="showLimitModal" class="modal-overlay">
+        <div class="modal-card">
+          <div class="modal-icon">🎉</div>
+          <h2>Wow, we are overwhelmed!</h2>
+          <p>Thank you so much for your interest! We have reached our maximum limit of 200 participants, so we are no longer accepting new responses for this study.</p>
+          <button class="primary-btn" @click="showLimitModal = false">
+            Close Window
+          </button>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div v-if="showSuccessModal" class="modal-overlay">
+        <div class="modal-card">
+          <div class="modal-icon">🎉</div>
+          <h2>Amazing Job!</h2>
+          <p>You have completely finished the CaféRater survey. Your feedback is going to help us build a much smarter food AI. Thank you for your time!</p>
+          <button class="primary-btn" @click="resetSurvey">
+            Start New Survey
+          </button>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -161,6 +187,7 @@ import axios from 'axios';
 // --- State ---
 const menuItems = ref<any[]>([]);
 const isLanding = ref(true);
+const showLimitModal = ref(false);
 const activeCategory = ref('Meal');
 const currentItemIndex = ref(0);
 
@@ -335,6 +362,11 @@ const prevItem = () => {
   }
 };
 
+const resetSurvey = () => {
+  showSuccessModal.value = false;
+  window.location.reload();
+}
+
 const finishCategory = async () => {
   try {
     // 1. Format the data for Spring Boot
@@ -373,14 +405,20 @@ const finishCategory = async () => {
       isLanding.value = true; // Show the nice landing page for the new category
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      // They just finished the very last category!
-      alert("🎉 Amazing! You have completely finished the CafeRater survey!");
+      showSuccessModal.value = true;
       // You could redirect them to a "Thank You" page here
     }
 
   } catch (error) {
-    console.error("Error saving category data:", error);
-    alert("Oops! There was a problem saving your answers. Please try again.");
+    const errorMessage = error.response?.data ? JSON.stringify(error.response.data) : "";
+
+    if(errorMessage.includes("LIMIT_REACHED")) {
+      showLimitModal.value = true;
+    }
+    else {
+      console.error("Error saving category data:", error);
+      alert("Oops! There was a problem saving your answers. Please try again.");
+    }
   }
 };
 
@@ -534,8 +572,8 @@ onMounted(() => {
 .grid-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
 .opt-btn-grid { padding: 20px 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 8px; min-height: 110px;}
 .opt-icon-large { font-size: 2rem; }
-.opt-label-main { font-weight: 700; color: #0f172a; font-size: 1.05rem; }
-.opt-sub { font-size: 0.8rem; color: #64748b; font-weight: 500; }
+.opt-label-main { width: 100%; text-align: center; font-weight: 700; color: #0f172a; font-size: 1.05rem; }
+.opt-sub { width: 100%; text-align: center; font-size: 0.8rem; color: #64748b; font-weight: 500; }
 
 /* Text Area (Q5) */
 .text-input-wrapper { position: relative; }
@@ -555,6 +593,17 @@ onMounted(() => {
 .nav-btn.primary:hover { background: #ea580c; }
 .nav-btn.success { background: #22c55e; color: white; margin-left: auto;}
 .nav-btn.success:hover { background: #16a34a; }
+
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(5px); display: flex; align-items: center; jusify-content: center; z-index: 9999; }
+.modal-card { background: white; padding: 40px; border-radius: 24px; text-align: center; max-width: 450px; width: 90%; margin: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+.modal-icon { font-size: 4.5rem; margin-bottom: 15px; }
+.modal-card h2 { margin: 0 0 15px 0; color: #0f172a; font-size: 1.8rem; font-weight: 800; }
+.modal-card p { color: #64748b; line-height: 1.6; margin-bottom: 30px; font-size: 1.05rem; }
+
+@keyframes popIn {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1;}
+}
 
 /* Simple entrance animation */
 .pulse { animation: pulse 2s infinite; }

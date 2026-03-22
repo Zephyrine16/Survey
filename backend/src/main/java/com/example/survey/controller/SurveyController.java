@@ -18,10 +18,14 @@ public class SurveyController {
     private AnswerRepository answerRepository;
 
     @PostMapping("/submit-category")
-    public ResponseEntity<?> submitCategoryAnswers(@RequestBody List<CategorySubmissionDTO> payload) {
+    public ResponseEntity<?> submitCategoryAnswers(@RequestBody List<com.example.survey.dto.CategorySubmissionDTO> payload) {
         try {
-            for (CategorySubmissionDTO dto : payload) {
+            Long totalSurveys = answerRepository.countGlobalTotalResponses();
 
+            if(totalSurveys != null && totalSurveys >= 200) {
+                return ResponseEntity.badRequest().body("{\"error\": \"LIMIT_REACHED\"}");
+            }
+            for (com.example.survey.dto.CategorySubmissionDTO dto : payload) {
                 // 2. We use our new Native Query to force the data directly into the 'answers' table
                 answerRepository.saveRawAnswer(
                         "student@example.com",     // Dummy email since Dashboard reads it
