@@ -242,7 +242,9 @@
                 "{{ feedback.response || feedback.textResponse || (typeof feedback === 'string' ? feedback : 'No text saved in database') }}"
               </p>
               <div class="exc-footer">
-                <span class="exc-tag" :class="getSentimentData(i).class">{{ getSentimentData(i).icon }} {{ getSentimentData(i).label }}</span>
+                <span class="exc-tag" :class="getSentimentData(feedback).class">
+                  {{ getSentimentData(feedback).icon }} {{ getSentimentData(feedback).label }}
+                </span>
               </div>
             </div>
           </div>
@@ -448,11 +450,21 @@ const topResponse = (answers: any[]) => {
   return highest.optionLabel;
 };
 
-const getSentimentData = (index: number) => {
-  if (index % 3 === 0 || index % 3 === 1) return { class: 'pos', icon: '👍', label: 'Positive' };
-  if (index % 3 === 2 && index % 2 === 0) return { class: 'neu', icon: '—', label: 'Neutral' };
-  return { class: 'neg', icon: '👎', label: 'Negative' };
-};
+const getSentimentData = (feedback) => {
+  const text = (feedback.response || feedback.textResponse || (typeof feedback === 'string' ? feedback: '')).toLowerCase();
+  if(!text) return { class: 'neu', icon: '-', label: 'Neutral' };
+
+  const positiveWords = ['good', 'great', 'love', 'best', 'delicious', 'yummy', 'perfect', 'nice', 'amazing', 'sweet', 'comfort', 'favorite', 'warm', 'fresh', 'hot', 'filling'];
+  const negativeWords = ['bad', 'hate', 'awful', 'terrible', 'gross', 'expensive', 'worse', 'bland', 'nasty', 'disgusting', 'dry', 'salty', 'cold', 'hard', 'stale'];
+
+  const isPositive = positiveWords.some(word => text.includes(word));
+  const isNegative = negativeWords.some(word => text.includes(word));
+
+  if(isNegative) return { class: 'neg', icon: '👎', label: 'Negative' };
+  if(isPositive) return { class: 'pos', icon: '👍', label: 'Positive' };
+
+  return { class: 'neu', icon: '-', label: 'Neutral'};
+}
 
 const downloadReport = async () => {
   try {
