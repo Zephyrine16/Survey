@@ -191,6 +191,8 @@ const showLimitModal = ref(false);
 const activeCategory = ref('Meal');
 const currentItemIndex = ref(0);
 
+const currentSessionId = Math.random().toString(36).substring(2, 10);
+
 // Answers Dictionary: { itemId: { questionId: selectedOptionId / text } }
 const answers = ref<Record<number, Record<number, any>>>({});
 
@@ -381,7 +383,7 @@ const finishCategory = async () => {
           const isText = typeof ans === 'string';
 
           payload.push({
-            userId: 1, // Hardcoded test user for now
+            userId: currentSessionId,
             menuItemId: item.id,
             questionId: Number(qId),
             selectedOptionId: isText ? null : ans,
