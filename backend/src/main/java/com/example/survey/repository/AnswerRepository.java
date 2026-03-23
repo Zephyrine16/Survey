@@ -43,7 +43,7 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
     // FIX 1: Aligned the SQL columns (user_id) and the Params perfectly with the new DTO!
     @Modifying
     @Transactional
-    @Query(value = "INSERT INTO answers (user_id, menu_item_id, question_id, selected_option_id, response) VALUES (:userId, :menuItemId, :questionId, :selectedOptionId, :textResponse)", nativeQuery = true)
+    @Query(value = "INSERT INTO answers (user_id, menu_item_id, question_id, option_id, response) VALUES (:userId, :menuItemId, :questionId, :selectedOptionId, :textResponse)", nativeQuery = true)
     void saveRawAnswer(
             @Param("userId") String userId,
             @Param("menuItemId") Long menuItemId,
@@ -57,7 +57,7 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
             "FROM answers a " +
             "JOIN menu_items m ON a.menu_item_id = m.id " +
             "JOIN questions q ON a.question_id = q.id " +
-            "LEFT JOIN options o ON a.selected_option_id = o.id", nativeQuery = true)
+            "LEFT JOIN options o ON a.option_id = o.id", nativeQuery = true)
     List<Object[]> getExportData();
 
     // 1. Get the total number of people who answered Question 1 for a specific item
