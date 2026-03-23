@@ -40,28 +40,7 @@
       </div>
 
       <main class="main-content">
-
-        <div v-if="isLanding" class="landing-view">
-          <div class="landing-card">
-            <div class="category-icon">🍽️</div>
-            <h2>{{ activeCategory }}</h2>
-            <p class="subtitle">{{ filteredItems.length }} items • Scroll to rate each one</p>
-
-            <div class="question-preview-list">
-              <div v-for="(q, index) in questions" :key="q.id" class="q-preview">
-                <span class="q-num-light">{{ index + 1 }}</span>
-                <span>{{ q.shortText }}</span>
-              </div>
-            </div>
-
-            <button class="primary-btn pulse" @click="startRating">
-              Let's go &rarr;
-            </button>
-          </div>
-        </div>
-
         <div v-else class="rating-view">
-
           <div class="left-pane">
             <div class="sticky-card">
               <div class="pane-header">
@@ -206,7 +185,6 @@ const showSuccessModal = ref(false);
 
 // --- State ---
 const menuItems = ref<any[]>([]);
-const isLanding = ref(true);
 const activeCategory = ref('Meal');
 const currentItemIndex = ref(0);
 
@@ -357,13 +335,7 @@ const fetchMenuItems = async () => {
 
 const selectCategory = (cat: string) => {
   activeCategory.value = cat;
-  isLanding.value = true;
   currentItemIndex.value = 0;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-};
-
-const startRating = () => {
-  isLanding.value = false;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
@@ -418,7 +390,6 @@ const finishCategory = async () => {
       // Move to the next category in the array
       activeCategory.value = categories[currentCatIndex + 1];
       currentItemIndex.value = 0;
-      isLanding.value = true;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       // Trigger the Success Modal instead of an alert!
@@ -583,18 +554,6 @@ onMounted(() => {
 .pill-fruittea.active { background: #fda4af; color: #9f1239; border-color: #f43f5e; }
 
 .main-content { max-width: 1200px; margin: 40px auto; padding: 0 30px; }
-
-/* LANDING VIEW */
-.landing-view { display: flex; justify-content: center; align-items: center; margin-top: 60px; }
-.landing-card { background: white; padding: 50px; border-radius: 24px; text-align: center; max-width: 500px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid #f1f5f9;}
-.category-icon { font-size: 5rem; margin-bottom: 20px; }
-.landing-card h2 { margin: 0 0 5px 0; font-size: 2rem; color: #0f172a; }
-.subtitle { color: #64748b; margin-bottom: 30px; font-size: 1.1rem; }
-.question-preview-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 40px; text-align: left; }
-.q-preview { display: flex; align-items: center; gap: 15px; background: #f8fafc; padding: 12px 20px; border-radius: 12px; border: 1px solid #e2e8f0; font-size: 0.95rem; font-weight: 500; color: #475569;}
-.q-num-light { background: #ffedd5; color: #ea580c; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; }
-.primary-btn { background: #f97316; color: white; border: none; padding: 16px 40px; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; width: 100%; transition: transform 0.2s, background 0.2s; }
-.primary-btn:hover { background: #ea580c; transform: translateY(-2px); }
 
 /* RATING VIEW (Split Pane) */
 .rating-view { display: grid; grid-template-columns: 350px 1fr; gap: 40px; align-items: start; }
