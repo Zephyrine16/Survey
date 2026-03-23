@@ -13,22 +13,24 @@ import java.util.Map;
 @CrossOrigin(origins = {"http://localhost:5173", "http://127.0.0.1:5173"})
 public class SurveyController {
 
-    // 1. We swap out the repository so it connects to the Analytics table!
     @Autowired
     private AnswerRepository answerRepository;
 
+    // ==========================================
+    // 1. SAVE SURVEY ANSWERS (Now with Anonymous IDs!)
+    // ==========================================
     @PostMapping("/submit-category")
-    public ResponseEntity<?> submitCategoryAnswers(@RequestBody List<com.example.survey.dto.CategorySubmissionDTO> payload) {
+    public ResponseEntity<?> submitCategoryAnswers(@RequestBody List<CategorySubmissionDTO> payload) {
         try {
+            // The Bouncer: Checks for the 200 limit
             Long totalSurveys = answerRepository.countGlobalTotalResponses();
-
             if(totalSurveys != null && totalSurveys >= 200) {
                 return ResponseEntity.badRequest().body("{\"error\": \"LIMIT_REACHED\"}");
             }
-            for (com.example.survey.dto.CategorySubmissionDTO dto : payload) {
-                // 2. We use our new Native Query to force the data directly into the 'answers' table
+
+            for (CategorySubmissionDTO dto : payload) {
                 answerRepository.saveRawAnswer(
-                        "student@example.com",     // Dummy email since Dashboard reads it
+                        dto.getUserId(),           // <--- UPDATED: Grabs the random ID from Vue!
                         dto.getMenuItemId(),
                         dto.getQuestionId(),
                         dto.getSelectedOptionId(),
@@ -45,14 +47,14 @@ public class SurveyController {
     }
 
     // ==========================================
-    // 2. THIS EXPORTS THE CSV
+    // 2. EXPORT THE CSV
     // ==========================================
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportReport() {
         List<Object[]> data = answerRepository.getExportData();
 
-        // FIX #1: Add \uFEFF at the very beginning so Excel reads special characters (like ₱) correctly!
-        StringBuilder csv = new StringBuilder("\uFEFFUser Email,Menu Item,Question,Selected Option,Text Response\n");
+        // UPDATED: Changed "User Email" to "Session ID" to reflect our anonymous tracking!
+        StringBuilder csv = new StringBuilder("\uFEFFSession ID,Menu Item,Question,Selected Option,Text Response\n");
 
         for (Object[] row : data) {
             String email = row[0] != null ? row[0].toString() : "Anonymous";
@@ -68,7 +70,6 @@ public class SurveyController {
                     .append(textResponse).append("\n");
         }
 
-        // FIX #2: Explicitly tell Java to format the bytes as UTF-8
         byte[] csvBytes = csv.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
         return ResponseEntity.ok()
@@ -78,24 +79,21 @@ public class SurveyController {
     }
 
     // ==========================================
-    // 4. FETCH REAL DASHBOARD STATISTICS
+    // 3. FETCH REAL DASHBOARD STATISTICS
     // ==========================================
     @GetMapping("/analytics/stats/{menuItemId}")
     public ResponseEntity<com.example.survey.dto.DashboardStatsDTO> getItemStats(@PathVariable Long menuItemId) {
         com.example.survey.dto.DashboardStatsDTO stats = new com.example.survey.dto.DashboardStatsDTO();
 
-        // Fetch base counts
+        // Fetch base counts (Cleaned up duplicate lines here!)
         stats.globalTotal = answerRepository.countGlobalTotalResponses();
         stats.itemTotal = answerRepository.countTotalResponsesForItem(menuItemId);
 
-        stats.globalTotal = answerRepository.countGlobalTotalResponses();
-        stats.itemTotal = answerRepository.countTotalResponsesForItem(menuItemId);
-
+        // Engagement Rate Math
         Long globalTextTotal = answerRepository.countGlobalTextResponses();
         if(stats.globalTotal > 0) {
             stats.engagementPct = Math.round(((double) globalTextTotal / stats.globalTotal) * 1000.0) / 10.0;
-        }
-        else {
+        } else {
             stats.engagementPct = 0.0;
         }
 
@@ -114,7 +112,7 @@ public class SurveyController {
             }
         }
 
-        // Calculate Percentages (Avoid dividing by zero!)
+        // Calculate Percentages
         int totalAnalyzed = stats.positiveCount + stats.neutralCount + stats.negativeCount;
         if (totalAnalyzed > 0) {
             stats.positivePct = Math.round(((double) stats.positiveCount / totalAnalyzed) * 1000.0) / 10.0;
@@ -122,6 +120,7 @@ public class SurveyController {
             stats.negativePct = Math.round(((double) stats.negativeCount / totalAnalyzed) * 1000.0) / 10.0;
         }
 
+        // Keyword Extractor
         java.util.List<String> stopWords = java.util.Arrays.asList(
                 "the", "and", "is", "it", "to", "a", "of", "for", "in", "on", "this", "but",
                 "very", "so", "with", "i", "was", "not", "have", "that", "like", "just", "my"
@@ -129,7 +128,8 @@ public class SurveyController {
 
         java.util.Map<String, Integer> wordCounts = new java.util.HashMap<>();
         for(String review : reviews) {
-            String[] words = review.toLowerCase().replaceAll("[^a-z\\s]", "").split("\\s");
+            // FIXED: Added a '+' to \\s so it safely removes double-spaces
+            String[] words = review.toLowerCase().replaceAll("[^a-z\\s]", "").split("\\s+");
             for(String word : words) {
                 if(word.length() > 2 && !stopWords.contains(word)) {
                     wordCounts.put(word, wordCounts.getOrDefault(word, 0) + 1);
