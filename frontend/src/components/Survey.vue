@@ -1,169 +1,182 @@
 <template>
   <div class="survey-layout">
 
-    <header class="top-nav">
-      <div class="nav-content">
-        <div class="logo">
-          <span class="logo-icon">🍴</span>
-          <h1>CaféRater</h1>
-        </div>
-        <div class="global-progress">
-          <strong>{{ totalRatedItems }}</strong> of {{ menuItems.length }} rated
-        </div>
-      </div>
-    </header>
-
-    <div class="tabs-container">
-      <div class="tabs-scroll">
-        <button
-          v-for="cat in categories"
-          :key="cat"
-          class="tab-btn"
-          :class="[getPillClass(cat), { active: activeCategory === cat }]"
-          @click="selectCategory(cat)"
-        >
-          {{ cat }}
+    <div v-if="!hasStarted" class="welcome-screen">
+      <div class="welcome-card">
+        <div class="welcome-icon">🍴</div>
+        <h1>Welcome to CaféRater!</h1>
+        <p>Help us build a smarter AI by rating our menu items. Your feedback directly shapes the future of our cafe!</p>
+        <button class="primary-btn pulse" @click="hasStarted = true">
+          Start the Survey &rarr;
         </button>
       </div>
     </div>
 
-    <main class="main-content">
-
-      <div v-if="isLanding" class="landing-view">
-        <div class="landing-card">
-          <div class="category-icon">🍽️</div>
-          <h2>{{ activeCategory }}</h2>
-          <p class="subtitle">{{ filteredItems.length }} items • Scroll to rate each one</p>
-
-          <div class="question-preview-list">
-            <div v-for="(q, index) in questions" :key="q.id" class="q-preview">
-              <span class="q-num-light">{{ index + 1 }}</span>
-              <span>{{ q.shortText }}</span>
-            </div>
+    <div v-else class="app-container">
+      <header class="top-nav">
+        <div class="nav-content">
+          <div class="logo">
+            <span class="logo-icon">🍴</span>
+            <h1>CaféRater</h1>
           </div>
+          <div class="global-progress">
+            <strong>{{ totalRatedItems }}</strong> of {{ menuItems.length }} rated
+          </div>
+        </div>
+      </header>
 
-          <button class="primary-btn pulse" @click="startRating">
-            Let's go &rarr;
+      <div class="tabs-container">
+        <div class="tabs-scroll">
+          <button
+            v-for="cat in categories"
+            :key="cat"
+            class="tab-btn"
+            :class="[getPillClass(cat), { active: activeCategory === cat }]"
+            @click="selectCategory(cat)"
+          >
+            {{ cat }}
           </button>
         </div>
       </div>
 
-      <div v-else class="rating-view">
+      <main class="main-content">
 
-        <div class="left-pane">
-          <div class="sticky-card">
-            <div class="pane-header">
-              <span class="breadcrumb">{{ activeCategory }} — <span class="text-dark">{{ currentItem?.name }}</span></span>
-              <span class="cat-progress"><strong class="green-text">{{ completedInCategory }}</strong>/{{ filteredItems.length }} done</span>
-            </div>
+        <div v-if="isLanding" class="landing-view">
+          <div class="landing-card">
+            <div class="category-icon">🍽️</div>
+            <h2>{{ activeCategory }}</h2>
+            <p class="subtitle">{{ filteredItems.length }} items • Scroll to rate each one</p>
 
-            <div class="item-cover">
-              <div class="cover-img" style="background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800');"></div>
-              <div class="cover-info">
-                <h3>{{ currentItem?.name }}</h3>
-                <span class="badge">🍴 {{ activeCategory }}</span>
+            <div class="question-preview-list">
+              <div v-for="(q, index) in questions" :key="q.id" class="q-preview">
+                <span class="q-num-light">{{ index + 1 }}</span>
+                <span>{{ q.shortText }}</span>
               </div>
             </div>
+
+            <button class="primary-btn pulse" @click="startRating">
+              Let's go &rarr;
+            </button>
           </div>
         </div>
 
-        <div class="right-pane">
-          <div class="questions-list">
+        <div v-else class="rating-view">
 
-            <div v-for="(q, index) in questions" :key="q.id" class="question-card">
-
-              <div class="q-header">
-                <div class="q-bubble" :class="{ 'answered': isAnswered(currentItem?.id, q.id) }">
-                  <span v-if="isAnswered(currentItem?.id, q.id)">✓</span>
-                  <span v-else>{{ index + 1 }}</span>
-                </div>
-                <h4>{{ q.text }}</h4>
+          <div class="left-pane">
+            <div class="sticky-card">
+              <div class="pane-header">
+                <span class="breadcrumb">{{ activeCategory }} — <span class="text-dark">{{ currentItem?.name }}</span></span>
+                <span class="cat-progress"><strong class="green-text">{{ completedInCategory }}</strong>/{{ filteredItems.length }} done</span>
               </div>
 
-              <div v-if="q.type === 'vertical-radio'" class="vertical-options">
+              <div class="item-cover">
+                <div class="cover-img" style="background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800');"></div>
+                <div class="cover-info">
+                  <h3>{{ currentItem?.name }}</h3>
+                  <span class="badge">🍴 {{ activeCategory }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="right-pane">
+            <div class="questions-list">
+
+              <div v-for="(q, index) in questions" :key="q.id" class="question-card">
+
+                <div class="q-header">
+                  <div class="q-bubble" :class="{ 'answered': isAnswered(currentItem?.id, q.id) }">
+                    <span v-if="isAnswered(currentItem?.id, q.id)">✓</span>
+                    <span v-else>{{ index + 1 }}</span>
+                  </div>
+                  <h4>{{ q.text }}</h4>
+                </div>
+
+                <div v-if="q.type === 'vertical-radio'" class="vertical-options">
+                  <button
+                    v-for="opt in q.options"
+                    :key="opt.id"
+                    class="opt-btn-vertical"
+                    :class="{ selected: getAnswer(currentItem?.id, q.id) === opt.id }"
+                    @click="setAnswer(currentItem?.id, q.id, opt.id)"
+                  >
+                    <span class="opt-icon">{{ opt.icon }}</span>
+                    <span class="opt-label">{{ opt.label }}</span>
+                  </button>
+                </div>
+
+                <div v-if="q.type === 'grid-radio'" class="grid-options">
+                  <button
+                    v-for="opt in q.options"
+                    :key="opt.id"
+                    class="opt-btn-grid"
+                    :class="{ selected: getAnswer(currentItem?.id, q.id) === opt.id }"
+                    @click="setAnswer(currentItem?.id, q.id, opt.id)"
+                  >
+                    <span class="opt-icon-large" v-if="opt.icon">{{ opt.icon }}</span>
+                    <span class="opt-label-main">{{ opt.label }}</span>
+                    <span class="opt-sub" v-if="opt.sub">{{ opt.sub }}</span>
+                  </button>
+                </div>
+
+                <div v-if="q.type === 'textarea'" class="text-input-wrapper">
+                  <textarea
+                    class="styled-textarea"
+                    :class="{ 'has-content': getAnswer(currentItem?.id, q.id)?.length > 0 }"
+                    placeholder="Describe this dish as if you're telling an AI what it tastes, looks, and feels like..."
+                    :value="getAnswer(currentItem?.id, q.id) || ''"
+                    @input="setTextAnswer(currentItem?.id, q.id, $event.target.value)"
+                    maxlength="300"
+                  ></textarea>
+                  <div class="char-count">
+                    {{ getAnswer(currentItem?.id, q.id)?.length || 0 }} / 300
+                  </div>
+                  <p class="helper-text">Your description helps train a smarter food recommendation AI.</p>
+                </div>
+
+              </div>
+
+              <div class="action-footer">
+                <button class="nav-btn secondary" @click="prevItem" :disabled="currentItemIndex === 0">
+                  &larr; Previous Item
+                </button>
+
                 <button
-                  v-for="opt in q.options"
-                  :key="opt.id"
-                  class="opt-btn-vertical"
-                  :class="{ selected: getAnswer(currentItem?.id, q.id) === opt.id }"
-                  @click="setAnswer(currentItem?.id, q.id, opt.id)"
+                  v-if="currentItemIndex < filteredItems.length - 1"
+                  class="nav-btn primary"
+                  @click="nextItem"
+                  :disabled="!isCurrentItemComplete"
                 >
-                  <span class="opt-icon">{{ opt.icon }}</span>
-                  <span class="opt-label">{{ opt.label }}</span>
+                  Next Item &rarr;
+                </button>
+
+                <button
+                  v-else
+                  class="nav-btn success"
+                  @click="finishCategory"
+                  :disabled="!isCurrentItemComplete"
+                >
+                  Submit & Return to Categories
                 </button>
               </div>
 
-              <div v-if="q.type === 'grid-radio'" class="grid-options">
-                <button
-                  v-for="opt in q.options"
-                  :key="opt.id"
-                  class="opt-btn-grid"
-                  :class="{ selected: getAnswer(currentItem?.id, q.id) === opt.id }"
-                  @click="setAnswer(currentItem?.id, q.id, opt.id)"
-                >
-                  <span class="opt-icon-large" v-if="opt.icon">{{ opt.icon }}</span>
-                  <span class="opt-label-main">{{ opt.label }}</span>
-                  <span class="opt-sub" v-if="opt.sub">{{ opt.sub }}</span>
-                </button>
-              </div>
-
-              <div v-if="q.type === 'textarea'" class="text-input-wrapper">
-                <textarea
-                  class="styled-textarea"
-                  :class="{ 'has-content': getAnswer(currentItem?.id, q.id)?.length > 0 }"
-                  placeholder="Describe this dish as if you're telling an AI what it tastes, looks, and feels like..."
-                  :value="getAnswer(currentItem?.id, q.id) || ''"
-                  @input="setTextAnswer(currentItem?.id, q.id, $event.target.value)"
-                  maxlength="300"
-                ></textarea>
-                <div class="char-count">
-                  {{ getAnswer(currentItem?.id, q.id)?.length || 0 }} / 300
-                </div>
-                <p class="helper-text">Your description helps train a smarter food recommendation AI.</p>
-              </div>
-
-            </div> <div class="action-footer">
-            <button class="nav-btn secondary" @click="prevItem" :disabled="currentItemIndex === 0">
-              &larr; Previous Item
-            </button>
-
-            <button
-              v-if="currentItemIndex < filteredItems.length - 1"
-              class="nav-btn primary"
-              @click="nextItem"
-              :disabled="!isCurrentItemComplete"
-            >
-              Next Item &rarr;
-            </button>
-
-            <button
-              v-else
-              class="nav-btn success"
-              @click="finishCategory"
-              :disabled="!isCurrentItemComplete"
-            >
-              Submit & Return to Categories
-            </button>
+            </div>
           </div>
 
-          </div>
         </div>
-
+      </main>
+    </div> <Teleport to="body">
+    <div v-if="showLimitModal" class="modal-overlay">
+      <div class="modal-card">
+        <div class="modal-icon">🎉</div>
+        <h2>Wow, we are overwhelmed!</h2>
+        <p>Thank you so much for your interest! We have reached our maximum limit of 200 participants, so we are no longer accepting new responses for this study.</p>
+        <button class="primary-btn" @click="showLimitModal = false">
+          Close Window
+        </button>
       </div>
-    </main>
-
-    <Teleport to="body">
-      <div v-if="showLimitModal" class="modal-overlay">
-        <div class="modal-card">
-          <div class="modal-icon">🎉</div>
-          <h2>Wow, we are overwhelmed!</h2>
-          <p>Thank you so much for your interest! We have reached our maximum limit of 200 participants, so we are no longer accepting new responses for this study.</p>
-          <button class="primary-btn" @click="showLimitModal = false">
-            Close Window
-          </button>
-        </div>
-      </div>
-    </Teleport>
+    </div>
+  </Teleport>
 
     <Teleport to="body">
       <div v-if="showSuccessModal" class="modal-overlay">
@@ -177,6 +190,7 @@
         </div>
       </div>
     </Teleport>
+
   </div>
 </template>
 
@@ -184,14 +198,17 @@
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 
+// --- NEW: Welcome Screen & Anonymous User ID ---
+const hasStarted = ref(false);
+const currentSessionId = Math.random().toString(36).substring(2, 10);
+const showLimitModal = ref(false);
+const showSuccessModal = ref(false);
+
 // --- State ---
 const menuItems = ref<any[]>([]);
 const isLanding = ref(true);
-const showLimitModal = ref(false);
 const activeCategory = ref('Meal');
 const currentItemIndex = ref(0);
-
-const currentSessionId = Math.random().toString(36).substring(2, 10);
 
 // Answers Dictionary: { itemId: { questionId: selectedOptionId / text } }
 const answers = ref<Record<number, Record<number, any>>>({});
@@ -367,23 +384,21 @@ const prevItem = () => {
 const resetSurvey = () => {
   showSuccessModal.value = false;
   window.location.reload();
-}
+};
 
 const finishCategory = async () => {
   try {
     // 1. Format the data for Spring Boot
-    // We loop through the items in the CURRENT category and grab their answers
     const payload: any[] = [];
 
     filteredItems.value.forEach(item => {
       const itemAnswers = answers.value[item.id];
       if (itemAnswers) {
         Object.entries(itemAnswers).forEach(([qId, ans]) => {
-          // If the answer is a string, it's the text area. Otherwise, it's a radio button ID.
           const isText = typeof ans === 'string';
 
           payload.push({
-            userId: currentSessionId,
+            userId: currentSessionId, // Uses the anonymous ID generated on page load!
             menuItemId: item.id,
             questionId: Number(qId),
             selectedOptionId: isText ? null : ans,
@@ -394,7 +409,6 @@ const finishCategory = async () => {
     });
 
     // 2. Send the HTTP POST request to your database
-    // (Note: Make sure this URL matches your actual Spring Boot endpoint!)
     await axios.post('http://localhost:8080/submit-category', payload);
 
     // 3. Find the next category and navigate
@@ -404,20 +418,20 @@ const finishCategory = async () => {
       // Move to the next category in the array
       activeCategory.value = categories[currentCatIndex + 1];
       currentItemIndex.value = 0;
-      isLanding.value = true; // Show the nice landing page for the new category
+      isLanding.value = true;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
+      // Trigger the Success Modal instead of an alert!
       showSuccessModal.value = true;
-      // You could redirect them to a "Thank You" page here
     }
 
-  } catch (error) {
+  } catch (error: any) {
+    // --- Check if the backend bounced us due to the 200 limit! ---
     const errorMessage = error.response?.data ? JSON.stringify(error.response.data) : "";
 
-    if(errorMessage.includes("LIMIT_REACHED")) {
+    if (errorMessage.includes("LIMIT_REACHED")) {
       showLimitModal.value = true;
-    }
-    else {
+    } else {
       console.error("Error saving category data:", error);
       alert("Oops! There was a problem saving your answers. Please try again.");
     }
@@ -457,6 +471,56 @@ onMounted(() => {
 <style scoped>
 /* GLOBALS */
 .survey-layout { background-color: #f8fafc; min-height: 100vh; font-family: 'Inter', -apple-system, sans-serif; color: #1e293b; padding-bottom: 50px;}
+
+/* --- WELCOME SCREEN --- */
+.welcome-screen {
+  position: fixed;
+  inset: 0;
+  background-image: url('https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&q=80&w=2000');
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.welcome-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+}
+.welcome-card {
+  position: relative;
+  background: white;
+  padding: 50px 40px;
+  border-radius: 24px;
+  text-align: center;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.welcome-icon {
+  background: #f97316;
+  color: white;
+  width: 70px;
+  height: 70px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  margin: 0 auto 20px auto;
+  box-shadow: 0 10px 15px -3px rgba(249, 115, 22, 0.3);
+}
+.welcome-card h1 { margin: 0 0 15px 0; color: #0f172a; font-size: 2.2rem; font-weight: 800; }
+.welcome-card p { color: #475569; line-height: 1.6; margin-bottom: 35px; font-size: 1.1rem; }
+@keyframes slideUp {
+  0% { transform: translateY(40px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
 
 /* HEADER */
 .top-nav { background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 50; }
@@ -574,6 +638,8 @@ onMounted(() => {
 .grid-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
 .opt-btn-grid { padding: 20px 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 8px; min-height: 110px;}
 .opt-icon-large { font-size: 2rem; }
+
+/* Formatted for centering text, perfect for mobile */
 .opt-label-main { width: 100%; text-align: center; font-weight: 700; color: #0f172a; font-size: 1.05rem; }
 .opt-sub { width: 100%; text-align: center; font-size: 0.8rem; color: #64748b; font-weight: 500; }
 
@@ -596,17 +662,6 @@ onMounted(() => {
 .nav-btn.success { background: #22c55e; color: white; margin-left: auto;}
 .nav-btn.success:hover { background: #16a34a; }
 
-.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(5px); display: flex; align-items: center; jusify-content: center; z-index: 9999; }
-.modal-card { background: white; padding: 40px; border-radius: 24px; text-align: center; max-width: 450px; width: 90%; margin: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-.modal-icon { font-size: 4.5rem; margin-bottom: 15px; }
-.modal-card h2 { margin: 0 0 15px 0; color: #0f172a; font-size: 1.8rem; font-weight: 800; }
-.modal-card p { color: #64748b; line-height: 1.6; margin-bottom: 30px; font-size: 1.05rem; }
-
-@keyframes popIn {
-  0% { transform: scale(0.8); opacity: 0; }
-  100% { transform: scale(1); opacity: 1;}
-}
-
 /* Simple entrance animation */
 .pulse { animation: pulse 2s infinite; }
 @keyframes pulse {
@@ -615,47 +670,45 @@ onMounted(() => {
   100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
 }
 
+/* --- CUSTOM MODALS --- */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.modal-card {
+  background: white;
+  padding: 40px;
+  border-radius: 24px;
+  text-align: center;
+  max-width: 450px;
+  width: 90%;
+  margin: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+.modal-icon { font-size: 4.5rem; margin-bottom: 15px; }
+.modal-card h2 { margin: 0 0 15px 0; color: #0f172a; font-size: 1.8rem; font-weight: 800; }
+.modal-card p { color: #64748b; line-height: 1.6; margin-bottom: 30px; font-size: 1.05rem; }
+@keyframes popIn {
+  0% { transform: scale(0.8); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
 /* --- MOBILE RESPONSIVENESS (Phones & Small Tablets) --- */
 @media (max-width: 850px) {
-  /* 1. Stack the left and right panes on top of each other */
-  .rating-view {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-
-  /* 2. Stop the image from being 'sticky' so users can scroll past it */
-  .left-pane {
-    position: relative;
-    top: 0;
-  }
-
-  /* 3. Make the food image a little shorter so it doesn't take up the whole phone screen */
-  .cover-img {
-    height: 180px;
-  }
-
-  /* 4. Stack the Grid Buttons (Weather, Vibe, Price) into a single vertical column for easy tapping */
-  .grid-options {
-    grid-template-columns: 1fr;
-  }
-
-  /* 5. Adjust padding for smaller screens */
-  .main-content {
-    padding: 0 15px;
-  }
-
-  .landing-card {
-    padding: 30px 20px;
-  }
-
-  .action-footer {
-    flex-direction: column;
-    gap: 15px;
-  }
-
-  .nav-btn.primary, .nav-btn.success {
-    margin-left: 0;
-    width: 100%;
-  }
+  .rating-view { grid-template-columns: 1fr; gap: 20px; }
+  .left-pane { position: relative; top: 0; }
+  .cover-img { height: 180px; }
+  .grid-options { grid-template-columns: 1fr; }
+  .main-content { padding: 0 15px; }
+  .landing-card { padding: 30px 20px; }
+  .action-footer { flex-direction: column; gap: 15px; }
+  .nav-btn.primary, .nav-btn.success { margin-left: 0; width: 100%; }
 }
 </style>
