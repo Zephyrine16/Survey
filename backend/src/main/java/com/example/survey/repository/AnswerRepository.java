@@ -14,6 +14,7 @@ import java.util.List;
 
 @Repository
 public interface AnswerRepository extends JpaRepository<Answer, Long> {
+
     @Query("""
         SELECT new com.example.survey.dto.OptionCountDTO(o.label, COUNT(a))
         FROM Answer a
@@ -28,7 +29,7 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
     );
 
     @Query("""
-        SELECT new com.example.survey.dto.TextFeedbackDTO(a.userEmail, a.response)
+        SELECT new com.example.survey.dto.TextFeedbackDTO(a.userId, a.response)
         FROM Answer a
         WHERE a.menuItem.id = :menuItemId
         AND a.question.id = :questionId
@@ -39,31 +40,33 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
             @Param("questionId") Long questionId
     );
 
+    // FIX 1: Aligned the SQL columns (user_id) and the Params perfectly with the new DTO!
     @Modifying
     @Transactional
-    @Query(value = "INSERT INTO answers (user_email, menu_item_id, question_id, option_id, response) VALUES (:email, :menuItemId, :questionId, :optionId, :response)", nativeQuery = true)
+    @Query(value = "INSERT INTO answers (user_id, menu_item_id, question_id, selected_option_id, response) VALUES (:userId, :menuItemId, :questionId, :selectedOptionId, :textResponse)", nativeQuery = true)
     void saveRawAnswer(
-            @Param("email") String email,
+            @Param("userId") String userId,
             @Param("menuItemId") Long menuItemId,
             @Param("questionId") Long questionId,
-            @Param("optionId") Long optionId,
-            @Param("response") String response
+            @Param("selectedOptionId") Long selectedOptionId,
+            @Param("textResponse") String textResponse
     );
 
-    @Query(value = "SELECT a.user_email, m.name, q.text, o.label, a.response " +
+    // FIX 2: Changed a.user_email to a.user_id, and matched the selected_option_id column
+    @Query(value = "SELECT a.user_id, m.name, q.text, o.label, a.response " +
             "FROM answers a " +
             "JOIN menu_items m ON a.menu_item_id = m.id " +
             "JOIN questions q ON a.question_id = q.id " +
-            "LEFT JOIN options o ON a.option_id = o.id", nativeQuery = true)
+            "LEFT JOIN options o ON a.selected_option_id = o.id", nativeQuery = true)
     List<Object[]> getExportData();
 
     // 1. Get the total number of people who answered Question 1 for a specific item
     @Query(value = "SELECT COUNT(*) FROM answers WHERE menu_item_id = :menuItemId AND question_id = 1", nativeQuery = true)
-    Long countTotalResponsesForItem(@org.springframework.data.repository.query.Param("menuItemId") Long menuItemId);
+    Long countTotalResponsesForItem(@Param("menuItemId") Long menuItemId);
 
     // 2. Get all the text descriptions (Question 5) for a specific item
     @Query(value = "SELECT response FROM answers WHERE menu_item_id = :menuItemId AND question_id = 5 AND response IS NOT NULL AND TRIM(response) != ''", nativeQuery = true)
-    List<String> getTextReviewsForItem(@org.springframework.data.repository.query.Param("menuItemId") Long menuItemId);
+    List<String> getTextReviewsForItem(@Param("menuItemId") Long menuItemId);
 
     // 3. Get global total responses (everyone who answered Question 1 across all items)
     @Query(value = "SELECT COUNT(*) FROM answers WHERE question_id = 1", nativeQuery = true)
