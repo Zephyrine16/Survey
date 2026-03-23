@@ -40,7 +40,7 @@
       </div>
 
       <main class="main-content">
-        <div v-else class="rating-view">
+        <div class="rating-view">
           <div class="left-pane">
             <div class="sticky-card">
               <div class="pane-header">
@@ -491,6 +491,24 @@ onMounted(() => {
 @keyframes slideUp {
   0% { transform: translateY(40px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }
+}
+
+/* --- SHARED BUTTONS --- */
+.primary-btn {
+  background: #f97316;
+  color: white;
+  border: none;
+  padding: 16px 40px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  transition: transform 0.2s, background 0.2s;
+}
+.primary-btn:hover {
+  background: #ea580c;
+  transform: translateY(-2px);
 }
 
 /* HEADER */
