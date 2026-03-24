@@ -134,7 +134,7 @@
                   @click="finishCategory"
                   :disabled="!isCurrentItemComplete"
                 >
-                  Submit & Return to Categories
+                  {{ isLastCategory ? 'Finish Survey & Save' : 'Submit & Next Category' }}
                 </button>
               </div>
 
@@ -170,6 +170,20 @@
     </Teleport>
 
   </div>
+
+  <Teleport to="body">
+    <div v-if="showConfirmModal" class="modal-overlay">
+      <div class="modal-card">
+        <div class="modal-icon">💾</div>
+        <h2>Ready to Submit?</h2>
+        <p>You have reached the end of the survey! By confirming, your anonymous response data will be securely recorded in our database.</p>
+        <div class="modal-actions">
+          <button class="nav-btn secondary" @click="showConfirmModal = false">Review Answers</button>
+          <button class="nav-btn primary" @click="executeFinalSubmit">Confirm & Submit</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -181,6 +195,11 @@ const hasStarted = ref(false);
 const currentSessionId = Math.random().toString(36).substring(2, 10);
 const showLimitModal = ref(false);
 const showSuccessModal = ref(false);
+const showConfirmModal = ref(false);
+
+const isLastCategory = computed(() => {
+  return categories.indexOf(activeCategory.value) === categories.length - 1;
+});
 
 // --- State ---
 const menuItems = ref<any[]>([]);
@@ -350,6 +369,20 @@ const resetSurvey = () => {
   showSuccessModal.value = false;
   window.location.reload();
 };
+
+const handleCategorySubmit = () => {
+  if(isLastCategory.value) {
+    showConfirmModal.value = true;
+  }
+  else {
+    finishCategory();
+  }
+};
+
+const executeFinalSubmit = async () => {
+  showConfirmModal.value = false;
+  await finishCategory();
+}
 
 const finishCategory = async () => {
   try {
@@ -657,6 +690,18 @@ onMounted(() => {
 @keyframes popIn {
   0% { transform: scale(0.8); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
+}
+
+/* --- Modal Actions --- */
+.modal-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 10px;
+}
+.modal-actions button {
+  flex: 1;
+  margin: 0;
 }
 
 /* --- MOBILE RESPONSIVENESS (Phones & Small Tablets) --- */
