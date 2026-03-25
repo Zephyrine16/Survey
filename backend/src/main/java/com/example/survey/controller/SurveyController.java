@@ -147,4 +147,11 @@ public class SurveyController {
 
         return ResponseEntity.ok(stats);
     }
+
+    @GetMapping("/api/stats/participants")
+    public ResponseEntity<Long> getParticipantCount() {
+        Long count = answerRepository.countUniqueParticipants();
+        // If the database is empty, return 0 instead of null
+        return ResponseEntity.ok(count != null ? count : 0L);
+    }
 }

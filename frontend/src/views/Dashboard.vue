@@ -18,14 +18,16 @@
     </header>
 
     <section class="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-tag"><span class="t-dot blue"></span> GLOBAL</div>
-        <div class="kpi-body">
-          <div class="kpi-icon blue">👥</div>
-          <div class="kpi-content">
-            <p class="kpi-label">TOTAL RESPONSES</p>
-            <h2>{{ globalTotal }}</h2>
-            <p class="kpi-subtext">All food items</p>
+      <div class="stat-card">
+        <div class="card-header">
+          <span class="dot blue"></span> GLOBAL
+        </div>
+        <div class="card-body">
+          <div class="icon-wrapper">👥</div>
+          <div class="stat-info">
+            <span class="stat-label">TOTAL PARTICIPANTS</span>
+            <h2 class="stat-value">{{ participantCount }} <span class="limit-text">/ 200</span></h2>
+            <span class="stat-subtext">Unique respondents</span>
           </div>
         </div>
       </div>
@@ -271,6 +273,7 @@ const activeSubcategory = ref('All');
 const selectedItemId = ref<number | null>(null);
 
 const currentDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const participantCount = ref(0);
 
 // We define what belongs where based on your actual menu!
 const foodSubcategories = ['Meal', 'Bread', 'Pasta', 'Waffle'];
@@ -526,8 +529,18 @@ const fetchItemStats = async (menuItemId) => {
   }
 };
 
+const fetchStats = async () => {
+  try {
+    const response = await axios.get('http://localhost:8080/api/stats/participants');
+    participantCount.value = response.data;
+  } catch (error) {
+    console.error("Error fetching participant count:", error);
+  }
+};
+
 onMounted(() => {
   fetchMenuItems();
+  fetchStats();
 });
 </script>
 
