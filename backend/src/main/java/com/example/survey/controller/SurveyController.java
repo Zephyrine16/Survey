@@ -154,4 +154,12 @@ public class SurveyController {
         Long count = answerRepository.countTotalResponsesForItem(itemId);
         return ResponseEntity.ok(count != null ? count : 0L);
     }
+
+    // Endpoint for Card 1
+    @GetMapping("/api/stats/participants")
+    public ResponseEntity<Long> getParticipantCount() {
+        Long count = answerRepository.countUniqueParticipants();
+        // If the database is empty, return 0 instead of null
+        return ResponseEntity.ok(count != null ? count : 0L);
+    }
 }
