@@ -147,4 +147,11 @@ public class SurveyController {
 
         return ResponseEntity.ok(stats);
     }
+
+    // Endpoint for Card 2 (Notice how it takes the Item ID in the URL!)
+    @GetMapping("/api/stats/responses/{itemId}")
+    public ResponseEntity<Long> getItemResponseCount(@PathVariable Long itemId) {
+        Long count = answerRepository.countTotalResponsesForItem(itemId);
+        return ResponseEntity.ok(count != null ? count : 0L);
+    }
 }
