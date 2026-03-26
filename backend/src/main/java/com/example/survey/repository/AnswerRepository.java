@@ -40,7 +40,10 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
             @Param("questionId") Long questionId
     );
 
-    // FIX 1: Aligned the SQL columns (user_id) and the Params perfectly with the new DTO!
+    // ==========================================
+    // DATA INGESTION & EXPORT QUERIES
+    // ==========================================
+
     @Modifying
     @Transactional
     @Query(value = "INSERT INTO answers (user_id, menu_item_id, question_id, option_id, response) VALUES (:userId, :menuItemId, :questionId, :selectedOptionId, :textResponse)", nativeQuery = true)
@@ -52,7 +55,6 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
             @Param("textResponse") String textResponse
     );
 
-    // FIX 2: Changed a.user_email to a.user_id, and matched the selected_option_id column
     @Query(value = "SELECT a.user_id, m.name, q.text, o.label, a.response " +
             "FROM answers a " +
             "JOIN menu_items m ON a.menu_item_id = m.id " +
@@ -60,23 +62,27 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
             "LEFT JOIN options o ON a.option_id = o.id", nativeQuery = true)
     List<Object[]> getExportData();
 
-    // 1. Get the total number of people who answered Question 1 for a specific item
-    @Query(value = "SELECT COUNT(*) FROM answers WHERE menu_item_id = :menuItemId AND question_id = 1", nativeQuery = true)
-    Long countTotalResponsesForItem(@Param("menuItemId") Long menuItemId);
+    // ==========================================
+    // DASHBOARD KPI QUERIES
+    // ==========================================
 
-    // 2. Get all the text descriptions (Question 5) for a specific item
+    // 1. Get all the text descriptions (Question 5) for a specific item to run Sentiment Analysis
     @Query(value = "SELECT response FROM answers WHERE menu_item_id = :menuItemId AND question_id = 5 AND response IS NOT NULL AND TRIM(response) != ''", nativeQuery = true)
     List<String> getTextReviewsForItem(@Param("menuItemId") Long menuItemId);
 
-    // 3. Get global total responses (everyone who answered Question 1 across all items)
+    // 2. Get global total responses (Used to calculate the 200 participant limit!)
     @Query(value = "SELECT COUNT(*) FROM answers WHERE question_id = 1", nativeQuery = true)
     Long countGlobalTotalResponses();
 
-    // 4. Get global total of text responses (everyone who answered Question 5)
+    // 3. Get global total of text responses (Used for the engagement rate math)
     @Query(value = "SELECT COUNT(*) FROM answers WHERE question_id = 5 AND response IS NOT NULL AND TRIM(response) != ''", nativeQuery = true)
     Long countGlobalTextResponses();
 
-    // Card 1: Get the total number of UNIQUE participants based on their session ID
+    // CARD 1 (MACRO): Get the total number of UNIQUE participants based on their session ID
     @Query(value = "SELECT COUNT(DISTINCT user_id) FROM answers", nativeQuery = true)
     Long countUniqueParticipants();
+
+    // CARD 2 (MICRO): Get the total number of people who answered Question 1 for a SPECIFIC item
+    @Query(value = "SELECT COUNT(*) FROM answers WHERE menu_item_id = :menuItemId AND question_id = 1", nativeQuery = true)
+    Long countTotalResponsesForItem(@Param("menuItemId") Long menuItemId);
 }
