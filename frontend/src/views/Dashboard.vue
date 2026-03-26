@@ -435,8 +435,18 @@ const isAnswered = (itemId: number | undefined, questionId: number) => {
   return ans !== undefined && ans !== null;
 };
 
+const fetchStats = async () => {
+  try {
+    const response = await axios.get('http://localhost:8080/api/stats/participants');
+    participantCount.value = response.data;
+  } catch (error) {
+    console.error("Error fetching participant count:", error);
+  }
+};
+
 onMounted(() => {
   fetchMenuItems();
+  fetchStats();
 });
 </script>
 
