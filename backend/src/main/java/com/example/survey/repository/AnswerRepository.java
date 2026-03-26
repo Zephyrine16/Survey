@@ -76,7 +76,7 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
     @Query(value = "SELECT COUNT(*) FROM answers WHERE question_id = 5 AND response IS NOT NULL AND TRIM(response) != ''", nativeQuery = true)
     Long countGlobalTextResponses();
 
-    // Get the total number of UNIQUE participants based on their session ID
+    // Card 1: Get the total number of UNIQUE participants based on their session ID
     @Query(value = "SELECT COUNT(DISTINCT user_id) FROM answers", nativeQuery = true)
     Long countUniqueParticipants();
 }
