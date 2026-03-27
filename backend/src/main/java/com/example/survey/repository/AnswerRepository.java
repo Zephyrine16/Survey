@@ -78,9 +78,13 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
     @Query(value = "SELECT COUNT(*) FROM answers WHERE question_id = 5 AND response IS NOT NULL AND TRIM(response) != ''", nativeQuery = true)
     Long countGlobalTextResponses();
 
-    // CARD 1 (MACRO): Get the total number of UNIQUE participants based on their session ID
-    @Query(value = "SELECT COUNT(DISTINCT user_id) FROM answers", nativeQuery = true)
-    Long countUniqueParticipants();
+    // CARD 1 (MACRO/BASELINE): Get the lowest number of responses among all menu items
+    @Query(value = "SELECT COALESCE(MIN(response_count), 0) FROM (" +
+            "SELECT m.id, COUNT(a.id) AS response_count " +
+            "FROM menu_items m " +
+            "LEFT JOIN answers a ON m.id = a.menu_item_id AND a.question_id = 1 " +
+            "GROUP BY m.id) AS counts", nativeQuery = true)
+    Long getBaselineResponseCount();
 
     // CARD 2 (MICRO): Get the total number of people who answered Question 1 for a SPECIFIC item
     @Query(value = "SELECT COUNT(*) FROM answers WHERE menu_item_id = :menuItemId AND question_id = 1", nativeQuery = true)

@@ -155,11 +155,10 @@ public class SurveyController {
         return ResponseEntity.ok(count != null ? count : 0L);
     }
 
-    // Endpoint for Card 1
-    @GetMapping("/api/stats/participants")
-    public ResponseEntity<Long> getParticipantCount() {
-        Long count = answerRepository.countUniqueParticipants();
-        // If the database is empty, return 0 instead of null
-        return ResponseEntity.ok(count != null ? count : 0L);
+    //Endpoint for Card 1
+    @GetMapping("/api/stats/baseline")
+    public ResponseEntity<Long> getBaseLineCount() {
+        Long lowestCount = answerRepository.getBaselineResponseCount();
+        return ResponseEntity.ok(lowestCount != null ? lowestCount : 0L);
     }
 }
