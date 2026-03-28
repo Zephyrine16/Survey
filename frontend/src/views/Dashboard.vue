@@ -11,9 +11,11 @@
       </div>
       <div class="header-right">
         <span class="live-badge"><span class="dot"></span> Live</span>
+
         <button class="danger-btn" @click="showClearModal = true">
           🗑️ Clear Data
         </button>
+
         <button class="export-btn" @click="downloadReport">
           📥 Export Report
         </button>
@@ -21,75 +23,43 @@
     </header>
 
     <section class="kpi-grid">
-      <!-- KPI CARD 1 -->
-      <div class="stat-card">
-        <div class="card-header">
-          <span class="dot blue"></span> GLOBAL
-        </div>
-        <div class="card-body">
-          <div class="icon-wrapper">📈</div>
-          <div class="stat-info">
-            <span class="stat-label">BASELINE METRIC</span>
-            <h2 class="stat-value">{{ baselineCount }} <span class="limit-text">/ 30 Target</span></h2>
-            <span class="stat-subtext" :class="{ 'text-success': baselineCount >= 30 }">
-              {{ baselineCount >= 30 ? 'Goal Reached!' : `Need ${30 - baselineCount} more responses` }}
-            </span>
-          </div>
-        </div>
+      <div class="new-kpi-card global-card">
+        <div class="scope-label"><span class="scope-dot blue-dot"></span> GLOBAL</div>
+        <h2 class="kpi-val">{{ baselineCount }}</h2>
+        <p class="kpi-name">BASELINE METRIC</p>
+        <p class="kpi-desc">Target 30 • {{ baselineCount >= 30 ? 'Goal Reached!' : `Need ${30 - baselineCount} more responses` }}</p>
       </div>
 
-      <!-- KPI CARD 2 -->
-      <div class="kpi-card">
-        <div class="kpi-tag"><span class="t-dot orange"></span> CURRENT ITEM</div>
-        <div class="kpi-body">
-          <div class="kpi-icon orange">🎯</div>
-          <div class="kpi-content">
-            <p class="kpi-label">TOTAL RESPONSES</p>
-            <h2>{{ itemTotal }}</h2>
-            <p class="kpi-subtext">For selected menu item</p>
-          </div>
-        </div>
+      <div class="new-kpi-card item-card">
+        <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
+        <h2 class="kpi-val">{{ itemTotal }}</h2>
+        <p class="kpi-name">TOTAL RESPONSES</p>
+        <p class="kpi-desc">For selected menu item</p>
       </div>
 
-      <!-- KPI CARD 3 -->
-      <div class="kpi-card">
-        <div class="kpi-tag"><span class="t-dot teal"></span> CURRENT ITEM</div>
-        <div class="kpi-body">
-          <div class="kpi-icon teal">👍</div>
-          <div class="kpi-content">
-            <p class="kpi-label">POSITIVE SENTIMENT</p>
-            <h2>{{ sentiment.posPct }}%</h2>
-            <p class="kpi-subtext">Happy Reviewers</p>
-          </div>
-        </div>
+      <div class="new-kpi-card item-card">
+        <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
+        <h2 class="kpi-val">{{ sentiment.posPct }}%</h2>
+        <p class="kpi-name">POSITIVE SENTIMENT</p>
+        <p class="kpi-desc">Happy Reviewers</p>
       </div>
 
-      <!-- KPI CARD 4 -->
-      <div class="kpi-card">
-        <div class="kpi-tag"><span class="t-dot orange"></span> CURRENT ITEM</div>
-        <div class="kpi-body">
-          <div class="kpi-icon orange">🚨</div>
-          <div class="kpi-content">
-            <p class="kpi-label">NEEDS ATTENTION</p>
-            <h2>{{ sentiment.negPct }}%</h2>
-            <p class="kpi-subtext">Critical / Negative Feedback</p>
-          </div>
-        </div>
+      <div class="new-kpi-card item-card">
+        <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
+        <h2 class="kpi-val">{{ sentiment.negPct }}%</h2>
+        <p class="kpi-name">NEEDS ATTENTION</p>
+        <p class="kpi-desc">Critical / Negative Feedback</p>
       </div>
 
-      <!-- KPI CARD 5 -->
-      <div class="kpi-card">
-        <div class="kpi-tag"><span class="t-dot blue"></span> CURRENT ITEM</div>
-        <div class="kpi-body">
-          <div class="kpi-icon blue">💬</div>
-          <div class="kpi-content">
-            <p class="kpi-label">TOP KEYWORD</p>
-            <h2 style="text-transform: capitalize;">
-              {{ topKeywords.length > 0 ? topKeywords[0] : '-' }}
-            </h2>
-            <p class="kpi-subtext">Most used in text reviews</p>
-          </div>
+      <div class="new-kpi-card item-card">
+        <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
+        <div class="kpi-val-wrapper">
+          <span class="keyword-pill" style="text-transform: capitalize;">
+            {{ topKeywords.length > 0 ? topKeywords[0] : '-' }}
+          </span>
         </div>
+        <p class="kpi-name">TOP KEYWORD</p>
+        <p class="kpi-desc">Most used in text reviews</p>
       </div>
     </section>
 
@@ -155,16 +125,18 @@
 
     <section v-else class="cards-grid">
 
-      <div v-for="(answers, question, index) in radioQuestions" :key="question" class="insight-card radio-card-v2">
+      <div v-for="(answers, question, index) in radioQuestions" :key="question"
+           class="insight-card radio-card-v2"
+           :style="getCategoryStyles(menuItem?.category)">
         <div class="card-image-header-v2">
           <div class="image-overlay-v2">
             <h3 class="truncate-text">{{ menuItem?.name }}</h3>
-            <span class="badge-v2 food-badge">🍴 {{ menuItem?.category }}</span>
+            <span class="badge-v2 food-badge" :class="getPillClass(menuItem?.category)">🍴 {{ menuItem?.category }}</span>
           </div>
           <span class="q-circle">Q{{ index + 1 }}</span>
         </div>
 
-        <div class="card-body">
+        <div class="card-body insight-body">
           <h4 class="question-title">{{ question }}</h4>
           <p class="response-count">{{ totalResponses }} responses</p>
 
@@ -186,7 +158,9 @@
         </div>
       </div>
 
-      <div v-for="(answers, question, index) in textQuestions" :key="question" class="insight-card text-card-v2">
+      <div v-for="(answers, question, index) in textQuestions" :key="question"
+           class="insight-card text-card-v2"
+           :style="getCategoryStyles(menuItem?.category)">
         <div class="text-top-row">
 
           <div class="text-col-image">
@@ -194,7 +168,7 @@
             <div class="image-overlay-v2">
               <h3 class="truncate-text">{{ menuItem?.name }}</h3>
               <div class="badge-row">
-                <span class="badge-v2 food-badge">🍴 {{ menuItem?.category }}</span>
+                <span class="badge-v2 food-badge" :class="getPillClass(menuItem?.category)">🍴 {{ menuItem?.category }}</span>
                 <span class="badge-v2 type-badge">💬 Open-ended</span>
               </div>
             </div>
@@ -306,65 +280,63 @@ const currentDate = new Date().toLocaleDateString('en-US', { month: 'short', day
 const baselineCount = ref(0);
 const showClearModal = ref(false);
 
-// We define what belongs where based on your actual menu!
 const foodSubcategories = ['Meal', 'Bread', 'Pasta', 'Waffle'];
 const drinkSubcategories = ['Coffee', 'Non-coffee', 'Frappe Series', 'Float', 'Milktea', 'Sparkling Soda', 'Fruit Tea'];
 
-// Computed Helpers for Filtering
 const isFood = (cat: string) => foodSubcategories.includes(cat);
 const isDrink = (cat: string) => drinkSubcategories.includes(cat);
 
-// Maps categories to their pastel color CSS classes
-const getPillClass = (sub: string) => {
+const getPillClass = (cat: string | undefined) => {
+  if (!cat) return 'pill-default';
+  const cleanCat = cat.trim().toLowerCase();
   const map: Record<string, string> = {
-    // New Individual Food Colors
-    'Meal': 'pill-meal',
-    'Bread': 'pill-bread',
-    'Pasta': 'pill-pasta',
-    'Waffle': 'pill-waffle',
-
-    // Existing Drink Colors
-    'Coffee': 'pill-coffee',
-    'Non-coffee': 'pill-noncoffee',
-    'Frappe Series': 'pill-frappe',
-    'Float': 'pill-float',
-    'Sparkling Soda': 'pill-soda',
-    'Milktea': 'pill-milktea',
-    'Fruit Tea': 'pill-fruittea'
+    'meal': 'pill-meal', 'bread': 'pill-bread', 'pasta': 'pill-pasta',
+    'waffle': 'pill-waffle', 'coffee': 'pill-coffee', 'non-coffee': 'pill-noncoffee',
+    'frappe series': 'pill-frappe', 'float': 'pill-float', 'sparkling soda': 'pill-soda',
+    'milktea': 'pill-milktea', 'fruit tea': 'pill-fruittea'
   };
-  return map[sub] || 'pill-all';
+  return map[cleanCat] || 'pill-default';
+};
+
+// DYNAMIC CHART STYLES based on category
+const getCategoryStyles = (cat: string | undefined) => {
+  if (!cat) return {};
+  const cleanCat = cat.trim();
+  const themes: Record<string, Record<string, string>> = {
+    'Meal': { '--c-main': '#ef4444', '--c-light': '#fef2f2', '--c-text': '#b91c1c' },
+    'Bread': { '--c-main': '#d97706', '--c-light': '#fdf5e6', '--c-text': '#8b5a2b' },
+    'Pasta': { '--c-main': '#eab308', '--c-light': '#fefce8', '--c-text': '#854d0e' },
+    'Waffle': { '--c-main': '#f97316', '--c-light': '#fff7ed', '--c-text': '#c2410c' },
+    'Coffee': { '--c-main': '#f59e0b', '--c-light': '#fffbeb', '--c-text': '#b45309' },
+    'Non-coffee': { '--c-main': '#0ea5e9', '--c-light': '#f0f9ff', '--c-text': '#0284c7' },
+    'Frappe Series': { '--c-main': '#8b5cf6', '--c-light': '#f5f3ff', '--c-text': '#7c3aed' },
+    'Float': { '--c-main': '#10b981', '--c-light': '#ecfdf5', '--c-text': '#059669' },
+    'Sparkling Soda': { '--c-main': '#06b6d4', '--c-light': '#ecfeff', '--c-text': '#0891b2' },
+    'Milktea': { '--c-main': '#d946ef', '--c-light': '#fdf4ff', '--c-text': '#c026d3' },
+    'Fruit Tea': { '--c-main': '#ec4899', '--c-light': '#fdf2f8', '--c-text': '#be185d' },
+  };
+  return themes[cleanCat] || { '--c-main': '#f97316', '--c-light': '#fff7ed', '--c-text': '#c2410c' };
 };
 
 const currentSubcategories = computed(() => {
   return activeCategory.value === 'Food' ? foodSubcategories : drinkSubcategories;
 });
 
-// The Magic Filter: This dynamically builds the horizontal scrolling tabs
 const filteredMenuItems = computed(() => {
   return menuItems.value.filter(item => {
-    // 1. Is it the right master category (Food vs Drink)?
     const matchesTopLevel = activeCategory.value === 'Food' ? isFood(item.category) : isDrink(item.category);
     if (!matchesTopLevel) return false;
-
-    // 2. Is it the right subcategory (Meal vs Pasta)?
-    if (activeSubcategory.value !== 'All' && item.category !== activeSubcategory.value) {
-      return false;
-    }
-
+    if (activeSubcategory.value !== 'All' && item.category !== activeSubcategory.value) return false;
     return true;
   });
 });
 
-// The currently viewed item
 const menuItem = computed(() => menuItems.value.find(i => i.id === selectedItemId.value) || null);
 
-// Data Fetching
 const fetchMenuItems = async () => {
   try {
     const response = await axios.get('http://localhost:8080/menu-items');
     menuItems.value = response.data;
-
-    // Auto-select the first item in the filtered list
     if (filteredMenuItems.value.length > 0) {
       await selectItem(filteredMenuItems.value[0].id);
     } else {
@@ -390,7 +362,6 @@ const fetchAnalyticsForCurrentItem = async () => {
   }
 };
 
-// Interaction Functions
 const selectItem = async (itemId) => {
   selectedItemId.value = itemId;
   fetchItemStats(itemId);
@@ -410,21 +381,14 @@ const setSubcategory = (subcategory: string) => {
 
 const autoSelectFirstFilteredItem = () => {
   if (filteredMenuItems.value.length > 0) {
-    // Check if the currently selected item is still visible in the new filtered list
     const currentStillVisible = filteredMenuItems.value.some(i => i.id === selectedItemId.value);
-
-    // If it disappeared because of the filter, auto-select the first available one!
-    if (!currentStillVisible) {
-      selectItem(filteredMenuItems.value[0].id);
-    }
+    if (!currentStillVisible) selectItem(filteredMenuItems.value[0].id);
   } else {
-    // Nothing matches the filter
     selectedItemId.value = null;
     analyticsData.value = {};
   }
 };
 
-// Chart Computed Properties
 const correctQuestionOrder = [
   'Which emotion or physical state most strongly makes you want to order this item?',
   'In what weather condition does this item feel most satisfying?',
@@ -434,24 +398,15 @@ const correctQuestionOrder = [
 
 const radioQuestions = computed(() => {
   const result: Record<string, any> = {};
-
-  // 1. Loop through YOUR specific order first
   correctQuestionOrder.forEach(qTitle => {
     const answers = analyticsData.value[qTitle];
-    if (answers && answers.length > 0 && answers[0].voteCount !== undefined) {
-      result[qTitle] = answers;
-    }
+    if (answers && answers.length > 0 && answers[0].voteCount !== undefined) result[qTitle] = answers;
   });
-
-  // 2. Catch any extra questions just in case
   Object.entries(analyticsData.value).forEach(([qTitle, answers]) => {
     if (!correctQuestionOrder.includes(qTitle)) {
-      if (answers && answers.length > 0 && answers[0].voteCount !== undefined) {
-        result[qTitle] = answers;
-      }
+      if (answers && answers.length > 0 && answers[0].voteCount !== undefined) result[qTitle] = answers;
     }
   });
-
   return result;
 });
 
@@ -487,35 +442,22 @@ const topResponse = (answers: any[]) => {
 const getSentimentData = (feedback) => {
   const text = (feedback.response || feedback.textResponse || (typeof feedback === 'string' ? feedback: '')).toLowerCase();
   if(!text) return { class: 'neu', icon: '-', label: 'Neutral' };
-
   const positiveWords = ['good', 'great', 'love', 'best', 'delicious', 'yummy', 'perfect', 'nice', 'amazing', 'sweet', 'comfort', 'favorite', 'warm', 'fresh', 'hot', 'filling'];
   const negativeWords = ['bad', 'hate', 'awful', 'terrible', 'gross', 'expensive', 'worse', 'bland', 'nasty', 'disgusting', 'dry', 'salty', 'cold', 'hard', 'stale'];
-
-  const isPositive = positiveWords.some(word => text.includes(word));
-  const isNegative = negativeWords.some(word => text.includes(word));
-
-  if(isNegative) return { class: 'neg', icon: '👎', label: 'Negative' };
-  if(isPositive) return { class: 'pos', icon: '👍', label: 'Positive' };
-
+  if(negativeWords.some(word => text.includes(word))) return { class: 'neg', icon: '👎', label: 'Negative' };
+  if(positiveWords.some(word => text.includes(word))) return { class: 'pos', icon: '👍', label: 'Positive' };
   return { class: 'neu', icon: '-', label: 'Neutral'};
 }
 
 const downloadReport = async () => {
   try {
-    // We tell Axios we are expecting a 'blob' (a file), not just standard JSON
-    const response = await axios.get('http://localhost:8080/export', {
-      responseType: 'blob'
-    });
-
-    // Create a temporary hidden link in the browser to force the download
+    const response = await axios.get('http://localhost:8080/export', { responseType: 'blob' });
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', 'CafeRater_Report.csv');
     document.body.appendChild(link);
     link.click();
-
-    // Clean up the link after the download starts
     document.body.removeChild(link);
   } catch (error) {
     console.error("Error downloading report:", error);
@@ -528,7 +470,7 @@ const clearAllData = async () => {
     await axios.delete('http://localhost:8080/api/admin/clear-data');
     showClearModal.value = false;
     window.location.reload();
-  } catch(error) {
+  } catch (error) {
     console.error("Error clearing data:", error);
     alert("Oops! Could not clear the database.");
   }
@@ -551,27 +493,19 @@ const fetchItemStats = async (menuItemId) => {
   try {
     const response = await axios.get(`http://localhost:8080/analytics/stats/${menuItemId}`);
     const data = response.data;
-
     globalTotal.value = data.globalTotal;
     itemTotal.value = data.itemTotal;
     engagementPct.value = data.engagementPct;
-
     sentiment.value = {
-      pos: data.positiveCount,
-      neu: data.neutralCount,
-      neg: data.negativeCount,
-      posPct: data.positivePct,
-      neuPct: data.neutralPct,
-      negPct: data.negativePct,
+      pos: data.positiveCount, neu: data.neutralCount, neg: data.negativeCount,
+      posPct: data.positivePct, neuPct: data.neutralPct, negPct: data.negativePct,
     };
-
     topKeywords.value = data.topKeywords || [];
   } catch (error) {
     console.error("Failed to load real stats", error);
   }
 };
 
-// UPDATED: Now fetches from your newly built baseline endpoint
 const fetchStats = async () => {
   try {
     const response = await axios.get('http://localhost:8080/api/stats/baseline');
@@ -598,22 +532,107 @@ onMounted(() => {
 .header-right { display: flex; gap: 15px; align-items: center; }
 .live-badge { background: #ecfdf5; color: #10b981; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; border: 1px solid #a7f3d0; }
 .live-badge .dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; }
-.export-btn { background: #1e293b; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+
+.export-btn { background: #1e293b; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; transition: all 0.2s;}
+.export-btn:hover { background: #0f172a; }
+.danger-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.danger-btn:hover {
+  background: #dc2626;
+}
 
 .truncate-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 
-/* KPI CARDS */
+/* SLEEK REDESIGNED KPI CARDS */
 .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; margin-bottom: 25px; }
-.kpi-card { background: white; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); display: flex; flex-direction: column; border: 1px solid #e2e8f0; overflow: hidden; }
-.kpi-tag { padding: 8px 15px; border-bottom: 1px solid #f1f5f9; font-size: 0.7rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
-.t-dot { width: 6px; height: 6px; border-radius: 50%; }
-.t-dot.blue { background: #3b82f6; } .t-dot.teal { background: #0d9488; } .t-dot.orange { background: #ea580c; }
-.kpi-body { padding: 15px; display: flex; align-items: flex-start; gap: 15px; }
-.kpi-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
-.kpi-icon.blue { background: #eff6ff; color: #3b82f6; } .kpi-icon.teal { background: #f0fdfa; color: #0d9488; } .kpi-icon.orange { background: #fff7ed; color: #ea580c; } .kpi-icon.green { background: #f0fdf4; color: #16a34a; }
-.kpi-content h2 { margin: 4px 0; font-size: 1.6rem; color: #0f172a; font-weight: 700;}
-.kpi-label { margin: 0; font-size: 0.75rem; color: #64748b; font-weight: 600; letter-spacing: 0.5px; }
-.kpi-subtext { margin: 0; font-size: 0.75rem; color: #94a3b8; }
+
+.new-kpi-card {
+  border: 1px solid #E2DED5;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.global-card {
+  background-color: #EFF6FF;
+  border-left: 3px solid #3B82F6;
+}
+
+.item-card {
+  background-color: #FFFFFF;
+  border-left: 3px solid #F07000;
+}
+
+.scope-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.global-card .scope-label { color: #3B82F6; }
+.item-card .scope-label { color: #F07000; }
+
+.scope-dot { width: 6px; height: 6px; border-radius: 50%; }
+.blue-dot { background-color: #3B82F6; }
+.orange-dot { background-color: #F07000; }
+
+.kpi-val {
+  margin: 0 0 4px 0;
+  font-size: 42px;
+  font-weight: 800;
+  color: #1C1A17;
+  line-height: 1;
+}
+
+.kpi-val-wrapper {
+  margin: 0 0 4px 0;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+}
+
+.keyword-pill {
+  background: #FFF3E8;
+  color: #F07000;
+  font-size: 28px;
+  font-weight: 800;
+  padding: 8px 14px;
+  border-radius: 8px;
+  display: inline-block;
+  line-height: 1;
+}
+
+.kpi-name {
+  margin: 0 0 8px 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748B;
+  font-weight: 600;
+}
+
+.kpi-desc {
+  margin: 0;
+  font-size: 12px;
+  color: #94A3B8;
+  font-weight: 400;
+}
 
 /* OPTION 1 NAVIGATION PANEL */
 .navigation-panel { background: white; border-radius: 16px; margin-bottom: 30px; border: 1px solid #e2e8f0; box-shadow: 0 2px 10px rgba(0,0,0,0.02); overflow: hidden; }
@@ -628,62 +647,42 @@ onMounted(() => {
 .subcategory-pills { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 2px;}
 .subcategory-pills::-webkit-scrollbar { display: none; }
 
-/* Base pill styling */
 .f-pill { padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; border: 1px solid; }
 
-/* Meal: Savory Red */
+.pill-default { background: #f1f5f9; border-color: #e2e8f0; color: #475569; }
 .pill-meal { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
 .pill-meal:hover { background: #fee2e2; }
 .pill-meal.active { background: #fca5a5; color: #7f1d1d; border-color: #f87171; }
-
-/* Bread: Toasted Wheat/Tan */
 .pill-bread { background: #fdf5e6; border-color: #ebd5b3; color: #8b5a2b; }
 .pill-bread:hover { background: #faebd7; }
 .pill-bread.active { background: #deb887; color: #5c3317; border-color: #cdaa7d; }
-
-/* Pasta: Bright Butter Yellow */
 .pill-pasta { background: #fefce8; border-color: #fde047; color: #854d0e; }
 .pill-pasta:hover { background: #fef9c3; }
 .pill-pasta.active { background: #facc15; color: #422006; border-color: #eab308; }
-
-/* Waffle: Sweet Orange */
 .pill-waffle { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
 .pill-waffle:hover { background: #ffedd5; }
 .pill-waffle.active { background: #fdba74; color: #9a3412; border-color: #f97316; }
-
-/* Food Colors (Orange/Yellow) */
-.pill-food { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
-.pill-food:hover { background: #ffedd5; }
-.pill-food.active { background: #fdba74; color: #9a3412; border-color: #f97316; }
-
-/* Drink Colors (Matched to Figma!) */
 .pill-coffee { background: #fffbeb; border-color: #fde68a; color: #b45309; }
 .pill-coffee:hover { background: #fef3c7; }
 .pill-coffee.active { background: #fcd34d; color: #78350f; border-color: #f59e0b; }
-
 .pill-noncoffee { background: #f0f9ff; border-color: #bae6fd; color: #0284c7; }
 .pill-noncoffee:hover { background: #e0f2fe; }
 .pill-noncoffee.active { background: #7dd3fc; color: #0369a1; border-color: #0ea5e9; }
-
 .pill-frappe { background: #f5f3ff; border-color: #ddd6fe; color: #7c3aed; }
 .pill-frappe:hover { background: #ede9fe; }
 .pill-frappe.active { background: #c4b5fd; color: #5b21b6; border-color: #8b5cf6; }
-
 .pill-float { background: #ecfdf5; border-color: #a7f3d0; color: #059669; }
 .pill-float:hover { background: #d1fae5; }
 .pill-float.active { background: #6ee7b7; color: #064e3b; border-color: #10b981; }
-
 .pill-soda { background: #ecfeff; border-color: #a5f3fc; color: #0891b2; }
 .pill-soda:hover { background: #cffafe; }
 .pill-soda.active { background: #67e8f9; color: #164e63; border-color: #06b6d4; }
-
 .pill-milktea { background: #fdf4ff; border-color: #f5d0fe; color: #c026d3; }
 .pill-milktea:hover { background: #fae8ff; }
 .pill-milktea.active { background: #f0abfc; color: #86198f; border-color: #d946ef; }
-
-.pill-fruittea { background: #fff1f2; border-color: #fecdd3; color: #e11d48; }
-.pill-fruittea:hover { background: #ffe4e6; }
-.pill-fruittea.active { background: #fda4af; color: #9f1239; border-color: #f43f5e; }
+.pill-fruittea { background: #fdf2f8; border-color: #fbcfe8; color: #be185d; }
+.pill-fruittea:hover { background: #fce7f3; }
+.pill-fruittea.active { background: #f9a8d4; color: #831843; border-color: #f472b6; }
 
 .item-tabs-container { display: flex; gap: 5px; padding: 15px 20px; overflow-x: auto; }
 .empty-filter { padding: 20px; color: #94a3b8; font-style: italic; font-size: 0.9rem; }
@@ -700,7 +699,7 @@ onMounted(() => {
 .state-message { text-align: center; padding: 80px 20px; color: #64748b; }
 .state-message.empty h2 { color: #0f172a; font-size: 2rem; margin-bottom: 10px; }
 .state-message.empty p { font-size: 1.1rem; }
-.badge-v2 { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+.badge-v2 { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; display: inline-block; border: 1px solid transparent;}
 .badge-v2.food-badge { background: #ffedd5; color: #c2410c; }
 .badge-v2.type-badge { background: rgba(0,0,0,0.6); color: white; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(4px); }
 .q-circle { position: absolute; bottom: 15px; right: 15px; background: rgba(255,255,255,0.2); color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 3; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.3); }
@@ -708,25 +707,33 @@ onMounted(() => {
 /* RADIO CARDS */
 .cards-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 25px; }
 .insight-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
-.radio-card-v2 { border-top: 4px solid #f97316; }
+
+/* DYNAMIC CSS VARIABLES FOR CHARTS */
+.radio-card-v2 { border-top: 4px solid var(--c-main, #f97316); }
+.text-card-v2 { grid-column: 1 / -1; display: flex; flex-direction: column; border-top: 4px solid var(--c-main, #f97316); }
+
 .card-image-header-v2 { height: 180px; background-color: #e2e8f0; background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800'); background-size: cover; background-position: center; position: relative; display: flex; align-items: flex-end; padding: 20px; }
 .card-image-header-v2::before { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 70%; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); z-index: 1;}
 .image-overlay-v2 { z-index: 2; width: 100%; }
 .image-overlay-v2 h3 { color: white; margin: 0 0 8px 0; font-size: 1.3rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
 .card-body { padding: 25px; }
-.insight-card .card-body { display: block; }
+.insight-body { display: block; }
 .question-title { margin: 0 0 5px 0; font-size: 1.1rem; color: #0f172a; }
 .response-count { margin: 0 0 20px 0; font-size: 0.85rem; color: #94a3b8; }
 .bar-row { display: flex; align-items: center; gap: 15px; margin-bottom: 12px; }
 .bar-label { width: 100px; font-size: 0.9rem; color: #475569; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bar-track-v2 { flex-grow: 1; height: 28px; background: #fff7ed; border-radius: 8px; overflow: hidden; }
-.bar-fill.orange-solid { height: 100%; border-radius: 8px; transition: width 1s ease; background: #f97316; }
+
+/* DYNAMIC BAR GRAPHS */
+.bar-track-v2 { flex-grow: 1; height: 28px; background: var(--c-light, #fff7ed); border-radius: 8px; overflow: hidden; }
+.bar-fill.orange-solid { height: 100%; border-radius: 8px; transition: width 1s ease; background: var(--c-main, #f97316); }
+
 .bar-value { width: 30px; font-weight: 600; font-size: 0.9rem; color: #0f172a; text-align: right;}
 .bar-percent { width: 40px; font-size: 0.85rem; color: #94a3b8; text-align: right;}
-.key-insight-v2 { margin-top: 25px; background: #fff7ed; padding: 12px 15px; border-radius: 8px; color: #c2410c; font-size: 0.9rem; display: flex; align-items: center; gap: 10px; }
+
+/* DYNAMIC INSIGHT BOX */
+.key-insight-v2 { margin-top: 25px; background: var(--c-light, #fff7ed); padding: 12px 15px; border-radius: 8px; color: var(--c-text, #c2410c); font-size: 0.9rem; display: flex; align-items: center; gap: 10px; }
 
 /* TEXT CARDS */
-.text-card-v2 { grid-column: 1 / -1; display: flex; flex-direction: column; border-top: 4px solid #f97316; }
 .text-top-row { display: grid; grid-template-columns: 280px 1.5fr 1fr; border-bottom: 1px solid #f1f5f9; }
 .text-col-image { position: relative; background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800'); background-size: cover; background-position: center; min-height: 250px; display: flex; align-items: flex-end; padding: 20px; }
 .text-col-image::before { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 60%; background: linear-gradient(to top, rgba(0,0,0,0.85), transparent); }
@@ -778,24 +785,7 @@ onMounted(() => {
 .exc-tag { font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 5px; }
 .exc-tag.pos { color: #16a34a; } .exc-tag.neu { color: #64748b; } .exc-tag.neg { color: #ef4444; }
 
-/* NOTE: Added a missing class that your HTML was using for KPI Card 1 */
-.stat-card { background: white; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); display: flex; flex-direction: column; border: 1px solid #e2e8f0; overflow: hidden; }
-.card-header { padding: 8px 15px; border-bottom: 1px solid #f1f5f9; font-size: 0.7rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
-.dot { width: 6px; height: 6px; border-radius: 50%; }
-.dot.blue { background: #3b82f6; }
-.card-body { padding: 15px; display: flex; align-items: flex-start; gap: 15px; }
-.icon-wrapper { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; background: #eff6ff; color: #3b82f6;}
-.stat-info { display: flex; flex-direction: column; }
-.stat-label { font-size: 0.75rem; color: #64748b; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 4px; }
-.stat-value { margin: 0; font-size: 1.6rem; font-weight: 700; color: #0f172a; line-height: 1; display: flex; align-items: baseline; gap: 6px;}
-.limit-text { font-size: 1rem; color: #94a3b8; font-weight: 600; }
-.stat-subtext { font-size: 0.75rem; color: #94a3b8; margin-top: 6px;}
-.text-success { color: #10b981; font-weight: 600; }
-
-/* CLEAR DATABASE */
-.danger-btn { background: white; color: #ef4444; border: 1px solid #fca5a5; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-right: 10px; }
-.danger-btn:hover { background: #fef2f2; border-color: #ef4444; }
-
+/* MODAL STYLES */
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 9999; }
 .modal-card { background: white; padding: 40px; border-radius: 24px; text-align: center; max-width: 450px; width: 90%; margin: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
 .modal-icon { width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin: 0 auto 15px auto; }
