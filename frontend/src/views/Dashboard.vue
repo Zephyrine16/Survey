@@ -1,446 +1,545 @@
 <template>
-  <div class="survey-layout">
+  <div class="dashboard-layout">
 
-    <div v-if="!hasStarted" class="welcome-screen">
-      <div class="welcome-card">
-        <div class="welcome-icon">🍴</div>
-        <h1>Welcome to CaféRater!</h1>
-        <p>Help us build a smarter AI by rating our menu items. Your feedback directly shapes the future of our cafe!</p>
-        <button class="primary-btn pulse" @click="hasStarted = true">
-          Start the Survey &rarr;
+    <header class="top-header">
+      <div class="header-left">
+        <div class="logo-icon">📊</div>
+        <div>
+          <h1>Food Preferences Survey</h1>
+          <p class="subtitle">Jan 1 — {{ currentDate }} • {{ totalQuestions }} questions • {{ menuItems.length }} total items</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <span class="live-badge"><span class="dot"></span> Live</span>
+        <button class="export-btn" @click="downloadReport">
+          📥 Export Report
         </button>
       </div>
-    </div>
+    </header>
 
-    <div v-else class="app-container">
-
-      <header class="top-nav">
-        <div class="nav-content">
-          <div class="logo">
-            <span class="logo-icon">🍴</span>
-            <h1>CaféRater</h1>
-          </div>
-
-          <div class="header-actions">
-            <div class="global-progress">
-              <strong>{{ totalRatedItems }}</strong> items rated
-            </div>
-            <button class="header-finish-btn pulse-light" @click="showConfirmModal = true">
-              I'm Done 🏁
-            </button>
+    <section class="kpi-grid">
+      <div class="stat-card">
+        <div class="card-header">
+          <span class="dot blue"></span> GLOBAL
+        </div>
+        <div class="card-body">
+          <div class="icon-wrapper">📈</div>
+          <div class="stat-info">
+            <span class="stat-label">BASELINE METRIC</span>
+            <h2 class="stat-value">{{ baselineCount }} <span class="limit-text">/ 30 Target</span></h2>
+            <span class="stat-subtext" :class="{ 'text-success': baselineCount >= 30 }">
+              {{ baselineCount >= 30 ? 'Goal Reached!' : `Need ${30 - baselineCount} more responses` }}
+            </span>
           </div>
         </div>
-      </header>
+      </div>
 
-      <div class="tabs-container">
-        <div class="tabs-scroll">
+      <div class="kpi-card">
+        <div class="kpi-tag"><span class="t-dot teal"></span> GLOBAL</div>
+        <div class="kpi-body">
+          <div class="kpi-icon teal">✅</div>
+          <div class="kpi-content">
+            <p class="kpi-label">ENGAGEMENT RATE</p>
+            <h2>{{ engagementPct }}%</h2>
+            <p class="kpi-subtext">Submitted</p>
+          </div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-tag"><span class="t-dot orange"></span> CURRENT ITEM</div>
+        <div class="kpi-body">
+          <div class="kpi-icon orange">⭐</div>
+          <div class="kpi-content">
+            <p class="kpi-label">FAVORABLE RATING</p>
+            <h2>{{ (sentiment.posPct + sentiment.neuPct).toFixed(1) }}%</h2>
+            <p class="kpi-subtext">Excellent + Good</p>
+          </div>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-tag"><span class="t-dot orange"></span> CURRENT ITEM</div>
+        <div class="kpi-body">
+          <div class="kpi-icon orange">⭐</div>
+          <div class="kpi-content">
+            <p class="kpi-label">FAVORABLE RATING</p>
+            <h2>{{ (sentiment.posPct + sentiment.neuPct).toFixed(1) }}%</h2>
+            <p class="kpi-subtext">Positive + Neutral Feedback</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-tag"><span class="t-dot orange"></span> CURRENT ITEM</div>
+        <div class="kpi-body">
+          <div class="kpi-icon teal">😊</div>
+          <div class="kpi-content">
+            <p class="kpi-label">SATISFACTION</p>
+            <h2>{{ sentiment.posPct }}%</h2>
+            <p class="kpi-subtext">Highly Positive Feedback</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="navigation-panel" v-if="menuItems.length > 0">
+
+      <div class="filters-row">
+        <div class="category-toggle">
+          <button :class="{ active: activeCategory === 'Food' }" @click="setCategory('Food')">🍴 Food</button>
+          <button :class="{ active: activeCategory === 'Drink' }" @click="setCategory('Drink')">🥤 Drink</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="subcategory-pills">
           <button
-            v-for="cat in categories"
-            :key="cat"
-            class="tab-btn"
-            :class="[getPillClass(cat), { active: activeCategory === cat }]"
-            @click="selectCategory(cat)"
+            class="f-pill pill-all"
+            :class="{ active: activeSubcategory === 'All' }"
+            @click="setSubcategory('All')"
           >
-            {{ cat }}
+            All {{ activeCategory }}
+          </button>
+
+          <button
+            v-for="sub in currentSubcategories"
+            :key="sub"
+            class="f-pill"
+            :class="[getPillClass(sub), { active: activeSubcategory === sub }]"
+            @click="setSubcategory(sub)"
+          >
+            {{ sub }}
           </button>
         </div>
       </div>
 
-      <main class="main-content">
-        <div class="rating-view">
-
-          <div class="left-pane">
-            <div class="sticky-card">
-              <div class="pane-header">
-                <span class="breadcrumb">{{ activeCategory }} — <span class="text-dark">{{ currentItem?.name }}</span></span>
-                <span class="cat-progress"><strong class="green-text">{{ completedInCategory }}</strong>/{{ filteredItems.length }} done</span>
-              </div>
-
-              <div class="item-cover">
-                <div class="cover-img" style="background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800');"></div>
-                <div class="cover-info">
-                  <h3>{{ currentItem?.name }}</h3>
-                  <span class="badge">🍴 {{ activeCategory }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="right-pane">
-            <div class="questions-list">
-
-              <div v-for="(q, index) in questions" :key="q.id" class="question-card">
-                <div class="q-header">
-                  <div class="q-bubble" :class="{ 'answered': isAnswered(currentItem?.id, q.id) }">
-                    <span v-if="isAnswered(currentItem?.id, q.id)">✓</span>
-                    <span v-else>{{ index + 1 }}</span>
-                  </div>
-                  <h4>{{ q.text }}</h4>
-                </div>
-
-                <div v-if="q.type === 'vertical-radio'" class="vertical-options">
-                  <button
-                    v-for="opt in q.options"
-                    :key="opt.id"
-                    class="opt-btn-vertical"
-                    :class="{ selected: getAnswer(currentItem?.id, q.id) === opt.id }"
-                    @click="setAnswer(currentItem?.id, q.id, opt.id)"
-                  >
-                    <span class="opt-icon">{{ opt.icon }}</span>
-                    <span class="opt-label">{{ opt.label }}</span>
-                  </button>
-                </div>
-
-                <div v-if="q.type === 'grid-radio'" class="grid-options">
-                  <button
-                    v-for="opt in q.options"
-                    :key="opt.id"
-                    class="opt-btn-grid"
-                    :class="{ selected: getAnswer(currentItem?.id, q.id) === opt.id }"
-                    @click="setAnswer(currentItem?.id, q.id, opt.id)"
-                  >
-                    <span class="opt-icon-large" v-if="opt.icon">{{ opt.icon }}</span>
-                    <span class="opt-label-main">{{ opt.label }}</span>
-                    <span class="opt-sub" v-if="opt.sub">{{ opt.sub }}</span>
-                  </button>
-                </div>
-
-                <div v-if="q.type === 'textarea'" class="text-input-wrapper">
-                  <textarea
-                    class="styled-textarea"
-                    :class="{ 'has-content': getAnswer(currentItem?.id, q.id)?.length > 0 }"
-                    placeholder="Describe this dish as if you're telling an AI what it tastes, looks, and feels like..."
-                    :value="getAnswer(currentItem?.id, q.id) || ''"
-                    @input="setTextAnswer(currentItem?.id, q.id, $event.target.value)"
-                    maxlength="300"
-                  ></textarea>
-                  <div class="char-count">
-                    {{ getAnswer(currentItem?.id, q.id)?.length || 0 }} / 300
-                  </div>
-                  <p class="helper-text">Your description helps train a smarter food recommendation AI.</p>
-                </div>
-              </div>
-
-              <div class="action-footer">
-                <button class="nav-btn secondary" @click="prevItem" :disabled="currentItemIndex === 0">
-                  &larr; Previous Item
-                </button>
-
-                <button
-                  v-if="currentItemIndex < filteredItems.length - 1"
-                  class="nav-btn primary"
-                  @click="nextItem"
-                  :disabled="!isCurrentItemComplete"
-                >
-                  Next Item &rarr;
-                </button>
-
-                <button
-                  v-else
-                  class="nav-btn success"
-                  @click="saveCategory"
-                  :disabled="!isCurrentItemComplete"
-                >
-                  Save Category Answers 💾
-                </button>
-              </div>
-
-            </div>
-          </div>
-
+      <div class="item-tabs-container">
+        <div v-if="filteredMenuItems.length === 0" class="empty-filter">
+          No items found in this category.
         </div>
-      </main>
+        <div
+          v-for="item in filteredMenuItems"
+          :key="item.id"
+          class="item-tab"
+          :class="{ active: selectedItemId === item.id }"
+          @click="selectItem(item.id)"
+        >
+          <div class="tab-thumb" style="background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=150')"></div>
+          <span class="tab-title truncate-text" :title="item.name">{{ item.name }}</span>
+          <span class="tab-cat">{{ item.category }}</span>
+        </div>
+      </div>
+    </section>
+
+    <div v-if="isLoading" class="state-message">
+      <h2>Loading analytics for {{ menuItem?.name }}...</h2>
+    </div>
+    <div v-else-if="!menuItem" class="state-message">
+      <h2>Select an item to view analytics.</h2>
+    </div>
+    <div v-else-if="totalResponses === 0" class="state-message empty">
+      <h2>No Data Yet 📭</h2>
+      <p>Nobody has submitted a survey for <strong>{{ menuItem?.name }}</strong> yet. Check back later!</p>
     </div>
 
-    <Teleport to="body">
-      <div v-if="showConfirmModal" class="modal-overlay">
-        <div class="modal-card">
-          <div class="modal-icon">👋</div>
-          <h2>Ready to Finish?</h2>
-          <p>Are you completely finished rating your items? If you have nothing else to review, click Confirm to complete your session!</p>
-          <div class="modal-actions">
-            <button class="nav-btn secondary" @click="showConfirmModal = false">Keep Rating</button>
-            <button class="nav-btn primary" @click="executeFinalSubmit">Confirm & Finish</button>
+    <section v-else class="cards-grid">
+
+      <div v-for="(answers, question, index) in radioQuestions" :key="question" class="insight-card radio-card-v2">
+        <div class="card-image-header-v2">
+          <div class="image-overlay-v2">
+            <h3 class="truncate-text">{{ menuItem?.name }}</h3>
+            <span class="badge-v2 food-badge">🍴 {{ menuItem?.category }}</span>
+          </div>
+          <span class="q-circle">Q{{ index + 1 }}</span>
+        </div>
+
+        <div class="card-body">
+          <h4 class="question-title">{{ question }}</h4>
+          <p class="response-count">{{ totalResponses }} responses</p>
+
+          <div class="bars-container">
+            <div v-for="stat in answers" :key="stat.optionLabel" class="bar-row">
+              <span class="bar-label" :title="stat.optionLabel">{{ stat.optionLabel }}</span>
+              <div class="bar-track-v2">
+                <div class="bar-fill orange-solid" :style="{ width: calculatePercentage(stat.voteCount, answers) + '%' }"></div>
+              </div>
+              <span class="bar-value">{{ stat.voteCount }}</span>
+              <span class="bar-percent">{{ calculatePercentage(stat.voteCount, answers) }}%</span>
+            </div>
+          </div>
+
+          <div class="key-insight-v2">
+            <span class="insight-icon">📈</span>
+            <span><strong>Key insight:</strong> {{ topResponse(answers) }} is the leading choice.</span>
           </div>
         </div>
       </div>
-    </Teleport>
 
-    <Teleport to="body">
-      <div v-if="showLimitModal" class="modal-overlay">
-        <div class="modal-card">
-          <div class="modal-icon">🎉</div>
-          <h2>Wow, we are overwhelmed!</h2>
-          <p>Thank you so much for your interest! We have reached our maximum limit of 200 participants, so we are no longer accepting new responses for this study.</p>
-          <button class="primary-btn" @click="showLimitModal = false">
-            Close Window
-          </button>
+      <div v-for="(answers, question, index) in textQuestions" :key="question" class="insight-card text-card-v2">
+        <div class="text-top-row">
+
+          <div class="text-col-image">
+            <span class="q-circle">Q{{ radioQuestionsCount + index + 1 }}</span>
+            <div class="image-overlay-v2">
+              <h3 class="truncate-text">{{ menuItem?.name }}</h3>
+              <div class="badge-row">
+                <span class="badge-v2 food-badge">🍴 {{ menuItem?.category }}</span>
+                <span class="badge-v2 type-badge">💬 Open-ended</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="text-col-sentiment">
+            <h4 class="question-title-v2">{{ question }}</h4>
+            <p class="response-count-v2">{{ answers.length }} text responses</p>
+            <p class="section-label">SENTIMENT BREAKDOWN</p>
+
+            <div class="sent-boxes-v2">
+              <div class="s-box-v2 pos"><h2>{{ sentiment.pos }}</h2><span>Positive</span></div>
+              <div class="s-box-v2 neu"><h2>{{ sentiment.neu }}</h2><span>Neutral</span></div>
+              <div class="s-box-v2 neg"><h2>{{ sentiment.neg }}</h2><span>Negative</span></div>
+            </div>
+
+            <div class="sent-bar-thick">
+              <div class="s-fill-thick pos" :style="{ width: sentiment.posPct + '%' }"></div>
+              <div class="s-fill-thick neu" :style="{ width: sentiment.neuPct + '%' }"></div>
+              <div class="s-fill-thick neg" :style="{ width: sentiment.negPct + '%' }"></div>
+            </div>
+
+            <div class="sent-legend">
+              <span class="l-pos">● Positive {{ sentiment.posPct }}%</span>
+              <span class="l-neu">● Neutral {{ sentiment.neuPct }}%</span>
+              <span class="l-neg">● Negative {{ sentiment.negPct }}%</span>
+              <span class="l-total">= 100%</span>
+            </div>
+          </div>
+
+          <div class="text-col-keywords">
+            <p class="section-label"># TOP KEYWORDS</p>
+            <p class="section-subtext">Automatically extracted from reviews</p>
+            <div class="word-cloud-v2">
+              <span v-if="topKeywords.length === 0" class="w-small" style="color: #94a3b8;">Not enough text data yet.</span>
+
+              <span
+                v-for="(word, index) in topKeywords"
+                :key="word"
+                :class="getWordClass(index)"
+              >
+                {{ word }}
+              </span>
+            </div>
+          </div>
         </div>
-      </div>
-    </Teleport>
 
-    <Teleport to="body">
-      <div v-if="showSuccessModal" class="modal-overlay">
-        <div class="modal-card">
-          <div class="modal-icon">🎉</div>
-          <h2>Amazing Job!</h2>
-          <p>You have completely finished your session. Your feedback is going to help us build a much smarter food AI. Thank you for your time!</p>
-          <button class="primary-btn" @click="resetSurvey">
-            Start New Survey
-          </button>
+        <div class="text-bottom-row">
+          <div class="excerpt-header-row">
+            <div class="header-left-side">
+              <p class="section-label mb-0">⚑ RESPONSE EXCERPTS</p>
+              <span class="excerpt-count">{{ Math.min(answers.length, 8) }} of {{ answers.length }}</span>
+            </div>
+            <div class="excerpt-filters">
+              <button class="f-btn active">All</button><button class="f-btn pos-btn">Positive</button><button class="f-btn neu-btn">Neutral</button><button class="f-btn neg-btn">Negative</button>
+            </div>
+          </div>
+
+          <div class="excerpt-grid-v2">
+            <div v-for="(feedback, i) in answers.slice(0, 8)" :key="i" class="exc-card">
+              <p class="exc-text">
+                "{{ feedback.response || feedback.textResponse || (typeof feedback === 'string' ? feedback : 'No text saved in database') }}"
+              </p>
+              <div class="exc-footer">
+                <span class="exc-tag" :class="getSentimentData(feedback).class">
+                  {{ getSentimentData(feedback).icon }} {{ getSentimentData(feedback).label }}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </Teleport>
 
+      </div>
+
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 
-// --- State ---
-const hasStarted = ref(false);
-const currentSessionId = Math.random().toString(36).substring(2, 10);
-
-// Modal Flags
-const showLimitModal = ref(false);
-const showConfirmModal = ref(false);
-const showSuccessModal = ref(false);
-
+// Master State
 const menuItems = ref<any[]>([]);
-const activeCategory = ref('Meal');
-const currentItemIndex = ref(0);
+const analyticsData = ref<Record<string, any>>({});
+const isLoading = ref(true);
 
-// Answers Dictionary: { itemId: { questionId: selectedOptionId / text } }
-const answers = ref<Record<number, Record<number, any>>>({});
+// Option 1 Navigation State
+const activeCategory = ref('Food');
+const activeSubcategory = ref('All');
+const selectedItemId = ref<number | null>(null);
 
-const categories = [
-  'Meal', 'Bread', 'Pasta', 'Waffle', 'Coffee', 'Non-coffee',
-  'Frappe Series', 'Float', 'Milktea', 'Sparkling Soda', 'Fruit Tea'
-];
+const currentDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+// UPDATED: Changed from participantCount to baselineCount
+const baselineCount = ref(0);
 
-const getPillClass = (cat: string) => {
+// We define what belongs where based on your actual menu!
+const foodSubcategories = ['Meal', 'Bread', 'Pasta', 'Waffle'];
+const drinkSubcategories = ['Coffee', 'Non-coffee', 'Frappe Series', 'Float', 'Milktea', 'Sparkling Soda', 'Fruit Tea'];
+
+// Computed Helpers for Filtering
+const isFood = (cat: string) => foodSubcategories.includes(cat);
+const isDrink = (cat: string) => drinkSubcategories.includes(cat);
+
+// Maps categories to their pastel color CSS classes
+const getPillClass = (sub: string) => {
   const map: Record<string, string> = {
-    'Meal': 'pill-meal', 'Bread': 'pill-bread', 'Pasta': 'pill-pasta',
-    'Waffle': 'pill-waffle', 'Coffee': 'pill-coffee', 'Non-coffee': 'pill-noncoffee',
-    'Frappe Series': 'pill-frappe', 'Float': 'pill-float', 'Sparkling Soda': 'pill-soda',
-    'Milktea': 'pill-milktea', 'Fruit Tea': 'pill-fruittea'
+    // New Individual Food Colors
+    'Meal': 'pill-meal',
+    'Bread': 'pill-bread',
+    'Pasta': 'pill-pasta',
+    'Waffle': 'pill-waffle',
+
+    // Existing Drink Colors
+    'Coffee': 'pill-coffee',
+    'Non-coffee': 'pill-noncoffee',
+    'Frappe Series': 'pill-frappe',
+    'Float': 'pill-float',
+    'Sparkling Soda': 'pill-soda',
+    'Milktea': 'pill-milktea',
+    'Fruit Tea': 'pill-fruittea'
   };
-  return map[cat] || 'pill-default';
+  return map[sub] || 'pill-all';
 };
 
-const questions = [
-  {
-    id: 1,
-    shortText: "Which emotion makes you crave it?",
-    text: "Which emotion or physical state most strongly makes you want to order this item?",
-    type: 'vertical-radio',
-    options: [
-      { id: 1, label: "Stressed/Overwhelmed", icon: "😩" },
-      { id: 2, label: "Happy/Celebratory", icon: "😊" },
-      { id: 3, label: "Tired/Low Energy", icon: "😴" },
-      { id: 4, label: "Relaxed/Chilling", icon: "😌" },
-      { id: 5, label: "Focused/Working", icon: "🎯" }
-    ]
-  },
-  {
-    id: 2,
-    shortText: "What weather suits it best?",
-    text: "In what weather condition does this item feel most satisfying?",
-    type: 'grid-radio',
-    options: [
-      { id: 6, label: "Hot/Sunny", icon: "☀️" },
-      { id: 7, label: "Cold/Rainy", icon: "🌧️" },
-      { id: 8, label: "Any Weather", icon: "⛅" }
-    ]
-  },
-  {
-    id: 3,
-    shortText: "What's the vibe of the dish?",
-    text: "What is the vibe of this specific dish?",
-    type: 'grid-radio',
-    options: [
-      { id: 9, label: "Heavy Meal", icon: "🍽️" },
-      { id: 10, label: "Light Snack", icon: "🥗" },
-      { id: 11, label: "Drink/Refreshment", icon: "🥤" }
-    ]
-  },
-  {
-    id: 4,
-    shortText: "What's a fair student price?",
-    text: "What do you think is a fair Student-Friendly price for this item?",
-    type: 'grid-radio',
-    options: [
-      { id: 12, label: "Under ₱150", sub: "Budget" },
-      { id: 13, label: "₱150 - ₱249", sub: "Mid-range" },
-      { id: 14, label: "₱250 and above", sub: "Premium" }
-    ]
-  },
-  {
-    id: 5,
-    shortText: "Describe it to an AI.",
-    text: "How would you describe this dish to the AI chatbot?",
-    type: 'textarea'
-  }
-];
-
-// --- Computed Properties ---
-const filteredItems = computed(() => {
-  return menuItems.value.filter(item => item.category === activeCategory.value);
+const currentSubcategories = computed(() => {
+  return activeCategory.value === 'Food' ? foodSubcategories : drinkSubcategories;
 });
 
-const currentItem = computed(() => {
-  if (filteredItems.value.length === 0) return null;
-  return filteredItems.value[currentItemIndex.value];
-});
+// The Magic Filter: This dynamically builds the horizontal scrolling tabs
+const filteredMenuItems = computed(() => {
+  return menuItems.value.filter(item => {
+    // 1. Is it the right master category (Food vs Drink)?
+    const matchesTopLevel = activeCategory.value === 'Food' ? isFood(item.category) : isDrink(item.category);
+    if (!matchesTopLevel) return false;
 
-const isCurrentItemComplete = computed(() => {
-  if (!currentItem.value) return false;
-  const itemId = currentItem.value.id;
-  const itemAnswers = answers.value[itemId];
-  if (!itemAnswers) return false;
-
-  for (const q of questions) {
-    const ans = itemAnswers[q.id];
-    if (q.type === 'textarea') {
-      if (!ans || typeof ans !== 'string' || ans.trim() === '') return false;
-    } else {
-      if (ans === undefined || ans === null) return false;
+    // 2. Is it the right subcategory (Meal vs Pasta)?
+    if (activeSubcategory.value !== 'All' && item.category !== activeSubcategory.value) {
+      return false;
     }
-  }
-  return true;
-});
 
-const completedInCategory = computed(() => {
-  let count = 0;
-  filteredItems.value.forEach(item => {
-    if (answers.value[item.id] && Object.keys(answers.value[item.id]).length > 0) count++;
+    return true;
   });
-  return count;
 });
 
-const totalRatedItems = computed(() => {
-  let count = 0;
-  menuItems.value.forEach(item => {
-    if (answers.value[item.id] && Object.keys(answers.value[item.id]).length > 0) count++;
-  });
-  return count;
-});
+// The currently viewed item
+const menuItem = computed(() => menuItems.value.find(i => i.id === selectedItemId.value) || null);
 
-// --- Methods ---
+// Data Fetching
 const fetchMenuItems = async () => {
   try {
     const response = await axios.get('http://localhost:8080/menu-items');
     menuItems.value = response.data;
+
+    // Auto-select the first item in the filtered list
+    if (filteredMenuItems.value.length > 0) {
+      await selectItem(filteredMenuItems.value[0].id);
+    } else {
+      isLoading.value = false;
+    }
   } catch (error) {
     console.error("Error fetching menu items:", error);
+    isLoading.value = false;
   }
 };
 
-// Navigating Categories freely
-const selectCategory = (cat: string) => {
-  activeCategory.value = cat;
-  currentItemIndex.value = 0;
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-};
-
-const nextItem = () => {
-  if (currentItemIndex.value < filteredItems.value.length - 1) {
-    currentItemIndex.value++;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-};
-
-const prevItem = () => {
-  if (currentItemIndex.value > 0) {
-    currentItemIndex.value--;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-};
-
-const resetSurvey = () => {
-  showSuccessModal.value = false;
-  window.location.reload();
-};
-
-// Saves the specific category they just finished
-const saveCategory = async () => {
+const fetchAnalyticsForCurrentItem = async () => {
+  if (!selectedItemId.value) return;
+  isLoading.value = true;
   try {
-    const payload: any[] = [];
+    const response = await axios.get(`http://localhost:8080/analytics/${selectedItemId.value}`);
+    analyticsData.value = response.data;
+  } catch (error) {
+    console.error(`Error fetching analytics for item ${selectedItemId.value}:`, error);
+    analyticsData.value = {};
+  } finally {
+    isLoading.value = false;
+  }
+};
 
-    filteredItems.value.forEach(item => {
-      const itemAnswers = answers.value[item.id];
-      if (itemAnswers) {
-        Object.entries(itemAnswers).forEach(([qId, ans]) => {
-          const isText = typeof ans === 'string';
-          payload.push({
-            userId: currentSessionId,
-            menuItemId: item.id,
-            questionId: Number(qId),
-            selectedOptionId: isText ? null : ans,
-            textResponse: isText ? ans : null
-          });
-        });
+// Interaction Functions
+const selectItem = async (itemId) => {
+  selectedItemId.value = itemId;
+  fetchItemStats(itemId);
+  fetchAnalyticsForCurrentItem();
+};
+
+const setCategory = (category: string) => {
+  activeCategory.value = category;
+  activeSubcategory.value = 'All';
+  autoSelectFirstFilteredItem();
+};
+
+const setSubcategory = (subcategory: string) => {
+  activeSubcategory.value = subcategory;
+  autoSelectFirstFilteredItem();
+};
+
+const autoSelectFirstFilteredItem = () => {
+  if (filteredMenuItems.value.length > 0) {
+    // Check if the currently selected item is still visible in the new filtered list
+    const currentStillVisible = filteredMenuItems.value.some(i => i.id === selectedItemId.value);
+
+    // If it disappeared because of the filter, auto-select the first available one!
+    if (!currentStillVisible) {
+      selectItem(filteredMenuItems.value[0].id);
+    }
+  } else {
+    // Nothing matches the filter
+    selectedItemId.value = null;
+    analyticsData.value = {};
+  }
+};
+
+// Chart Computed Properties
+const correctQuestionOrder = [
+  'Which emotion or physical state most strongly makes you want to order this item?',
+  'In what weather condition does this item feel most satisfying?',
+  'What is the "vibe" of this specific dish?',
+  'Looking at this item, what do you think is a fair "Student-Friendly" price for it?'
+];
+
+const radioQuestions = computed(() => {
+  const result: Record<string, any> = {};
+
+  // 1. Loop through YOUR specific order first
+  correctQuestionOrder.forEach(qTitle => {
+    const answers = analyticsData.value[qTitle];
+    if (answers && answers.length > 0 && answers[0].voteCount !== undefined) {
+      result[qTitle] = answers;
+    }
+  });
+
+  // 2. Catch any extra questions just in case
+  Object.entries(analyticsData.value).forEach(([qTitle, answers]) => {
+    if (!correctQuestionOrder.includes(qTitle)) {
+      if (answers && answers.length > 0 && answers[0].voteCount !== undefined) {
+        result[qTitle] = answers;
       }
+    }
+  });
+
+  return result;
+});
+
+const textQuestions = computed(() => {
+  const result: Record<string, any> = {};
+  Object.entries(analyticsData.value).forEach(([q, ans]) => {
+    if (ans && ans.length > 0 && ans[0].voteCount === undefined) result[q] = ans;
+  });
+  return result;
+});
+
+const totalQuestions = computed(() => Object.keys(analyticsData.value).length);
+const radioQuestionsCount = computed(() => Object.keys(radioQuestions.value).length);
+
+const totalResponses = computed(() => {
+  const firstQ = Object.values(radioQuestions.value)[0];
+  if (!firstQ) return 0;
+  return firstQ.reduce((sum: number, stat: any) => sum + Number(stat.voteCount), 0);
+});
+
+const calculatePercentage = (votes: number, allStats: any[]) => {
+  const total = allStats.reduce((sum, stat) => sum + Number(stat.voteCount), 0);
+  if (total === 0) return 0;
+  return Math.round((votes / total) * 100);
+};
+
+const topResponse = (answers: any[]) => {
+  if (!answers || answers.length === 0) return 'N/A';
+  const highest = answers.reduce((prev, current) => (Number(prev.voteCount) > Number(current.voteCount)) ? prev : current);
+  return highest.optionLabel;
+};
+
+const getSentimentData = (feedback) => {
+  const text = (feedback.response || feedback.textResponse || (typeof feedback === 'string' ? feedback: '')).toLowerCase();
+  if(!text) return { class: 'neu', icon: '-', label: 'Neutral' };
+
+  const positiveWords = ['good', 'great', 'love', 'best', 'delicious', 'yummy', 'perfect', 'nice', 'amazing', 'sweet', 'comfort', 'favorite', 'warm', 'fresh', 'hot', 'filling'];
+  const negativeWords = ['bad', 'hate', 'awful', 'terrible', 'gross', 'expensive', 'worse', 'bland', 'nasty', 'disgusting', 'dry', 'salty', 'cold', 'hard', 'stale'];
+
+  const isPositive = positiveWords.some(word => text.includes(word));
+  const isNegative = negativeWords.some(word => text.includes(word));
+
+  if(isNegative) return { class: 'neg', icon: '👎', label: 'Negative' };
+  if(isPositive) return { class: 'pos', icon: '👍', label: 'Positive' };
+
+  return { class: 'neu', icon: '-', label: 'Neutral'};
+}
+
+const downloadReport = async () => {
+  try {
+    // We tell Axios we are expecting a 'blob' (a file), not just standard JSON
+    const response = await axios.get('http://localhost:8080/export', {
+      responseType: 'blob'
     });
 
-    if (payload.length === 0) return;
+    // Create a temporary hidden link in the browser to force the download
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'CafeRater_Report.csv');
+    document.body.appendChild(link);
+    link.click();
 
-    await axios.post('http://localhost:8080/submit-category', payload);
-
-    // Quick success alert, then prompt them to pick another category or finish
-    alert(`Success! Your answers for ${activeCategory.value} have been saved. You can select another category from the top, or click "I'm Done" to finish!`);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-
-  } catch (error: any) {
-    const errorMessage = error.response?.data ? JSON.stringify(error.response.data) : "";
-    if (errorMessage.includes("LIMIT_REACHED")) {
-      showLimitModal.value = true;
-    } else {
-      console.error("Error saving category data:", error);
-      alert("Oops! There was a problem saving your answers. Please try again.");
-    }
+    // Clean up the link after the download starts
+    document.body.removeChild(link);
+  } catch (error) {
+    console.error("Error downloading report:", error);
+    alert("Oops! Could not export the report right now.");
   }
 };
 
-// Handles ending the entire session
-const executeFinalSubmit = () => {
-  showConfirmModal.value = false;
-  showSuccessModal.value = true; // Shows confetti and blocks the screen
+const globalTotal = ref(0);
+const itemTotal = ref(0);
+const engagementPct = ref(0);
+const topKeywords = ref([]);
+const sentiment = ref({pos: 0, neu: 0, neg: 0, posPct: 0, neuPct: 0, negPct: 0});
+
+const getWordClass = (index) => {
+  if(index < 2) return 'w-huge';
+  if(index < 4) return 'w-large';
+  if(index < 6) return 'w-med';
+  return 'w-small';
 };
 
-// Answer Management
-const setAnswer = (itemId: number | undefined, questionId: number, optionId: number) => {
-  if (!itemId) return;
-  if (!answers.value[itemId]) answers.value[itemId] = {};
-  answers.value[itemId][questionId] = optionId;
+const fetchItemStats = async (menuItemId) => {
+  try {
+    const response = await axios.get(`http://localhost:8080/analytics/stats/${menuItemId}`);
+    const data = response.data;
+
+    globalTotal.value = data.globalTotal;
+    itemTotal.value = data.itemTotal;
+    engagementPct.value = data.engagementPct;
+
+    sentiment.value = {
+      pos: data.positiveCount,
+      neu: data.neutralCount,
+      neg: data.negativeCount,
+      posPct: data.positivePct,
+      neuPct: data.neutralPct,
+      negPct: data.negativePct,
+    };
+
+    topKeywords.value = data.topKeywords || [];
+  } catch (error) {
+    console.error("Failed to load real stats", error);
+  }
 };
 
-const setTextAnswer = (itemId: number | undefined, questionId: number, text: string) => {
-  if (!itemId) return;
-  if (!answers.value[itemId]) answers.value[itemId] = {};
-  answers.value[itemId][questionId] = text;
-};
-
-const getAnswer = (itemId: number | undefined, questionId: number) => {
-  if (!itemId || !answers.value[itemId]) return null;
-  return answers.value[itemId][questionId];
-};
-
-const isAnswered = (itemId: number | undefined, questionId: number) => {
-  if (!itemId || !answers.value[itemId]) return false;
-  const ans = answers.value[itemId][questionId];
-  if (typeof ans === 'string') return ans.trim().length > 0;
-  return ans !== undefined && ans !== null;
-};
-
+// UPDATED: Now fetches from your newly built baseline endpoint
 const fetchStats = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/api/stats/participants');
-    participantCount.value = response.data;
+    const response = await axios.get('http://localhost:8080/api/stats/baseline');
+    baselineCount.value = response.data;
   } catch (error) {
-    console.error("Error fetching participant count:", error);
+    console.error("Error fetching baseline count:", error);
   }
 };
 
@@ -451,67 +550,75 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* GLOBALS */
-.survey-layout { background-color: #f8fafc; min-height: 100vh; font-family: 'Inter', -apple-system, sans-serif; color: #1e293b; padding-bottom: 50px;}
+/* GLOBALS & HEADER */
+.dashboard-layout { background-color: #f4f7fa; min-height: 100vh; padding: 30px 50px; font-family: 'Inter', -apple-system, sans-serif; color: #1e293b; }
+.top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+.header-left { display: flex; align-items: center; gap: 15px; }
+.logo-icon { background: #f97316; color: white; width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+.top-header h1 { margin: 0 0 5px 0; font-size: 1.5rem; color: #0f172a; }
+.subtitle { margin: 0; color: #64748b; font-size: 0.9rem; }
+.header-right { display: flex; gap: 15px; align-items: center; }
+.live-badge { background: #ecfdf5; color: #10b981; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; border: 1px solid #a7f3d0; }
+.live-badge .dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; }
+.export-btn { background: #1e293b; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
 
-/* SHARED BUTTONS */
-.primary-btn {
-  background: #f97316; color: white; border: none; padding: 16px 40px; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; width: 100%; transition: transform 0.2s, background 0.2s;
-}
-.primary-btn:hover { background: #ea580c; transform: translateY(-2px); }
+.truncate-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 
-/* WELCOME SCREEN */
-.welcome-screen { position: fixed; inset: 0; background-image: url('https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&q=80&w=2000'); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; z-index: 100;}
-.welcome-screen::before { content: ''; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); }
-.welcome-card { position: relative; background: white; padding: 50px 40px; border-radius: 24px; text-align: center; max-width: 500px; width: 90%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.welcome-icon { background: #f97316; color: white; width: 70px; height: 70px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin: 0 auto 20px auto; box-shadow: 0 10px 15px -3px rgba(249, 115, 22, 0.3); }
-.welcome-card h1 { margin: 0 0 15px 0; color: #0f172a; font-size: 2.2rem; font-weight: 800; }
-.welcome-card p { color: #475569; line-height: 1.6; margin-bottom: 35px; font-size: 1.1rem; }
-@keyframes slideUp { 0% { transform: translateY(40px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+/* KPI CARDS */
+.kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; margin-bottom: 25px; }
+.kpi-card { background: white; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); display: flex; flex-direction: column; border: 1px solid #e2e8f0; overflow: hidden; }
+.kpi-tag { padding: 8px 15px; border-bottom: 1px solid #f1f5f9; font-size: 0.7rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
+.t-dot { width: 6px; height: 6px; border-radius: 50%; }
+.t-dot.blue { background: #3b82f6; } .t-dot.teal { background: #0d9488; } .t-dot.orange { background: #ea580c; }
+.kpi-body { padding: 15px; display: flex; align-items: flex-start; gap: 15px; }
+.kpi-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+.kpi-icon.blue { background: #eff6ff; color: #3b82f6; } .kpi-icon.teal { background: #f0fdfa; color: #0d9488; } .kpi-icon.orange { background: #fff7ed; color: #ea580c; } .kpi-icon.green { background: #f0fdf4; color: #16a34a; }
+.kpi-content h2 { margin: 4px 0; font-size: 1.6rem; color: #0f172a; font-weight: 700;}
+.kpi-label { margin: 0; font-size: 0.75rem; color: #64748b; font-weight: 600; letter-spacing: 0.5px; }
+.kpi-subtext { margin: 0; font-size: 0.75rem; color: #94a3b8; }
 
-/* HEADER */
-.top-nav { background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 50; }
-.nav-content { max-width: 1200px; margin: 0 auto; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
-.logo { display: flex; align-items: center; gap: 10px; }
-.logo-icon { background: #f97316; color: white; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
-.logo h1 { margin: 0; font-size: 1.2rem; color: #0f172a; font-weight: 700; }
+/* OPTION 1 NAVIGATION PANEL */
+.navigation-panel { background: white; border-radius: 16px; margin-bottom: 30px; border: 1px solid #e2e8f0; box-shadow: 0 2px 10px rgba(0,0,0,0.02); overflow: hidden; }
+.filters-row { display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid #f1f5f9; background: #fafbfc; gap: 20px;}
 
-/* HEADER ACTIONS (NEW) */
-.header-actions { display: flex; align-items: center; gap: 20px; }
-.global-progress { font-size: 0.95rem; color: #64748b; }
-.global-progress strong { color: #0f172a; }
-.header-finish-btn { background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: background 0.2s;}
-.header-finish-btn:hover { background: #059669; }
-.pulse-light { animation: pulseLight 2s infinite; }
-@keyframes pulseLight {
-  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
-  70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-}
+.category-toggle { display: flex; background: #e2e8f0; border-radius: 8px; padding: 4px; }
+.category-toggle button { background: transparent; border: none; padding: 6px 16px; border-radius: 6px; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.2s; }
+.category-toggle button.active { background: white; color: #0f172a; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 
-/* TABS */
-.tabs-container { background: white; border-bottom: 1px solid #e2e8f0; position: sticky; top: 67px; z-index: 40; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); }
-.tabs-scroll { max-width: 1200px; margin: 0 auto; padding: 10px 30px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
-.tabs-scroll::-webkit-scrollbar { display: none; }
-.tab-btn { padding: 8px 18px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; white-space: nowrap; border: 1px solid; }
+.divider { width: 1px; height: 24px; background: #cbd5e1; }
 
-/* --- Tab Color Palette --- */
+.subcategory-pills { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 2px;}
+.subcategory-pills::-webkit-scrollbar { display: none; }
+
+/* Base pill styling */
+.f-pill { padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; border: 1px solid; }
+
+/* Meal: Savory Red */
 .pill-meal { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
 .pill-meal:hover { background: #fee2e2; }
 .pill-meal.active { background: #fca5a5; color: #7f1d1d; border-color: #f87171; }
 
+/* Bread: Toasted Wheat/Tan */
 .pill-bread { background: #fdf5e6; border-color: #ebd5b3; color: #8b5a2b; }
 .pill-bread:hover { background: #faebd7; }
 .pill-bread.active { background: #deb887; color: #5c3317; border-color: #cdaa7d; }
 
+/* Pasta: Bright Butter Yellow */
 .pill-pasta { background: #fefce8; border-color: #fde047; color: #854d0e; }
 .pill-pasta:hover { background: #fef9c3; }
 .pill-pasta.active { background: #facc15; color: #422006; border-color: #eab308; }
 
+/* Waffle: Sweet Orange */
 .pill-waffle { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
 .pill-waffle:hover { background: #ffedd5; }
 .pill-waffle.active { background: #fdba74; color: #9a3412; border-color: #f97316; }
 
+/* Food Colors (Orange/Yellow) */
+.pill-food { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
+.pill-food:hover { background: #ffedd5; }
+.pill-food.active { background: #fdba74; color: #9a3412; border-color: #f97316; }
+
+/* Drink Colors (Matched to Figma!) */
 .pill-coffee { background: #fffbeb; border-color: #fde68a; color: #b45309; }
 .pill-coffee:hover { background: #fef3c7; }
 .pill-coffee.active { background: #fcd34d; color: #78350f; border-color: #f59e0b; }
@@ -540,99 +647,110 @@ onMounted(() => {
 .pill-fruittea:hover { background: #ffe4e6; }
 .pill-fruittea.active { background: #fda4af; color: #9f1239; border-color: #f43f5e; }
 
-.main-content { max-width: 1200px; margin: 40px auto; padding: 0 30px; }
+.item-tabs-container { display: flex; gap: 5px; padding: 15px 20px; overflow-x: auto; }
+.empty-filter { padding: 20px; color: #94a3b8; font-style: italic; font-size: 0.9rem; }
+.item-tab { display: flex; flex-direction: column; align-items: center; min-width: 100px; padding: 10px; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; opacity: 0.6; }
+.item-tab:hover { opacity: 0.9; }
+.item-tab.active { opacity: 1; border-bottom-color: #f97316; }
+.tab-thumb { width: 45px; height: 45px; border-radius: 10px; background-size: cover; background-position: center; border: 1px solid #e2e8f0; margin-bottom: 8px;}
+.tab-title { font-size: 0.85rem; font-weight: 600; color: #0f172a; max-width: 110px; text-align: center; }
+.item-tab.active .tab-title { color: #ea580c; }
+.tab-cat { font-size: 0.7rem; color: #94a3b8; }
+.item-tab.active .tab-cat { color: #fb923c; }
 
-/* RATING VIEW (Split Pane) */
-.rating-view { display: grid; grid-template-columns: 350px 1fr; gap: 40px; align-items: start; }
+/* STATES */
+.state-message { text-align: center; padding: 80px 20px; color: #64748b; }
+.state-message.empty h2 { color: #0f172a; font-size: 2rem; margin-bottom: 10px; }
+.state-message.empty p { font-size: 1.1rem; }
+.badge-v2 { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+.badge-v2.food-badge { background: #ffedd5; color: #c2410c; }
+.badge-v2.type-badge { background: rgba(0,0,0,0.6); color: white; border: 1px solid rgba(255,255,255,0.2); backdrop-filter: blur(4px); }
+.q-circle { position: absolute; bottom: 15px; right: 15px; background: rgba(255,255,255,0.2); color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; z-index: 3; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.3); }
 
-/* LEFT PANE (Sticky Item Card) */
-.left-pane { position: sticky; top: 140px; }
-.sticky-card { background: white; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
-.pane-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-size: 0.85rem; }
-.breadcrumb { color: #64748b; font-weight: 500;}
-.text-dark { color: #0f172a; font-weight: 600; }
-.cat-progress { color: #64748b; font-weight: 500;}
-.green-text { color: #16a34a; font-weight: 700; }
-.item-cover { position: relative; }
-.cover-img { height: 250px; background-size: cover; background-position: center; }
-.cover-img::before { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent 70%); }
-.cover-info { position: absolute; bottom: 20px; left: 20px; right: 20px; }
-.cover-info h3 { margin: 0 0 10px 0; color: white; font-size: 1.4rem; font-weight: 700; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.5);}
-.badge { background: #ffedd5; color: #c2410c; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; }
+/* RADIO CARDS */
+.cards-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 25px; }
+.insight-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; }
+.radio-card-v2 { border-top: 4px solid #f97316; }
+.card-image-header-v2 { height: 180px; background-color: #e2e8f0; background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800'); background-size: cover; background-position: center; position: relative; display: flex; align-items: flex-end; padding: 20px; }
+.card-image-header-v2::before { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 70%; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); z-index: 1;}
+.image-overlay-v2 { z-index: 2; width: 100%; }
+.image-overlay-v2 h3 { color: white; margin: 0 0 8px 0; font-size: 1.3rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+.card-body { padding: 25px; }
+.insight-card .card-body { display: block; }
+.question-title { margin: 0 0 5px 0; font-size: 1.1rem; color: #0f172a; }
+.response-count { margin: 0 0 20px 0; font-size: 0.85rem; color: #94a3b8; }
+.bar-row { display: flex; align-items: center; gap: 15px; margin-bottom: 12px; }
+.bar-label { width: 100px; font-size: 0.9rem; color: #475569; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track-v2 { flex-grow: 1; height: 28px; background: #fff7ed; border-radius: 8px; overflow: hidden; }
+.bar-fill.orange-solid { height: 100%; border-radius: 8px; transition: width 1s ease; background: #f97316; }
+.bar-value { width: 30px; font-weight: 600; font-size: 0.9rem; color: #0f172a; text-align: right;}
+.bar-percent { width: 40px; font-size: 0.85rem; color: #94a3b8; text-align: right;}
+.key-insight-v2 { margin-top: 25px; background: #fff7ed; padding: 12px 15px; border-radius: 8px; color: #c2410c; font-size: 0.9rem; display: flex; align-items: center; gap: 10px; }
 
-/* RIGHT PANE (Questions List) */
-.questions-list { display: flex; flex-direction: column; gap: 20px; }
-.question-card { background: white; padding: 30px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
+/* TEXT CARDS */
+.text-card-v2 { grid-column: 1 / -1; display: flex; flex-direction: column; border-top: 4px solid #f97316; }
+.text-top-row { display: grid; grid-template-columns: 280px 1.5fr 1fr; border-bottom: 1px solid #f1f5f9; }
+.text-col-image { position: relative; background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800'); background-size: cover; background-position: center; min-height: 250px; display: flex; align-items: flex-end; padding: 20px; }
+.text-col-image::before { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 60%; background: linear-gradient(to top, rgba(0,0,0,0.85), transparent); }
+.text-col-image::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 30%; background: linear-gradient(to bottom, rgba(0,0,0,0.3), transparent); }
+.text-col-image .q-circle { top: 15px; right: 15px; bottom: auto; background: rgba(255,255,255,0.8); color: #94a3b8; border: none;}
+.badge-row { display: flex; gap: 8px; }
+.text-col-sentiment { padding: 25px; border-right: 1px solid #f1f5f9; }
+.question-title-v2 { margin: 0 0 5px 0; font-size: 1.1rem; color: #0f172a; font-weight: 600; }
+.response-count-v2 { margin: 0 0 20px 0; font-size: 0.85rem; color: #94a3b8; }
+.section-label { font-size: 0.75rem; font-weight: 600; color: #64748b; letter-spacing: 0.5px; margin-bottom: 12px; text-transform: uppercase; }
+.section-subtext { font-size: 0.7rem; color: #94a3b8; margin-top: -8px; margin-bottom: 12px; }
+.sent-boxes-v2 { display: flex; gap: 10px; margin-bottom: 20px; }
+.s-box-v2 { flex: 1; text-align: center; padding: 12px 10px; border-radius: 8px; border: 1px solid #f1f5f9; }
+.s-box-v2 h2 { margin: 0; font-size: 1.6rem; font-weight: 700;}
+.s-box-v2 span { font-size: 0.8rem; font-weight: 500;}
+.s-box-v2.pos { background: #f0fdf4; color: #16a34a; border-color: #dcfce7; }
+.s-box-v2.neu { background: #f8fafc; color: #64748b; }
+.s-box-v2.neg { background: #fef2f2; color: #ef4444; border-color: #fee2e2; }
+.sent-bar-thick { height: 16px; display: flex; border-radius: 8px; overflow: hidden; gap: 0px; margin-bottom: 12px; }
+.s-fill-thick { height: 100%; }
+.s-fill-thick.pos { background: #22c55e; }
+.s-fill-thick.neu { background: #94a3b8; }
+.s-fill-thick.neg { background: #ef4444; }
+.sent-legend { display: flex; gap: 15px; font-size: 0.8rem; font-weight: 500; }
+.l-pos { color: #16a34a; } .l-neu { color: #64748b; } .l-neg { color: #ef4444; } .l-total { color: #94a3b8; margin-left: auto; }
+.text-col-keywords { padding: 25px; display: flex; flex-direction: column; }
+.word-cloud-v2 { flex-grow: 1; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 12px; margin-top: 10px; }
+.word-cloud-v2 span { font-weight: 700; color: #f97316; cursor: pointer; transition: opacity 0.2s; }
+.word-cloud-v2 span:hover { opacity: 0.7; }
+.w-huge { font-size: 1.8rem; } .w-large { font-size: 1.3rem; opacity: 0.8; } .w-med { font-size: 1.05rem; opacity: 0.6; } .w-small { font-size: 0.85rem; opacity: 0.4; color: #94a3b8 !important;}
 
-.q-header { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 25px; }
-.q-bubble { width: 28px; height: 28px; background: #ffedd5; color: #ea580c; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; flex-shrink: 0; transition: all 0.3s;}
-.q-bubble.answered { background: #22c55e; color: white; }
-.q-header h4 { margin: 0; font-size: 1.15rem; color: #0f172a; line-height: 1.4; padding-top: 2px;}
+/* Excerpts */
+.text-bottom-row { padding: 25px; background: white; }
+.excerpt-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.header-left-side { display: flex; align-items: center; gap: 10px; }
+.mb-0 { margin-bottom: 0 !important; }
+.excerpt-count { font-size: 0.8rem; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 10px; font-weight: 500;}
+.excerpt-filters { display: flex; gap: 8px; }
+.f-btn { padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border: 1px solid #e2e8f0; background: white; color: #64748b; transition: all 0.2s;}
+.f-btn:hover { background: #f8fafc; }
+.f-btn.active { background: #0f172a; color: white; border-color: #0f172a; }
+.pos-btn { color: #16a34a; border-color: #dcfce7; } .pos-btn:hover { background: #f0fdf4; }
+.neu-btn { color: #64748b; border-color: #e2e8f0; } .neu-btn:hover { background: #f8fafc; }
+.neg-btn { color: #ef4444; border-color: #fee2e2; } .neg-btn:hover { background: #fef2f2; }
+.excerpt-grid-v2 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+.exc-card { background: #f8fafc; padding: 20px; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #e2e8f0; }
+.exc-text { margin: 0 0 15px 0; font-size: 0.9rem; color: #334155; line-height: 1.5; }
+.exc-footer { display: flex; }
+.exc-tag { font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+.exc-tag.pos { color: #16a34a; } .exc-tag.neu { color: #64748b; } .exc-tag.neg { color: #ef4444; }
 
-/* Option Buttons Shared */
-.opt-btn-vertical, .opt-btn-grid { position: relative; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; cursor: pointer; transition: all 0.2s; text-align: left; }
-.opt-btn-vertical:hover, .opt-btn-grid:hover { border-color: #cbd5e1; background: #f1f5f9; }
-.opt-btn-vertical.selected, .opt-btn-grid.selected { border-color: #f97316; background: #fff7ed; }
-
-/* Vertical Layout (Q1) */
-.vertical-options { display: flex; flex-direction: column; gap: 10px; }
-.opt-btn-vertical { display: flex; align-items: center; gap: 15px; padding: 15px 20px; }
-.opt-icon { font-size: 1.5rem; }
-.opt-label { font-size: 1rem; font-weight: 600; color: #334155; }
-
-/* Grid Layout (Q2, Q3, Q4) */
-.grid-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
-.opt-btn-grid { padding: 20px 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 8px; min-height: 110px;}
-.opt-icon-large { font-size: 2rem; }
-.opt-label-main { width: 100%; text-align: center; font-weight: 700; color: #0f172a; font-size: 1.05rem; }
-.opt-sub { width: 100%; text-align: center; font-size: 0.8rem; color: #64748b; font-weight: 500; }
-
-/* Text Area (Q5) */
-.text-input-wrapper { position: relative; }
-.styled-textarea { box-sizing: border-box; width: 100%; height: 120px; padding: 20px; border-radius: 12px; border: 2px solid #e2e8f0; background: #f8fafc; font-family: inherit; font-size: 1rem; color: #334155; resize: none; transition: all 0.2s; outline: none; }
-.styled-textarea:focus { border-color: #f97316; background: white; }
-.styled-textarea.has-content { border-color: #f97316; background: #fff7ed; }
-.char-count { position: absolute; bottom: 35px; right: 15px; font-size: 0.8rem; color: #94a3b8; font-weight: 500;}
-.helper-text { margin: 10px 0 0 0; font-size: 0.85rem; color: #64748b; text-align: center; }
-
-/* Footer Actions */
-.action-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 20px; border-top: 1px solid #e2e8f0;}
-.nav-btn { padding: 14px 24px; border-radius: 10px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s; border: none; }
-.nav-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.nav-btn.secondary { background: white; border: 1px solid #cbd5e1; color: #475569; }
-.nav-btn.secondary:hover:not(:disabled) { background: #f1f5f9; }
-.nav-btn.primary { background: #f97316; color: white; margin-left: auto;}
-.nav-btn.primary:hover { background: #ea580c; }
-.nav-btn.success { background: #22c55e; color: white; margin-left: auto;}
-.nav-btn.success:hover { background: #16a34a; }
-
-/* --- CUSTOM MODALS --- */
-.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 9999; }
-.modal-card { background: white; padding: 40px; border-radius: 24px; text-align: center; max-width: 450px; width: 90%; margin: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-.modal-icon { font-size: 4.5rem; margin-bottom: 15px; }
-.modal-card h2 { margin: 0 0 15px 0; color: #0f172a; font-size: 1.8rem; font-weight: 800; }
-.modal-card p { color: #64748b; line-height: 1.6; margin-bottom: 30px; font-size: 1.05rem; }
-.modal-actions { display: flex; gap: 15px; justify-content: center; margin-top: 10px; }
-.modal-actions button { flex: 1; margin: 0; }
-@keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-
-/* Simple entrance animation */
-.pulse { animation: pulse 2s infinite; }
-@keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); }
-  70% { box-shadow: 0 0 0 10px rgba(249, 115, 22, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
-}
-
-/* --- MOBILE RESPONSIVENESS (Phones & Small Tablets) --- */
-@media (max-width: 850px) {
-  .rating-view { grid-template-columns: 1fr; gap: 20px; }
-  .left-pane { position: relative; top: 0; }
-  .cover-img { height: 180px; }
-  .grid-options { grid-template-columns: 1fr; }
-  .main-content { padding: 0 15px; }
-  .action-footer { flex-direction: column; gap: 15px; }
-  .nav-btn.primary, .nav-btn.success { margin-left: 0; width: 100%; }
-  .header-actions { flex-direction: column; gap: 5px; align-items: flex-end;}
-}
+/* NOTE: Added a missing class that your HTML was using for KPI Card 1 */
+.stat-card { background: white; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.02); display: flex; flex-direction: column; border: 1px solid #e2e8f0; overflow: hidden; }
+.card-header { padding: 8px 15px; border-bottom: 1px solid #f1f5f9; font-size: 0.7rem; font-weight: 700; color: #94a3b8; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
+.dot { width: 6px; height: 6px; border-radius: 50%; }
+.dot.blue { background: #3b82f6; }
+.card-body { padding: 15px; display: flex; align-items: flex-start; gap: 15px; }
+.icon-wrapper { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; background: #eff6ff; color: #3b82f6;}
+.stat-info { display: flex; flex-direction: column; }
+.stat-label { font-size: 0.75rem; color: #64748b; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 4px; }
+.stat-value { margin: 0; font-size: 1.6rem; font-weight: 700; color: #0f172a; line-height: 1; display: flex; align-items: baseline; gap: 6px;}
+.limit-text { font-size: 1rem; color: #94a3b8; font-weight: 600; }
+.stat-subtext { font-size: 0.75rem; color: #94a3b8; margin-top: 6px;}
+.text-success { color: #10b981; font-weight: 600; }
 </style>
