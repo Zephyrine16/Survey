@@ -18,6 +18,7 @@
     </header>
 
     <section class="kpi-grid">
+      <!-- KPI CARD 1 -->
       <div class="stat-card">
         <div class="card-header">
           <span class="dot blue"></span> GLOBAL
@@ -34,48 +35,56 @@
         </div>
       </div>
 
-      <div class="kpi-card">
-        <div class="kpi-tag"><span class="t-dot teal"></span> GLOBAL</div>
-        <div class="kpi-body">
-          <div class="kpi-icon teal">✅</div>
-          <div class="kpi-content">
-            <p class="kpi-label">ENGAGEMENT RATE</p>
-            <h2>{{ engagementPct }}%</h2>
-            <p class="kpi-subtext">Submitted</p>
-          </div>
-        </div>
-      </div>
+      <!-- KPI CARD 2 -->
       <div class="kpi-card">
         <div class="kpi-tag"><span class="t-dot orange"></span> CURRENT ITEM</div>
         <div class="kpi-body">
-          <div class="kpi-icon orange">⭐</div>
+          <div class="kpi-icon orange">🎯</div>
           <div class="kpi-content">
-            <p class="kpi-label">FAVORABLE RATING</p>
-            <h2>{{ (sentiment.posPct + sentiment.neuPct).toFixed(1) }}%</h2>
-            <p class="kpi-subtext">Excellent + Good</p>
-          </div>
-        </div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-tag"><span class="t-dot orange"></span> CURRENT ITEM</div>
-        <div class="kpi-body">
-          <div class="kpi-icon orange">⭐</div>
-          <div class="kpi-content">
-            <p class="kpi-label">FAVORABLE RATING</p>
-            <h2>{{ (sentiment.posPct + sentiment.neuPct).toFixed(1) }}%</h2>
-            <p class="kpi-subtext">Positive + Neutral Feedback</p>
+            <p class="kpi-label">TOTAL RESPONSES</p>
+            <h2>{{ itemTotal }}</h2>
+            <p class="kpi-subtext">For selected menu item</p>
           </div>
         </div>
       </div>
 
+      <!-- KPI CARD 3 -->
+      <div class="kpi-card">
+        <div class="kpi-tag"><span class="t-dot teal"></span> CURRENT ITEM</div>
+        <div class="kpi-body">
+          <div class="kpi-icon teal">👍</div>
+          <div class="kpi-content">
+            <p class="kpi-label">POSITIVE SENTIMENT</p>
+            <h2>{{ sentiment.posPct }}%</h2>
+            <p class="kpi-subtext">Happy Reviewers</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI CARD 4 -->
       <div class="kpi-card">
         <div class="kpi-tag"><span class="t-dot orange"></span> CURRENT ITEM</div>
         <div class="kpi-body">
-          <div class="kpi-icon teal">😊</div>
+          <div class="kpi-icon orange">🚨</div>
           <div class="kpi-content">
-            <p class="kpi-label">SATISFACTION</p>
-            <h2>{{ sentiment.posPct }}%</h2>
-            <p class="kpi-subtext">Highly Positive Feedback</p>
+            <p class="kpi-label">NEEDS ATTENTION</p>
+            <h2>{{ sentiment.negPct }}%</h2>
+            <p class="kpi-subtext">Critical / Negative Feedback</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI CARD 5 -->
+      <div class="kpi-card">
+        <div class="kpi-tag"><span class="t-dot blue"></span> CURRENT ITEM</div>
+        <div class="kpi-body">
+          <div class="kpi-icon blue">💬</div>
+          <div class="kpi-content">
+            <p class="kpi-label">TOP KEYWORD</p>
+            <h2 style="text-transform: capitalize;">
+              {{ topKeywords.length > 0 ? topKeywords[0] : '-' }}
+            </h2>
+            <p class="kpi-subtext">Most used in text reviews</p>
           </div>
         </div>
       </div>
