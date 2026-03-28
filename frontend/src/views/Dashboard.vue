@@ -11,6 +11,9 @@
       </div>
       <div class="header-right">
         <span class="live-badge"><span class="dot"></span> Live</span>
+        <button class="danger-btn" @click="showClearModal = true">
+          🗑️ Clear Data
+        </button>
         <button class="export-btn" @click="downloadReport">
           📥 Export Report
         </button>
@@ -267,6 +270,21 @@
       </div>
 
     </section>
+
+    <Teleport to="body">
+      <div v-if="showClearModal" class="modal-overlay">
+        <div class="modal-card danger-card">
+          <div class="modal-icon text-red">⚠️</div>
+          <h2>Wipe All Data?</h2>
+          <p>This will permanently delete <strong>all survey responses</strong> from the database. This action cannot be undone!</p>
+          <div class="modal-actions">
+            <button class="nav-btn secondary" @click="showClearModal = false">Cancel</button>
+            <button class="nav-btn danger-solid" @click="clearAllData">Yes, Nuke It</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
   </div>
 </template>
 
@@ -285,8 +303,8 @@ const activeSubcategory = ref('All');
 const selectedItemId = ref<number | null>(null);
 
 const currentDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-// UPDATED: Changed from participantCount to baselineCount
 const baselineCount = ref(0);
+const showClearModal = ref(false);
 
 // We define what belongs where based on your actual menu!
 const foodSubcategories = ['Meal', 'Bread', 'Pasta', 'Waffle'];
@@ -502,6 +520,17 @@ const downloadReport = async () => {
   } catch (error) {
     console.error("Error downloading report:", error);
     alert("Oops! Could not export the report right now.");
+  }
+};
+
+const clearAllData = async () => {
+  try {
+    await axios.delete('http://localhost:8080/api/admin/clear-data');
+    showClearModal.value = false;
+    window.location.reload();
+  } catch(error) {
+    console.error("Error clearing data:", error);
+    alert("Oops! Could not clear the database.");
   }
 };
 
@@ -762,4 +791,21 @@ onMounted(() => {
 .limit-text { font-size: 1rem; color: #94a3b8; font-weight: 600; }
 .stat-subtext { font-size: 0.75rem; color: #94a3b8; margin-top: 6px;}
 .text-success { color: #10b981; font-weight: 600; }
+
+/* CLEAR DATABASE */
+.danger-btn { background: white; color: #ef4444; border: 1px solid #fca5a5; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-right: 10px; }
+.danger-btn:hover { background: #fef2f2; border-color: #ef4444; }
+
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+.modal-card { background: white; padding: 40px; border-radius: 24px; text-align: center; max-width: 450px; width: 90%; margin: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+.modal-icon { width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin: 0 auto 15px auto; }
+.modal-card h2 { margin: 0 0 15px 0; color: #0f172a; font-size: 1.8rem; font-weight: 800; }
+.modal-card p { color: #64748b; line-height: 1.6; margin-bottom: 30px; font-size: 1.05rem; }
+.modal-actions { display: flex; gap: 15px; justify-content: center; margin-top: 10px; }
+.nav-btn { padding: 14px 24px; border-radius: 10px; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.2s; border: none; flex: 1; }
+.nav-btn.secondary { background: white; border: 1px solid #cbd5e1; color: #475569; }
+.nav-btn.secondary:hover { background: #f1f5f9; }
+.danger-solid { background: #ef4444; color: white; }
+.danger-solid:hover { background: #dc2626; }
+@keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 </style>
