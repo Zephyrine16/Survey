@@ -161,4 +161,18 @@ public class SurveyController {
         Long lowestCount = answerRepository.getBaselineResponseCount();
         return ResponseEntity.ok(lowestCount != null ? lowestCount : 0L);
     }
+
+    // ==========================================
+    // 4. ADMIN TOOLS: NUKE DATABASE (For Testing)
+    // ==========================================
+    @DeleteMapping("/api/admin/clear-data")
+    public ResponseEntity<?> clearAllData() {
+        try {
+            answerRepository.deleteAll();
+            return ResponseEntity.ok().body("{\"message\": \"All database records wiped!\"}");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("{\"error\": \"Failed to wipe data.\"}");
+        }
+    }
 }
