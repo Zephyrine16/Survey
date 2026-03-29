@@ -761,7 +761,8 @@ onMounted(() => {
 .l-pos { color: #16a34a; } .l-neu { color: #64748b; } .l-neg { color: #ef4444; } .l-total { color: #94a3b8; margin-left: auto; }
 .text-col-keywords { padding: 25px; display: flex; flex-direction: column; }
 .word-cloud-v2 { flex-grow: 1; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 12px; margin-top: 10px; }
-.word-cloud-v2 span { font-weight: 700; color: #f97316; cursor: pointer; transition: opacity 0.2s; }
+.word-cloud-v2 span {
+  font-weight: 700; color: var(--c-main, #f97316); cursor: pointer; transition: opacity 0.2s; }
 .word-cloud-v2 span:hover { opacity: 0.7; }
 .w-huge { font-size: 1.8rem; } .w-large { font-size: 1.3rem; opacity: 0.8; } .w-med { font-size: 1.05rem; opacity: 0.6; } .w-small { font-size: 0.85rem; opacity: 0.4; color: #94a3b8 !important;}
 
@@ -798,4 +799,115 @@ onMounted(() => {
 .danger-solid { background: #ef4444; color: white; }
 .danger-solid:hover { background: #dc2626; }
 @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+/* ==========================================================================
+   ✨ PREMIUM FINISHING TOUCHES ✨
+   ========================================================================== */
+
+/* 1. Premium Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.3);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.6);
+}
+/* Specifically force the custom scrollbar on our horizontal nav rows */
+.subcategory-pills::-webkit-scrollbar,
+.item-tabs-container::-webkit-scrollbar {
+  display: block;
+}
+
+/* 2. Tactile Hover States ("Lift" Effect) */
+.item-tab {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s, border-bottom-color 0.2s;
+}
+.item-tab:hover {
+  transform: translateY(-2px);
+  opacity: 1;
+}
+.exc-card {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s;
+}
+.exc-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  border-color: #cbd5e1;
+}
+
+/* 3. Blockquote Styling for Excerpts */
+.exc-card {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  background: #f8fafc;
+}
+.exc-card::before {
+  content: '"';
+  position: absolute;
+  top: -15px;
+  left: 10px;
+  font-family: Georgia, serif;
+  font-size: 6rem;
+  color: rgba(148, 163, 184, 0.12); /* Oversized, faint quote mark in background */
+  z-index: -1;
+  line-height: 1;
+}
+.exc-text {
+  font-style: italic;
+  color: #475569;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+/* 4. Better Contrast on Image Headers */
+.card-image-header-v2::before {
+  /* Darker gradient + subtle glass blur */
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.4) 60%, transparent 100%);
+  backdrop-filter: blur(2px);
+}
+.text-col-image::before {
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.5) 50%, transparent 100%);
+  backdrop-filter: blur(2px);
+}
+
+/* 5. Designed Empty States */
+.state-message.empty {
+  background: white;
+  border: 2px dashed #cbd5e1;
+  border-radius: 24px;
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 60px 30px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+}
+.state-message.empty h2 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  color: #0f172a;
+  font-size: 1.6rem;
+}
+.state-message.empty h2::before {
+  /* Turns the text emoji into a designed UI icon */
+  content: '📭';
+  font-size: 3.5rem;
+  background: #f8fafc;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  margin-bottom: 5px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
 </style>
