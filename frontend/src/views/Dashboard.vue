@@ -208,7 +208,8 @@
               <span
                 v-for="(word, index) in topKeywords"
                 :key="word"
-                :class="getWordClass(index)"
+                :class="[getWordClass(index), { 'active-word': activeKeywordFilter === word, 'dimmed-word': activeKeywordFilter && activeKeywordFilter !== word }]"
+                @click="toggleKeywordFilter(word)"
               >
                 {{ word }}
               </span>
@@ -217,18 +218,30 @@
         </div>
 
         <div class="text-bottom-row">
+
           <div class="excerpt-header-row">
             <div class="header-left-side">
               <p class="section-label mb-0">⚑ RESPONSE EXCERPTS</p>
-              <span class="excerpt-count">{{ Math.min(answers.length, 8) }} of {{ answers.length }}</span>
+              <span class="excerpt-count">{{ Math.min(filteredAnswers(answers).length, 8) }} of {{ filteredAnswers(answers).length }}</span>
             </div>
             <div class="excerpt-filters">
-              <button class="f-btn active">All</button><button class="f-btn pos-btn">Positive</button><button class="f-btn neu-btn">Neutral</button><button class="f-btn neg-btn">Negative</button>
+              <button class="f-btn" :class="{ active: activeSentimentFilter === 'All' }" @click="activeSentimentFilter = 'All'">All</button>
+              <button class="f-btn pos-btn" :class="{ active: activeSentimentFilter === 'Positive' }" @click="activeSentimentFilter = 'Positive'">Positive</button>
+              <button class="f-btn neu-btn" :class="{ active: activeSentimentFilter === 'Neutral' }" @click="activeSentimentFilter = 'Neutral'">Neutral</button>
+              <button class="f-btn neg-btn" :class="{ active: activeSentimentFilter === 'Negative' }" @click="activeSentimentFilter = 'Negative'">Negative</button>
+
+              <button v-if="activeKeywordFilter" class="f-btn keyword-clear-btn" @click="activeKeywordFilter = null">
+                Contains: "{{ activeKeywordFilter }}" ✕
+              </button>
             </div>
           </div>
 
-          <div class="excerpt-grid-v2">
-            <div v-for="(feedback, i) in answers.slice(0, 8)" :key="i" class="exc-card">
+          <div v-if="filteredAnswers(answers).length === 0" class="empty-filter" style="text-align: center; padding: 40px; color: #64748b; font-style: italic;">
+            No responses found matching your filters.
+          </div>
+
+          <div v-else class="excerpt-grid-v2">
+            <div v-for="(feedback, i) in filteredAnswers(answers).slice(0, 8)" :key="i" class="exc-card">
               <p class="exc-text">
                 "{{ feedback.response || feedback.textResponse || (typeof feedback === 'string' ? feedback : 'No text saved in database') }}"
               </p>
@@ -239,6 +252,7 @@
               </div>
             </div>
           </div>
+
         </div>
 
       </div>
@@ -364,6 +378,7 @@ const fetchAnalyticsForCurrentItem = async () => {
 
 const selectItem = async (itemId) => {
   selectedItemId.value = itemId;
+  activeKeywordFilter.value = null;
   fetchItemStats(itemId);
   fetchAnalyticsForCurrentItem();
 };
@@ -481,6 +496,40 @@ const itemTotal = ref(0);
 const engagementPct = ref(0);
 const topKeywords = ref([]);
 const sentiment = ref({pos: 0, neu: 0, neg: 0, posPct: 0, neuPct: 0, negPct: 0});
+const activeSentimentFilter = ref('All');
+const activeKeywordFilter = ref<string | null>(null);
+
+const filteredAnswers = (answers: any[]) => {
+  let filtered = answers;
+
+  // 1. Filter by Sentiment
+  if (activeSentimentFilter.value !== 'All') {
+    const targetClass =
+      activeSentimentFilter.value === 'Positive' ? 'pos' :
+        activeSentimentFilter.value === 'Neutral' ? 'neu' : 'neg';
+    filtered = filtered.filter(f => getSentimentData(f).class === targetClass);
+  }
+
+  if (activeKeywordFilter.value) {
+    const keyword = activeKeywordFilter.value.toLowerCase();
+    filtered = filtered.filter(f => {
+      const text = (f.response || f.textResponse || (typeof f === 'string' ? f : '')).toLowerCase();
+      return text.includes(keyword);
+    });
+  }
+
+  return filtered;
+};
+
+const toggleKeywordFilter = (word: string) => {
+  if(activeKeywordFilter.value === word) {
+    activeKeywordFilter.value = null;
+  }
+
+  else {
+    activeKeywordFilter.value = word;
+  }
+};
 
 const getWordClass = (index) => {
   if(index < 2) return 'w-huge';
@@ -734,7 +783,8 @@ onMounted(() => {
 .key-insight-v2 { margin-top: 25px; background: var(--c-light, #fff7ed); padding: 12px 15px; border-radius: 8px; color: var(--c-text, #c2410c); font-size: 0.9rem; display: flex; align-items: center; gap: 10px; }
 
 /* TEXT CARDS */
-.text-top-row { display: grid; grid-template-columns: 280px 1.5fr 1fr; border-bottom: 1px solid #f1f5f9; }
+.text-top-row { display: grid; grid-template-columns: 280px 1.5fr 1fr; border-bottom: 1px solid #f1f5f9; position: relative; z-index: 2;box-shadow: 0 4px 12px -2px rgba(0,0,0,0.03); }
+.text-col-sentiment { padding: 25px; border-right: 1px solid #f1f5f9; position: relative; z-index: 1; box-shadow: 4px 0 12px -2px rgba(0,0,0,0.03); }
 .text-col-image { position: relative; background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800'); background-size: cover; background-position: center; min-height: 250px; display: flex; align-items: flex-end; padding: 20px; }
 .text-col-image::before { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 60%; background: linear-gradient(to top, rgba(0,0,0,0.85), transparent); }
 .text-col-image::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 30%; background: linear-gradient(to bottom, rgba(0,0,0,0.3), transparent); }
@@ -776,9 +826,9 @@ onMounted(() => {
 .f-btn { padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; cursor: pointer; border: 1px solid #e2e8f0; background: white; color: #64748b; transition: all 0.2s;}
 .f-btn:hover { background: #f8fafc; }
 .f-btn.active { background: #0f172a; color: white; border-color: #0f172a; }
-.pos-btn { color: #16a34a; border-color: #dcfce7; } .pos-btn:hover { background: #f0fdf4; }
-.neu-btn { color: #64748b; border-color: #e2e8f0; } .neu-btn:hover { background: #f8fafc; }
-.neg-btn { color: #ef4444; border-color: #fee2e2; } .neg-btn:hover { background: #fef2f2; }
+.pos-btn.active { background: #16a34a !important; color: white !important; border-color: #16a34a !important; }
+.neu-btn.active { background: #64748b !important; color: white !important; border-color: #64748b !important; }
+.neg-btn.active { background: #ef4444 !important; color: white !important; border-color: #ef4444 !important; }
 .excerpt-grid-v2 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
 .exc-card { background: #f8fafc; padding: 20px; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid #e2e8f0; }
 .exc-text { margin: 0 0 15px 0; font-size: 0.9rem; color: #334155; line-height: 1.5; }
@@ -909,5 +959,26 @@ onMounted(() => {
   border-radius: 50%;
   margin-bottom: 5px;
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
+
+/* KEYWORD FILTER INTERACTIONS */
+.word-cloud-v2 span.active-word {
+  opacity: 1 !important;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.word-cloud-v2 span.dimmed-word {
+  opacity: 0.2 !important;
+  filter: grayscale(100%);
+}
+.keyword-clear-btn {
+  border-color: var(--c-main, #f97316) !important;
+  color: var(--c-main, #f97316) !important;
+  font-weight: 700;
+  background: var(--c-light, #fff7ed) !important;
+}
+.keyword-clear-btn:hover {
+  background: var(--c-main, #f97316) !important;
+  color: white !important;
 }
 </style>
