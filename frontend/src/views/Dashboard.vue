@@ -300,7 +300,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue';
 import axios from 'axios';
 
 //Security State
-const isAuthenticated = ref(!!localStorage.getItem('adminToken'));
+const isAuthenticated = ref(!!sessionStorage.getItem('adminToken'));
 const username = ref('');
 const password = ref('');
 const loginError = ref('');
@@ -317,7 +317,7 @@ const handleLogin = async () => {
     });
 
     const token = response.data.token;
-    localStorage.setItem('adminToken', token);
+    sessionStorage.setItem('adminToken', token);
 
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
@@ -332,7 +332,7 @@ const handleLogin = async () => {
 };
 
 const handleLogout = async () => {
-  localStorage.removeItem('adminToken');
+  sessionStorage.removeItem('adminToken');
   delete axios.defaults.headers.common['Authorization'];
   isAuthenticated.value = false;
   window.location.reload();
@@ -627,17 +627,19 @@ onMounted(() => {
   securityInterceptor = axios.interceptors.response.use(
     (response) => response,
     (error) => {
-      if(error.response && (errorresponse.status === 401 || error.response.status === 403)) {
+      if(error.response && (error.response.status === 401 || error.response.status === 403)) {
         console.warn("Session expired! Returning to login screen...");
-        localStorage.removeItem('adminToken');
+        sessionStorage.removeItem('adminToken');
+
         delete axios.defaults.headers.common['Authorization'];
         isAuthenticated.value = false;
       }
       return Promise.reject(error);
     }
   )
+
   if(isAuthenticated.value) {
-    axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem('adminToken')}`;
+    axios.defaults.headers.common['Authorization'] = `Bearer ${sessionStorage.getItem('adminToken')}`;
     fetchMenuItems();
     fetchStats();
   }
