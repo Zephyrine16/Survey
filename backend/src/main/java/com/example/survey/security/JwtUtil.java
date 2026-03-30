@@ -4,6 +4,8 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
@@ -11,8 +13,17 @@ import java.util.Date;
 
 @Component
 public class JwtUtil {
-    private final String SECRET_KEY = "SuperSecretCafeSurveyKey2026Secure!!";
-    private final Key key =  Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+
+    @Value("${jwt.secret}")
+    private String secretString;
+
+    private Key key;
+
+    // Build the secure key AFTER Spring injects the secretString
+    @PostConstruct
+    public void init() {
+        this.key = Keys.hmacShaKeyFor(secretString.getBytes());
+    }
 
     public String generateToken(String username) {
         return Jwts.builder()
@@ -26,7 +37,7 @@ public class JwtUtil {
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
-            return  true;
+            return true;
         } catch(Exception e) {
             return false;
         }
