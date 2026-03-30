@@ -5,6 +5,7 @@ import com.example.survey.repository.AnswerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.HtmlUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -17,20 +18,27 @@ public class SurveyController {
     private AnswerRepository answerRepository;
 
     // ==========================================
-    // 1. SAVE SURVEY ANSWERS (Now with Anonymous IDs!)
+    // 1. SAVE SURVEY ANSWERS (Now with Anonymous IDs & Sanitization!)
     // ==========================================
     @PostMapping("/submit-category")
     public ResponseEntity<?> submitCategoryAnswers(@RequestBody List<CategorySubmissionDTO> payload) {
         try {
-            // The Bouncer: Checks for the 200 limit
             Long totalSurveys = answerRepository.countGlobalTotalResponses();
-            if(totalSurveys != null && totalSurveys >= 200) {
+            if(totalSurveys != null && totalSurveys >= 30) {
                 return ResponseEntity.badRequest().body("{\"error\": \"LIMIT_REACHED\"}");
             }
 
             for (CategorySubmissionDTO dto : payload) {
+                if (dto.getTextResponse() != null && !dto.getTextResponse().isEmpty()) {
+                    String cleanText = HtmlUtils.htmlEscape(dto.getTextResponse());
+                    if (cleanText.length() > 250) {
+                        cleanText = cleanText.substring(0, 250);
+                    }
+                    dto.setTextResponse(cleanText);
+                }
+
                 answerRepository.saveRawAnswer(
-                        dto.getUserId(),           // <--- UPDATED: Grabs the random ID from Vue!
+                        dto.getUserId(),
                         dto.getMenuItemId(),
                         dto.getQuestionId(),
                         dto.getSelectedOptionId(),
