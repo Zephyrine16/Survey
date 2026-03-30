@@ -1,5 +1,23 @@
 <template>
-  <div class="dashboard-layout">
+  <div>
+    <div v-if="!isAuthenticated" class="login-wrapper">
+      <div class="login-card">
+        <div class="login-icon">🔒</div>
+        <h2>Admin Access</h2>
+        <p>Please log in to view the dashboard.</p>
+
+        <form @submit.prevent="handleLogin" class="login-form">
+          <input type="text" v-model="username" placeholder="Username" required class="login-input" />
+          <input type="password" v-model="password" placeholder="Password" required class="login-input" />
+
+          <p v-if="loginError" class="error-text">{{ loginError }}</p>
+
+          <button type="submit" class="login-btn" :disabled="isLoggingIn">
+            {{ isLoggingIn ? 'Authenticating...' : 'Sign In' }}
+          </button>
+        </form>
+      </div>
+    </div> <div v-else class="dashboard-layout">
 
     <header class="top-header">
       <div class="header-left">
@@ -11,6 +29,8 @@
       </div>
       <div class="header-right">
         <span class="live-badge"><span class="dot"></span> Live</span>
+
+        <button class="logout-btn" @click="handleLogout">🚪 Log Out</button>
 
         <button class="danger-btn" @click="showClearModal = true">
           🗑️ Clear Data
@@ -54,9 +74,9 @@
       <div class="new-kpi-card item-card">
         <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
         <div class="kpi-val-wrapper">
-          <span class="keyword-pill" style="text-transform: capitalize;">
-            {{ topKeywords.length > 0 ? topKeywords[0] : '-' }}
-          </span>
+            <span class="keyword-pill" style="text-transform: capitalize;">
+              {{ topKeywords.length > 0 ? topKeywords[0] : '-' }}
+            </span>
         </div>
         <p class="kpi-name">TOP KEYWORD</p>
         <p class="kpi-desc">Most used in text reviews</p>
@@ -138,7 +158,7 @@
 
         <div class="card-body insight-body">
           <h4 class="question-title">{{ question }}</h4>
-          <p class="response-count">{{ totalResponses }} responses</p>
+          <p class="response-count">{{ totalResponses }} response{{ totalResponses === 1 ? '' : 's' }}</p>
 
           <div class="bars-container">
             <div v-for="stat in answers" :key="stat.optionLabel" class="bar-row">
@@ -176,7 +196,7 @@
 
           <div class="text-col-sentiment">
             <h4 class="question-title-v2">{{ question }}</h4>
-            <p class="response-count-v2">{{ answers.length }} text responses</p>
+            <p class="response-count-v2">{{ answers.length }} text response{{ answers.length === 1 ? '' : 's' }}</p>
             <p class="section-label">SENTIMENT BREAKDOWN</p>
 
             <div class="sent-boxes-v2">
@@ -211,8 +231,8 @@
                 :class="[getWordClass(index), { 'active-word': activeKeywordFilter === word, 'dimmed-word': activeKeywordFilter && activeKeywordFilter !== word }]"
                 @click="toggleKeywordFilter(word)"
               >
-                {{ word }}
-              </span>
+                  {{ word }}
+                </span>
             </div>
           </div>
         </div>
@@ -246,9 +266,9 @@
                 "{{ feedback.response || feedback.textResponse || (typeof feedback === 'string' ? feedback : 'No text saved in database') }}"
               </p>
               <div class="exc-footer">
-                <span class="exc-tag" :class="getSentimentData(feedback).class">
-                  {{ getSentimentData(feedback).icon }} {{ getSentimentData(feedback).label }}
-                </span>
+                  <span class="exc-tag" :class="getSentimentData(feedback).class">
+                    {{ getSentimentData(feedback).icon }} {{ getSentimentData(feedback).label }}
+                  </span>
               </div>
             </div>
           </div>
@@ -273,19 +293,56 @@
       </div>
     </Teleport>
 
-  </div>
-</template>
+  </div> </div> </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import axios from 'axios';
+
+//Security State
+const isAuthenticated = ref(!!localStorage.getItem('adminToken'));
+const username = ref('');
+const password = ref('');
+const loginError = ref('');
+const isLoggingIn = ref(false);
+
+const handleLogin = async () => {
+  isLoggingIn.value = true;
+  loginError.value = '';
+
+  try {
+    const response = await axios.post('http://localhost:8080/api/admin/login', {
+      username: username.value,
+      password: password.value
+    });
+
+    const token = response.data.token;
+    localStorage.setItem('adminToken', token);
+
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+    isAuthenticated.value = true;
+    fetchMenuItems();
+    fetchStats();
+  } catch(error) {
+    loginError.value = 'Invalid username or password';
+  } finally {
+    isLoggingIn.value = false;
+  }
+};
+
+const handleLogout = async () => {
+  localStorage.removeItem('adminToken');
+  delete axios.defaults.headers.common['Authorization'];
+  isAuthenticated.value = false;
+  window.location.reload();
+}
 
 // Master State
 const menuItems = ref<any[]>([]);
 const analyticsData = ref<Record<string, any>>({});
 const isLoading = ref(true);
 
-// Option 1 Navigation State
 const activeCategory = ref('Food');
 const activeSubcategory = ref('All');
 const selectedItemId = ref<number | null>(null);
@@ -564,13 +621,89 @@ const fetchStats = async () => {
   }
 };
 
+let securityInterceptor: number | null = null;
+
 onMounted(() => {
-  fetchMenuItems();
-  fetchStats();
+  securityInterceptor = axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if(error.response && (errorresponse.status === 401 || error.response.status === 403)) {
+        console.warn("Session expired! Returning to login screen...");
+        localStorage.removeItem('adminToken');
+        delete axios.defaults.headers.common['Authorization'];
+        isAuthenticated.value = false;
+      }
+      return Promise.reject(error);
+    }
+  )
+  if(isAuthenticated.value) {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${localStorage.getItem('adminToken')}`;
+    fetchMenuItems();
+    fetchStats();
+  }
+});
+
+onUnmounted(() => {
+  if(securityInterceptor != null) {
+    axios.interceptors.response.eject(securityInterceptor);
+  }
 });
 </script>
 
 <style scoped>
+/* LOGIN SCREEN */
+.login-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #f4f7fa;
+}
+
+.login-card {
+  background: white;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  border: 1px solid #e2e8f0;
+}
+
+.login-icon { font-size: 3rem; margin-bottom: 10px; }
+.login-card h2 { margin: 0 0 10px 0; color: #0f172a; font-size: 1.8rem; }
+.login-card p { color: #64748b; margin-bottom: 25px; font-size: 0.95rem; }
+
+.login-form { display: flex; flex-direction: column; gap: 15px; }
+
+.login-input {
+  padding: 12px 15px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #f8fafc;
+  transition: border-color 0.2s;
+}
+.login-input:focus { outline: none; border-color: #f97316; background: white; }
+
+.login-btn {
+  background: #0f172a;
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background 0.2s;
+}
+.login-btn:hover:not(:disabled) { background: #1e293b; }
+.login-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+.error-text { color: #ef4444 !important; font-size: 0.85rem !important; margin: 0 !important; text-align: left; }
+
 /* GLOBALS & HEADER */
 .dashboard-layout { background-color: #f4f7fa; min-height: 100vh; padding: 30px 50px; font-family: 'Inter', -apple-system, sans-serif; color: #1e293b; }
 .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
@@ -849,6 +982,29 @@ onMounted(() => {
 .danger-solid { background: #ef4444; color: white; }
 .danger-solid:hover { background: #dc2626; }
 @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+/* LOGOUT BUTTON STYLES */
+.logout-btn {
+  background-color: #64748b;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.logout-btn:hover {
+  background-color: #475569;
+}
+
+.logout-btn:active {
+  transform: scale(0.96);
+}
 
 /* ==========================================================================
    ✨ PREMIUM FINISHING TOUCHES ✨
