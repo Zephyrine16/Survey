@@ -5,16 +5,19 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "http://localhost:5173")
 public class AuthController {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Value("${admin.username}")
     private String adminUser;
@@ -27,7 +30,7 @@ public class AuthController {
         String username = credentials.get("username");
         String password = credentials.get("password");
 
-        if(adminUser.equals(username) && adminPass.equals(password)) {
+        if(adminUser.equals(username) && adminPass.matches(password)) {
             String token = jwtUtil.generateToken(username);
             return ResponseEntity.ok(Map.of("token", token));
         }
