@@ -30,7 +30,7 @@ public class AuthController {
         String username = credentials.get("username");
         String password = credentials.get("password");
 
-        if(adminUser.equals(username) && adminPass.matches(password)) {
+        if(adminUser.equals(username) && passwordEncoder.matches(password, adminPass)) {
             String token = jwtUtil.generateToken(username);
             return ResponseEntity.ok(Map.of("token", token));
         }

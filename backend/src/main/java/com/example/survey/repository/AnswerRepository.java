@@ -89,4 +89,8 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
     // CARD 2 (MICRO): Get the total number of people who answered Question 1 for a SPECIFIC item
     @Query(value = "SELECT COUNT(*) FROM answers WHERE menu_item_id = :menuItemId AND question_id = 1", nativeQuery = true)
     Long countTotalResponsesForItem(@Param("menuItemId") Long menuItemId);
+
+    // This counts unique people (by their random session ID) instead of total button clicks
+    @Query("SELECT COUNT(DISTINCT a.userId) FROM Answer a")
+    Long countTotalParticipants();
 }
