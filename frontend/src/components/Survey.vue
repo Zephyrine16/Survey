@@ -359,6 +359,17 @@ const fetchMenuItems = async () => {
   }
 };
 
+const checkSurveyLimit = async () => {
+  try {
+    const response = await axios.get('http://localhost:8080/api/stats/survey-status');
+    if(response.data.isFull) {
+      showLImitModal.value = true;
+    }
+  } catch(error) {
+    console.error("Failed to check survey status:", error);
+  }
+};
+
 const nextItem = () => {
   if (currentItemIndex.value < menuItems.value.length - 1) {
     currentItemIndex.value++;
@@ -479,6 +490,7 @@ const getPillClass = (cat: string | undefined) => {
 };
 
 onMounted(() => {
+  checkSurveyLimit();
   fetchMenuItems();
 });
 </script>

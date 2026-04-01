@@ -22,8 +22,8 @@ public class SurveyController {
     @PostMapping("/submit-category")
     public ResponseEntity<?> submitCategoryAnswers(@RequestBody List<CategorySubmissionDTO> payload) {
         try {
-            Long totalSurveys = answerRepository.countGlobalTotalResponses();
-            if(totalSurveys != null && totalSurveys >= 30) {
+            Long totalParticipants = answerRepository.countTotalParticipants();
+            if(totalParticipants != null && totalParticipants >= 30) {
                 return ResponseEntity.badRequest().body("{\"error\": \"LIMIT_REACHED\"}");
             }
 
@@ -51,6 +51,17 @@ public class SurveyController {
             e.printStackTrace();
             return ResponseEntity.internalServerError().body("{\"error\": \"Failed to save data.\"}");
         }
+    }
+
+    @GetMapping("/api/stats/survey-status")
+    public ResponseEntity<?> checkSurveyStatus() {
+        Long totalParticipants = answerRepository.countTotalParticipants();
+        boolean isFull = (totalParticipants != null && totalParticipants >= 30);
+
+        return ResponseEntity.ok(java.util.Map.of(
+                "isFull", isFull,
+                "currentCount", totalParticipants != null ? totalParticipants : 0
+        ));
     }
 
     // ==========================================
@@ -94,14 +105,6 @@ public class SurveyController {
         // Fetch base counts (Cleaned up duplicate lines here!)
         stats.globalTotal = answerRepository.countGlobalTotalResponses();
         stats.itemTotal = answerRepository.countTotalResponsesForItem(menuItemId);
-
-        // Engagement Rate Math
-        Long globalTextTotal = answerRepository.countGlobalTextResponses();
-        if(stats.globalTotal > 0) {
-            stats.engagementPct = Math.round(((double) globalTextTotal / stats.globalTotal) * 1000.0) / 10.0;
-        } else {
-            stats.engagementPct = 0.0;
-        }
 
         // Fetch text reviews for sentiment analysis
         List<String> reviews = answerRepository.getTextReviewsForItem(menuItemId);

@@ -74,10 +74,6 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
     @Query(value = "SELECT COUNT(*) FROM answers WHERE question_id = 1", nativeQuery = true)
     Long countGlobalTotalResponses();
 
-    // 3. Get global total of text responses (Used for the engagement rate math)
-    @Query(value = "SELECT COUNT(*) FROM answers WHERE question_id = 5 AND response IS NOT NULL AND TRIM(response) != ''", nativeQuery = true)
-    Long countGlobalTextResponses();
-
     // CARD 1 (MACRO/BASELINE): Get the lowest number of responses among all menu items
     @Query(value = "SELECT COALESCE(MIN(response_count), 0) FROM (" +
             "SELECT m.id, COUNT(a.id) AS response_count " +
