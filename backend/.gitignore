@@ -1,0 +1,11 @@
+# Compiled Java classes
+target/
+*.jar
+
+# IntelliJ Idea files
+.idea/
+*.iml
+node_modules/
+
+# Maven Wrapper (we keep this, but ignore local settings)
+.mvn/wrapper/maven-wrapper.jar

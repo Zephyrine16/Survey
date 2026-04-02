@@ -311,7 +311,7 @@ const handleLogin = async () => {
   loginError.value = '';
 
   try {
-    const response = await axios.post('http://localhost:8080/api/admin/login', {
+    const response = await axios.post('/api/admin/login', {
       username: username.value,
       password: password.value
     });
@@ -354,8 +354,19 @@ const showClearModal = ref(false);
 const foodSubcategories = ['Meal', 'Bread', 'Pasta', 'Waffle'];
 const drinkSubcategories = ['Coffee', 'Non-coffee', 'Frappe Series', 'Float', 'Milktea', 'Sparkling Soda', 'Fruit Tea'];
 
-const isFood = (cat: string) => foodSubcategories.includes(cat);
-const isDrink = (cat: string) => drinkSubcategories.includes(cat);
+const isFood = (cat: string) => {
+  if (!cat) return false;
+  const cleanCat = cat.trim().toLowerCase();
+  const foodCats = foodSubcategories.map(s => s.toLowerCase());
+  return foodCats.includes(cleanCat);
+};
+
+const isDrink = (cat: string) => {
+  if (!cat) return false;
+  const cleanCat = cat.trim().toLowerCase();
+  const drinkCats = drinkSubcategories.map(s => s.toLowerCase());
+  return drinkCats.includes(cleanCat);
+};
 
 const getPillClass = (cat: string | undefined) => {
   if (!cat) return 'pill-default';
@@ -406,7 +417,7 @@ const menuItem = computed(() => menuItems.value.find(i => i.id === selectedItemI
 
 const fetchMenuItems = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/menu-items');
+    const response = await axios.get('/menu-items');
     menuItems.value = response.data;
     if (filteredMenuItems.value.length > 0) {
       await selectItem(filteredMenuItems.value[0].id);
@@ -423,7 +434,7 @@ const fetchAnalyticsForCurrentItem = async () => {
   if (!selectedItemId.value) return;
   isLoading.value = true;
   try {
-    const response = await axios.get(`http://localhost:8080/analytics/${selectedItemId.value}`);
+    const response = await axios.get(`/analytics/${selectedItemId.value}`);
     analyticsData.value = response.data;
   } catch (error) {
     console.error(`Error fetching analytics for item ${selectedItemId.value}:`, error);
@@ -523,7 +534,7 @@ const getSentimentData = (feedback) => {
 
 const downloadReport = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/export', { responseType: 'blob' });
+    const response = await axios.get('/export', { responseType: 'blob' });
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = url;
@@ -539,7 +550,7 @@ const downloadReport = async () => {
 
 const clearAllData = async () => {
   try {
-    await axios.delete('http://localhost:8080/api/admin/clear-data');
+    await axios.delete('/api/admin/clear-data');
     showClearModal.value = false;
     window.location.reload();
   } catch (error) {
@@ -597,7 +608,7 @@ const getWordClass = (index) => {
 
 const fetchItemStats = async (menuItemId) => {
   try {
-    const response = await axios.get(`http://localhost:8080/analytics/stats/${menuItemId}`);
+    const response = await axios.get(`/analytics/stats/${menuItemId}`);
     const data = response.data;
     globalTotal.value = data.globalTotal;
     itemTotal.value = data.itemTotal;
@@ -614,7 +625,7 @@ const fetchItemStats = async (menuItemId) => {
 
 const fetchStats = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/api/stats/baseline');
+    const response = await axios.get('/api/stats/baseline');
     baselineCount.value = response.data;
   } catch (error) {
     console.error("Error fetching baseline count:", error);

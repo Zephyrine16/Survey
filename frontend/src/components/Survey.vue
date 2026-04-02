@@ -350,7 +350,7 @@ const shuffleArray = (array: any[]) => {
 
 const fetchMenuItems = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/menu-items');
+    const response = await axios.get('/menu-items');
     let allItems = response.data;
     shuffleArray(allItems);
     menuItems.value = allItems.slice(0, 15);
@@ -361,9 +361,9 @@ const fetchMenuItems = async () => {
 
 const checkSurveyLimit = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/api/stats/survey-status');
+    const response = await axios.get('/api/stats/survey-status');
     if(response.data.isFull) {
-      showLImitModal.value = true;
+      showLimitModal.value = true;
     }
   } catch(error) {
     console.error("Failed to check survey status:", error);
@@ -411,7 +411,7 @@ const executeFinalSubmit = async () => {
 
     if (payload.length === 0) return;
 
-    await axios.post('http://localhost:8080/submit-category', payload);
+    await axios.post('/submit-category', payload);
 
     showConfirmModal.value = false;
     showReviewModal.value = false; // Close review modal on submit

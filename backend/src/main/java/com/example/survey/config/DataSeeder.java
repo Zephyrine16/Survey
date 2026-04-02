@@ -67,17 +67,5 @@ public class DataSeeder implements CommandLineRunner {
             jdbcTemplate.execute(sql);
             System.out.println("EYE-DINE Survey data seeded successfully!");
         }
-
-        if(menuItemRepository.count() == 0) {
-            System.out.println("Seeding menu items...");
-
-            List<MenuItem> meals = Arrays.asList(
-                    new MenuItem("Chicken Creamy Mushroom n Aglio Olio Rice", "A comforting classic.", "Meal", 150.00, "placeholder.jpg"),
-                    new MenuItem("Salisbury Steak n Mushroom Sauce", "Savory and filling.", "Meal", 180.00, "placeholder.jpg")
-            );
-
-            menuItemRepository.saveAll(meals);
-            System.out.println("Meals seeded successfully!");
-        }
     }
 }
