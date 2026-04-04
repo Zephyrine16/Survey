@@ -143,6 +143,15 @@ public class MenuSeeder implements CommandLineRunner {
         MenuItem item = new MenuItem();
         item.setName(name);
         item.setCategory(category);
+        
+        String baseName = name.replaceFirst("^(?i)(Hot |Iced )", "");
+
+        String generatedFileName = baseName.toLowerCase()
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("-$", "")
+                + ".webp";
+
+        item.setImageName(generatedFileName);
         return item;
     }
 }
