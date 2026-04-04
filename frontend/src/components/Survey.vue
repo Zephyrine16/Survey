@@ -43,7 +43,10 @@
               </div>
 
               <div class="item-cover">
-                <div class="cover-img" style="background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800');"></div>
+                <div
+                  class="cover-img"
+                  :style="currentItem?.imageName ? { backgroundImage: `url('${getImagePath(currentItem)}')` } : {}"
+                ></div>
                 <div class="cover-info">
                   <h3>{{ currentItem?.name }}</h3>
                   <span class="badge" :class="getPillClass(currentItem?.category)">🍴 {{ currentItem?.category }}</span>
@@ -157,12 +160,12 @@
         <div class="modal-card review-card">
           <div class="review-header">
             <h2>Review Your Answers</h2>
-            <p>Here is a summary of your feedback for your {{ answeredItems.length }} item{{ answeredItems.length === 1 ? '' : 's' }}.</p>
+            <p>Summary for your {{ answeredItems.length }} item{{ answeredItems.length === 1 ? '' : 's' }}.</p>
           </div>
 
           <div class="review-scroll-area">
             <div v-if="answeredItems.length === 0" class="empty-review">
-              <p>You haven't rated any items yet! Go back and select some options first.</p>
+              <p>You haven't rated any items yet!</p>
             </div>
 
             <div v-for="(item, index) in answeredItems" :key="item.id" class="review-item-block">
@@ -197,11 +200,9 @@
       <div v-if="showLimitModal" class="modal-overlay">
         <div class="modal-card">
           <div class="modal-icon">🎉</div>
-          <h2>Wow, we are overwhelmed!</h2>
-          <p>Thank you so much for your interest! We have reached our maximum limit of 200 participants, so we are no longer accepting new responses for this study.</p>
-          <button class="primary-btn" @click="showLimitModal = false">
-            Close Window
-          </button>
+          <h2>Maximum Limit Reached</h2>
+          <p>We are no longer accepting new responses for this study.</p>
+          <button class="primary-btn" @click="showLimitModal = false">Close Window</button>
         </div>
       </div>
     </Teleport>
@@ -211,10 +212,8 @@
         <div class="modal-card">
           <div class="modal-icon">🎉</div>
           <h2>Amazing Job!</h2>
-          <p>You have completely finished your session. Your feedback is going to help us build a much smarter food AI. Thank you for your time!</p>
-          <button class="primary-btn" @click="resetSurvey">
-            Start New Survey
-          </button>
+          <p>Your feedback is going to help us build a much smarter food AI. Thank you!</p>
+          <button class="primary-btn" @click="resetSurvey">Start New Survey</button>
         </div>
       </div>
     </Teleport>
@@ -332,12 +331,46 @@ const completedItemsCount = computed(() => {
   return count;
 });
 
-// Filters the list to ONLY show items where at least 1 question is answered
 const answeredItems = computed(() => {
   return menuItems.value.filter(item => {
     return questions.some(q => isAnswered(item.id, q.id));
   });
 });
+
+const getImagePath = (item) => {
+  if (!item || !item.imageName) return '';
+
+  // 1. Ask Vite where the live server's root folder actually is
+  const baseUrl = import.meta.env.BASE_URL;
+
+  // 2. Clean up the URL just in case Vite adds an extra slash
+  const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+
+  // 3. Build the absolute bulletproof path
+  return `${cleanBase}/items/${item.imageName}`;
+};
+
+/**
+ * Helper to match badge colors based on category.
+ */
+const getPillClass = (cat: string | undefined) => {
+  if (!cat) return 'pill-default';
+
+  const map: Record<string, string> = {
+    'Meal': 'pill-meal',
+    'Bread': 'pill-bread',
+    'Pasta': 'pill-pasta',
+    'Waffle': 'pill-waffle',
+    'Coffee': 'pill-coffee',
+    'Non-coffee': 'pill-noncoffee',
+    'Frappe Series': 'pill-frappe',
+    'Float': 'pill-float',
+    'Sparkling Soda': 'pill-soda',
+    'Milktea': 'pill-milktea',
+    'Fruit Tea': 'pill-fruittea'
+  };
+  return map[cat.trim()] || 'pill-default';
+};
 
 // --- Methods ---
 
@@ -414,7 +447,7 @@ const executeFinalSubmit = async () => {
     await axios.post('/submit-category', payload);
 
     showConfirmModal.value = false;
-    showReviewModal.value = false; // Close review modal on submit
+    showReviewModal.value = false;
     showSuccessModal.value = true;
 
   } catch (error: any) {
@@ -455,7 +488,6 @@ const isAnswered = (itemId: number | undefined, questionId: number) => {
   return ans !== undefined && ans !== null;
 };
 
-// NEW: Helper function to grab the text representation of an answer for the Review Modal
 const getAnswerText = (itemId: number, q: any) => {
   const ans = getAnswer(itemId, q.id);
 
@@ -475,20 +507,6 @@ const getAnswerText = (itemId: number, q: any) => {
   return 'Unknown';
 };
 
-// Helper to match the badge colors to the Dashboard analytics
-const getPillClass = (cat: string | undefined) => {
-  if(!cat) return 'pill-default';
-
-  const cleanCat = cat.trim().toLowerCase();
-  const map: Record<string, string> = {
-    'Meal': 'pill-meal', 'Bread': 'pill-bread', 'Pasta': 'pill-pasta',
-    'Waffle': 'pill-waffle', 'Coffee': 'pill-coffee', 'Non-coffee': 'pill-noncoffee',
-    'Frappe Series': 'pill-frappe', 'Float': 'pill-float', 'Sparkling Soda': 'pill-soda',
-    'Milktea': 'pill-milktea', 'Fruit Tea': 'pill-fruittea'
-  };
-  return map[cat.trim()] || 'pill-default';
-};
-
 onMounted(() => {
   checkSurveyLimit();
   fetchMenuItems();
@@ -506,8 +524,18 @@ onMounted(() => {
 .primary-btn:hover { background: #ea580c; transform: translateY(-2px); }
 
 /* WELCOME SCREEN */
-.welcome-screen { position: fixed; inset: 0; background-image: url('https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&q=80&w=2000'); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; z-index: 100;}
-.welcome-screen::before { content: ''; position: absolute; inset: 0; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); }
+.welcome-screen {
+  position: fixed;
+  inset: 0;
+  /* UPDATE: Removed hardcoded Unsplash URL */
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.welcome-screen { position: fixed; inset: 0; background-image: url('https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&q=80&w=2000'); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; z-index: 100; }
 .welcome-card { position: relative; background: white; padding: 50px 40px; border-radius: 24px; text-align: center; max-width: 500px; width: 90%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .welcome-icon { background: #f97316; color: white; width: 70px; height: 70px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin: 0 auto 20px auto; box-shadow: 0 10px 15px -3px rgba(249, 115, 22, 0.3); }
 .welcome-card h1 { margin: 0 0 15px 0; color: #0f172a; font-size: 2.2rem; font-weight: 800; }
@@ -544,7 +572,13 @@ onMounted(() => {
 .cat-progress { color: #64748b; font-weight: 500;}
 .green-text { color: #16a34a; font-weight: 700; }
 .item-cover { position: relative; }
-.cover-img { height: 250px; background-size: cover; background-position: center; }
+.cover-img {
+  height: 250px;
+  background-size: cover;
+  background-position: center;
+  /* UPDATE: Added gray fallback color */
+  background-color: #e2e8f0;
+}
 .cover-img::before { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent 70%); }
 .cover-info { position: absolute; bottom: 20px; left: 20px; right: 20px; }
 .cover-info h3 { margin: 0 0 10px 0; color: white; font-size: 1.4rem; font-weight: 700; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.5);}
