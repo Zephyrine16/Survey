@@ -118,6 +118,7 @@
         <div v-if="filteredMenuItems.length === 0" class="empty-filter">
           No items found in this category.
         </div>
+
         <div
           v-for="item in filteredMenuItems"
           :key="item.id"
@@ -125,8 +126,12 @@
           :class="{ active: selectedItemId === item.id }"
           @click="selectItem(item.id)"
         >
-          <div class="tab-thumb" style="background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=150')"></div>
-          <span class="tab-title truncate-text" :title="item.name">{{ item.name }}</span>
+          <div
+            class="tab-thumb"
+            :style="item?.imageName ? { backgroundImage: `url('${getImagePath(item)}')` } : {}"
+          ></div>
+
+          <span class="tab-title truncate-text">{{ item.name }}</span>
           <span class="tab-cat">{{ item.category }}</span>
         </div>
       </div>
@@ -148,7 +153,9 @@
       <div v-for="(answers, question, index) in radioQuestions" :key="question"
            class="insight-card radio-card-v2"
            :style="getCategoryStyles(menuItem?.category)">
-        <div class="card-image-header-v2">
+        <div
+          class="card-image-header-v2"
+             :style="menuItem?.imageName ? { backgroundImage: `url('${getImagePath(menuItem)}')` } : {}">
           <div class="image-overlay-v2">
             <h3 class="truncate-text">{{ menuItem?.name }}</h3>
             <span class="badge-v2 food-badge" :class="getPillClass(menuItem?.category)">🍴 {{ menuItem?.category }}</span>
@@ -183,7 +190,7 @@
            :style="getCategoryStyles(menuItem?.category)">
         <div class="text-top-row">
 
-          <div class="text-col-image">
+          <div class="text-col-image" :style="menuItem?.imageName ? { backgroundImage: `url('${getImagePath(menuItem)}')` } : {}">
             <span class="q-circle">Q{{ radioQuestionsCount + index + 1 }}</span>
             <div class="image-overlay-v2">
               <h3 class="truncate-text">{{ menuItem?.name }}</h3>
@@ -599,6 +606,19 @@ const toggleKeywordFilter = (word: string) => {
   }
 };
 
+const getImagePath = (item) => {
+  if (!item || !item.imageName) return '';
+
+  // 1. Ask Vite where the live server's root folder actually is
+  const baseUrl = import.meta.env.BASE_URL;
+
+  // 2. Clean up the URL just in case Vite adds an extra slash
+  const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+
+  // 3. Build the absolute bulletproof path
+  return `${cleanBase}/items/${item.imageName}`;
+};
+
 const getWordClass = (index) => {
   if(index < 2) return 'w-huge';
   if(index < 4) return 'w-large';
@@ -884,7 +904,7 @@ onUnmounted(() => {
 .item-tab { display: flex; flex-direction: column; align-items: center; min-width: 100px; padding: 10px; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; opacity: 0.6; }
 .item-tab:hover { opacity: 0.9; }
 .item-tab.active { opacity: 1; border-bottom-color: #f97316; }
-.tab-thumb { width: 45px; height: 45px; border-radius: 10px; background-size: cover; background-position: center; border: 1px solid #e2e8f0; margin-bottom: 8px;}
+.tab-thumb { width: 45px; height: 45px; border-radius: 10px; background-size: cover; background-position: center; border: 1px solid #e2e8f0; margin-bottom: 8px; }
 .tab-title { font-size: 0.85rem; font-weight: 600; color: #0f172a; max-width: 110px; text-align: center; }
 .item-tab.active .tab-title { color: #ea580c; }
 .tab-cat { font-size: 0.7rem; color: #94a3b8; }
@@ -907,7 +927,7 @@ onUnmounted(() => {
 .radio-card-v2 { border-top: 4px solid var(--c-main, #f97316); }
 .text-card-v2 { grid-column: 1 / -1; display: flex; flex-direction: column; border-top: 4px solid var(--c-main, #f97316); }
 
-.card-image-header-v2 { height: 180px; background-color: #e2e8f0; background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800'); background-size: cover; background-position: center; position: relative; display: flex; align-items: flex-end; padding: 20px; }
+.card-image-header-v2 { height: 180px; background-color: #e2e8f0; background-size: cover; background-position: center; position: relative; display: flex; align-items: flex-end; padding: 20px; }
 .card-image-header-v2::before { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 70%; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); z-index: 1;}
 .image-overlay-v2 { z-index: 2; width: 100%; }
 .image-overlay-v2 h3 { color: white; margin: 0 0 8px 0; font-size: 1.3rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
@@ -931,7 +951,7 @@ onUnmounted(() => {
 /* TEXT CARDS */
 .text-top-row { display: grid; grid-template-columns: 280px 1.5fr 1fr; border-bottom: 1px solid #f1f5f9; position: relative; z-index: 2;box-shadow: 0 4px 12px -2px rgba(0,0,0,0.03); }
 .text-col-sentiment { padding: 25px; border-right: 1px solid #f1f5f9; position: relative; z-index: 1; box-shadow: 4px 0 12px -2px rgba(0,0,0,0.03); }
-.text-col-image { position: relative; background-image: url('https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=800'); background-size: cover; background-position: center; min-height: 250px; display: flex; align-items: flex-end; padding: 20px; }
+.text-col-image { position: relative; background-color: #e2e8f0; background-size: cover; background-position: center; min-height: 250px; display: flex; align-items: flex-end; padding: 20px; }
 .text-col-image::before { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 60%; background: linear-gradient(to top, rgba(0,0,0,0.85), transparent); }
 .text-col-image::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 30%; background: linear-gradient(to bottom, rgba(0,0,0,0.3), transparent); }
 .text-col-image .q-circle { top: 15px; right: 15px; bottom: auto; background: rgba(255,255,255,0.8); color: #94a3b8; border: none;}
