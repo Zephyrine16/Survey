@@ -6,6 +6,10 @@
         <div class="welcome-icon">🍴</div>
         <h1>Welcome to CaféRater!</h1>
         <p>Help us build a smarter AI by rating our menu items. Your feedback directly shapes the future of our cafe!</p>
+        <div class="disclaimer-box">
+          <span class="info-icon">⚠️</span>
+          <p><strong>DISCLAIMER:</strong> The photos used in this survey are from the internet for illustrative purposes only. Actual cafe servings and presentation may vary!</p>
+        </div>
         <button class="primary-btn pulse" @click="hasStarted = true">
           Start the Survey &rarr;
         </button>
@@ -51,6 +55,10 @@
                   <h3>{{ currentItem?.name }}</h3>
                   <span class="badge" :class="getPillClass(currentItem?.category)">🍴 {{ currentItem?.category }}</span>
                 </div>
+              </div>
+
+              <div class="image-disclaimer">
+                * Image is for illustration purposes only.
               </div>
             </div>
           </div>
@@ -695,6 +703,11 @@ onMounted(() => {
 .pill-soda { background: #ecfeff; border-color: #a5f3fc; color: #0891b2; }
 .pill-milktea { background: #fdf4ff; border-color: #f5d0fe; color: #c026d3; }
 .pill-fruittea { background: #fff1f2; border-color: #fecdd3; color: #e11d48; }
+
+.disclaimer-box { background: #f1f5f9; border-radius: 8px; padding: 12px 15px; margin-bottom: 30px; display: flex; align-items: flex-start; gap: 10px; text-align: left; border-left: 4px solid #f97316; }
+.disclaimer-box .info-icon { font-size: 1.2rem; line-height: 1; }
+.disclaimer-box p { margin: 0 !important; font-size: 0.85rem !important; color: #475569 !important; line-height: 1.4 !important; }
+.image-disclaimer { padding: 10px 20px; background: #f8fafc; font-size: 0.75rem; color: #64748b; text-align: center; font-style: italic; border-top: 1px solid #e2e8f0; }
 
 .empty-review { text-align: center; padding: 40px 20px; color: #64748b; font-size: 1.05rem; font-style: italic; }
 </style>
