@@ -119,6 +119,9 @@
               </div>
 
               <div class="action-footer">
+                <p v-if="!isCurrentItemComplete" class="incomplete-warning">
+                  * Please answer all questions to unlock the next step.
+                </p>
                 <button class="nav-btn secondary" @click="prevItem" :disabled="currentItemIndex === 0">
                   &larr; Previous Item
                 </button>
@@ -475,7 +478,15 @@ const executeFinalSubmit = async () => {
 const setAnswer = (itemId: number | undefined, questionId: number, optionId: number) => {
   if (!itemId) return;
   if (!answers.value[itemId]) answers.value[itemId] = {};
-  answers.value[itemId][questionId] = optionId;
+
+  const currentAnswer = answers.value[itemId][questionId];
+
+  if (currentAnswer === optionId) {
+    answers.value[itemId][questionId] = undefined;
+  }
+  else {
+    answers.value[itemId][questionId] = optionId;
+  }
 };
 
 const setTextAnswer = (itemId: number | undefined, questionId: number, text: string) => {
@@ -708,6 +719,9 @@ onMounted(() => {
 .disclaimer-box .info-icon { font-size: 1.2rem; line-height: 1; }
 .disclaimer-box p { margin: 0 !important; font-size: 0.85rem !important; color: #475569 !important; line-height: 1.4 !important; }
 .image-disclaimer { padding: 10px 20px; background: #f8fafc; font-size: 0.75rem; color: #64748b; text-align: center; font-style: italic; border-top: 1px solid #e2e8f0; }
+
+.submit-btn:disabled, .disabled-btn { background-color: #cbd5e1; color: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
+@keyframes fadeIn {  from { opacity: 0; }  to { opacity: 1; }  }
 
 .empty-review { text-align: center; padding: 40px 20px; color: #64748b; font-size: 1.05rem; font-style: italic; }
 </style>
