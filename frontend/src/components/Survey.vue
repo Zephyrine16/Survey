@@ -29,7 +29,11 @@
             <div class="global-progress">
               Item <strong>{{ currentItemIndex + 1 }}</strong> of {{ menuItems.length }}
             </div>
-            <button class="header-finish-btn pulse-light" @click="showConfirmModal = true">
+            <button class="header-finish-btn pulse-light"
+                    @click="showConfirmModal = true"
+                    :disabled="!isCurrentItemComplete"
+                    :class="{ 'disabled-btn': !isCurrentItemComplete }"
+            >
               I'm Done 🏁
             </button>
           </div>
@@ -109,22 +113,23 @@
                     placeholder="Describe this dish as if you're telling an AI what it tastes, looks, and feels like..."
                     :value="getAnswer(currentItem?.id, q.id) || ''"
                     @input="setTextAnswer(currentItem?.id, q.id, $event.target.value)"
-                    maxlength="300"
+                    maxlength="250"
                   ></textarea>
                   <div class="char-count">
-                    {{ getAnswer(currentItem?.id, q.id)?.length || 0 }} / 300
+                    {{ getAnswer(currentItem?.id, q.id)?.length || 0 }} / 250
                   </div>
                   <p class="helper-text">Your description helps train a smarter food recommendation AI.</p>
                 </div>
               </div>
 
               <div class="action-footer">
-                <p v-if="!isCurrentItemComplete" class="incomplete-warning">
-                  * Please answer all questions to unlock the next step.
-                </p>
                 <button class="nav-btn secondary" @click="prevItem" :disabled="currentItemIndex === 0">
                   &larr; Previous Item
                 </button>
+
+                <p v-if="!isCurrentItemComplete" class="incomplete-warning">
+                  * Please answer all questions to unlock the next step.
+                </p>
 
                 <button
                   v-if="!isLastItem"
@@ -722,6 +727,11 @@ onMounted(() => {
 
 .submit-btn:disabled, .disabled-btn { background-color: #cbd5e1; color: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
 @keyframes fadeIn {  from { opacity: 0; }  to { opacity: 1; }  }
+
+.action-footer { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-top: 20px; }
+.incomplete-warning { flex: 1; text-align: center; margin: 0; color: #ef4444; font-size: 0.85rem; font-style: italic; font-weight: 500; animation: fadeIn 0.3s ease-in-out; }
+
+.header-finish-btn:disabled { background-color: #cbd5e1 !important; color: #64748b !important; cursor: not-allowed; animation: none !important; box-shadow: none !important; opacity: 0.7; }
 
 .empty-review { text-align: center; padding: 40px 20px; color: #64748b; font-size: 1.05rem; font-style: italic; }
 </style>
