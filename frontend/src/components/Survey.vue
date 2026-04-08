@@ -238,7 +238,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { watch, ref, computed, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 
 // --- State ---
@@ -459,8 +459,9 @@ const executeFinalSubmit = async () => {
     });
 
     if (payload.length === 0) return;
-
+    window.removeEventListener('beforeunload', handleBeforeUnload);
     await axios.post('/submit-category', payload);
+    localStorage.removeItem(DRAFT_KEY);
 
     showConfirmModal.value = false;
     showReviewModal.value = false;
@@ -476,6 +477,8 @@ const executeFinalSubmit = async () => {
       console.error("Error saving data:", error);
       alert("Oops! There was a problem saving your answers. Please try again.");
     }
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
   }
 };
 
@@ -531,9 +534,42 @@ const getAnswerText = (itemId: number, q: any) => {
   return 'Unknown';
 };
 
+const DRAFT_KEY = 'cafeRater_survey_draft';
+
+watch(answers, (newAnswers) => {
+  if(Object.keys(newAnswers).length > 0) {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(newAnswers));
+  }
+}, { deep: true });
+
+const handleBeforeUnload = (event) => {
+  const hasAnswers = Object.keys(answers.value).length > 0;
+
+  if(hasAnswers) {
+    event.preventDefault();
+    event.returnValue = '';
+  }
+};
+
 onMounted(() => {
+  const savedDraft = localStorage.getItem(DRAFT_KEY);
+  if(savedDraft) {
+    try {
+      answers.value = JSON.parse(savedDraft);
+    } catch(e) {
+      console.error("Failed to parse saved draft", e);
+      localStorage.removeItem(DRAFT_KEY);
+    }
+  }
+
   checkSurveyLimit();
   fetchMenuItems();
+
+  window.addEventListener('beforeunload', handleBeforeUnload);
+})
+
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload);
 });
 </script>
 
