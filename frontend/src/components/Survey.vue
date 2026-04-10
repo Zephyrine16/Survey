@@ -235,6 +235,12 @@
     </Teleport>
 
   </div>
+
+  <div style="opacity: 0; position: absolute; top: -9999px; left: -9999px;">
+    <label for="phone_number">Phone Number</label>
+    <input type="text" id="phone_number" v-model="honeypotField" tabindex="-1" autocomplete="off" />
+  </div>
+
 </template>
 
 <script setup lang="ts">
@@ -250,6 +256,7 @@ const showLimitModal = ref(false);
 const showConfirmModal = ref(false);
 const showSuccessModal = ref(false);
 const showReviewModal = ref(false);
+const honeypotField = ref('');
 
 const menuItems = ref<any[]>([]);
 const currentItemIndex = ref(0);
@@ -436,7 +443,7 @@ const prevItem = () => {
 const resetSurvey = () => {
   showSuccessModal.value = false;
   window.location.reload();
-};
+}
 
 const executeFinalSubmit = async () => {
   try {
@@ -459,8 +466,16 @@ const executeFinalSubmit = async () => {
     });
 
     if (payload.length === 0) return;
+
+    const finalSubmission = {
+      answers: payload,
+      phoneNumber: honeypotField.value
+    };
+
     window.removeEventListener('beforeunload', handleBeforeUnload);
-    await axios.post('/submit-category', payload);
+
+    await axios.post('/submit-category', finalSubmission);
+
     localStorage.removeItem(DRAFT_KEY);
 
     showConfirmModal.value = false;

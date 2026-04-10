@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.HtmlUtils;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -17,16 +18,29 @@ public class SurveyController {
     private AnswerRepository answerRepository;
 
     // ==========================================
-    // 1. SAVE SURVEY ANSWERS (Now with Anonymous IDs & Sanitization!)
+    // 1. SAVE SURVEY ANSWERS (Now with Honeypot & @Valid Schema Checks!)
     // ==========================================
     @PostMapping("/submit-category")
-    public ResponseEntity<?> submitCategoryAnswers(@RequestBody List<CategorySubmissionDTO> payload) {
+    public ResponseEntity<?> submitCategoryAnswers(@Valid @RequestBody com.example.survey.dto.SurveySubmissionRequest request) {
+
+        // 1. THE HONEYPOT TRAP: Check this BEFORE touching the database
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
+            System.out.println("🛡️ Bot blocked! Honeypot field was triggered.");
+            // Return a fake success so the bot goes away and doesn't try a different attack
+            return ResponseEntity.ok().body("{\"message\": \"Category saved successfully!\"}");
+        }
+
         try {
+            // Extract the actual answers array from the wrapper
+            List<CategorySubmissionDTO> payload = request.getAnswers();
+
+            // 2. CHECK SURVEY LIMIT
             Long totalParticipants = answerRepository.countTotalParticipants();
             if(totalParticipants != null && totalParticipants >= 30) {
                 return ResponseEntity.badRequest().body("{\"error\": \"LIMIT_REACHED\"}");
             }
 
+            // 3. SANITIZE AND SAVE
             for (CategorySubmissionDTO dto : payload) {
                 if (dto.getTextResponse() != null && !dto.getTextResponse().isEmpty()) {
                     String cleanText = HtmlUtils.htmlEscape(dto.getTextResponse());
