@@ -264,67 +264,43 @@ const currentItemIndex = ref(0);
 // Answers Dictionary: { itemId: { questionId: selectedOptionId / text } }
 const answers = ref<Record<number, Record<number, any>>>({});
 
-const questions = [
-  {
-    id: 1,
-    shortText: "Which emotion makes you crave it?",
-    text: "Which emotion or physical state most strongly makes you want to order this item?",
-    type: 'vertical-radio',
-    options: [
-      { id: 1, label: "Stressed/Overwhelmed", icon: "😩" },
-      { id: 2, label: "Happy/Celebratory", icon: "😊" },
-      { id: 3, label: "Tired/Low Energy", icon: "😴" },
-      { id: 4, label: "Relaxed/Chilling", icon: "😌" },
-      { id: 5, label: "Focused/Working", icon: "🎯" }
-    ]
-  },
-  {
-    id: 2,
-    shortText: "What weather suits it best?",
-    text: "In what weather condition does this item feel most satisfying?",
-    type: 'grid-radio',
-    options: [
-      { id: 6, label: "Hot/Sunny", icon: "☀️" },
-      { id: 7, label: "Cold/Rainy", icon: "🌧️" },
-      { id: 8, label: "Any Weather", icon: "⛅" }
-    ]
-  },
-  {
-    id: 3,
-    shortText: "What's the vibe of the dish?",
-    text: "What is the vibe of this specific dish?",
-    type: 'grid-radio',
-    options: [
-      { id: 9, label: "Heavy Meal", icon: "🍽️" },
-      { id: 10, label: "Light Snack", icon: "🥗" },
-      { id: 11, label: "Drink/Refreshment", icon: "🥤" }
-    ]
-  },
-  {
-    id: 4,
-    shortText: "What's a fair student price?",
-    text: "What do you think is a fair Student-Friendly price for this item?",
-    type: 'grid-radio',
-    options: [
-      { id: 12, label: "Under ₱150", sub: "Budget" },
-      { id: 13, label: "₱150 - ₱249", sub: "Mid-range" },
-      { id: 14, label: "₱250 and above", sub: "Premium" }
-    ]
-  },
-  {
-    id: 5,
-    shortText: "Describe it to an AI.",
-    text: "How would you describe this dish to the AI chatbot?",
-    type: 'textarea'
+// 1. The clean, empty reactive array
+const questions = ref<any[]>([]);
+
+// 2. The perfectly balanced fetch function
+const fetchQuestions = async () => {
+  try {
+    const response = await axios.get('http://localhost:8080/questions/all');
+
+    const mappedQuestions = response.data.map((q: any) => {
+      let uiType = '';
+
+      if (q.type === 'TEXT') {
+        uiType = 'textarea';
+      } else if (q.id === 1) {
+        uiType = 'vertical-radio';
+      } else {
+        uiType = 'grid-radio';
+      }
+
+      return {
+        ...q,
+        type: uiType
+      };
+    });
+
+    questions.value = mappedQuestions;
+
+  } catch (error: any) {
+    console.error("Error fetching dynamic questions:", error);
   }
-];
+};
 
 // --- Computed Properties ---
 const currentItem = computed(() => {
   if (menuItems.value.length === 0) return null;
   return menuItems.value[currentItemIndex.value];
 });
-
 const isLastItem = computed(() => {
   return currentItemIndex.value === menuItems.value.length - 1;
 });
@@ -335,7 +311,7 @@ const isCurrentItemComplete = computed(() => {
   const itemAnswers = answers.value[itemId];
   if (!itemAnswers) return false;
 
-  for (const q of questions) {
+  for (const q of questions.value) {
     const ans = itemAnswers[q.id];
     if (q.type === 'textarea') {
       if (!ans || typeof ans !== 'string' || ans.trim() === '') return false;
@@ -356,7 +332,7 @@ const completedItemsCount = computed(() => {
 
 const answeredItems = computed(() => {
   return menuItems.value.filter(item => {
-    return questions.some(q => isAnswered(item.id, q.id));
+    return questions.value.some(q => isAnswered(item.id, q.id));
   });
 });
 
@@ -579,6 +555,7 @@ onMounted(() => {
 
   checkSurveyLimit();
   fetchMenuItems();
+  fetchQuestions();
 
   window.addEventListener('beforeunload', handleBeforeUnload);
 })

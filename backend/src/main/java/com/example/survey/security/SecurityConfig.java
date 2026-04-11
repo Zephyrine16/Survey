@@ -40,7 +40,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/menu-items", "/submit-survey", "/submit-category", "/api/admin/login", "/api/stats/survey-status").permitAll()
+                        .requestMatchers("/menu-items", "/questions/**", "/submit-survey", "/submit-category", "/api/admin/login", "/api/stats/survey-status").permitAll()
                         .requestMatchers("/analytics/**", "/api/stats/**", "/export", "/api/admin/clear-data").authenticated()
                         .anyRequest().authenticated()
                 )
