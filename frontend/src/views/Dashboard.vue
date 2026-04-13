@@ -330,6 +330,7 @@ const handleLogin = async () => {
 
     isAuthenticated.value = true;
     fetchMenuItems();
+    fetchQuestions();
     fetchStats();
   } catch(error) {
     loginError.value = 'Invalid username or password';
@@ -437,6 +438,17 @@ const fetchMenuItems = async () => {
   }
 };
 
+const dynamicQuestions = ref<any[]>([]);
+
+const fetchQuestions = async () => {
+  try {
+    const response = await axios.get('/questions/all');
+    dynamicQuestions.value = response.data;
+  } catch(error) {
+    console.error("Error fetching admin questions:", error);
+  }
+};
+
 const fetchAnalyticsForCurrentItem = async () => {
   if (!selectedItemId.value) return;
   isLoading.value = true;
@@ -486,35 +498,57 @@ const correctQuestionOrder = [
   'Looking at this item, what do you think is a fair "Student-Friendly" price for it?'
 ];
 
+// 🛡️ BULLETPROOF RADIO QUESTIONS (Dictionary Version)
 const radioQuestions = computed(() => {
   const result: Record<string, any> = {};
-  correctQuestionOrder.forEach(qTitle => {
-    const answers = analyticsData.value[qTitle];
-    if (answers && answers.length > 0 && answers[0].voteCount !== undefined) result[qTitle] = answers;
-  });
-  Object.entries(analyticsData.value).forEach(([qTitle, answers]) => {
-    if (!correctQuestionOrder.includes(qTitle)) {
-      if (answers && answers.length > 0 && answers[0].voteCount !== undefined) result[qTitle] = answers;
+
+  // Forgiving type check: If it's not explicitly TEXT, it's a chart!
+  const rQuestions = dynamicQuestions.value.filter(q => !q.type || q.type.toUpperCase() !== 'TEXT');
+
+  rQuestions.forEach(q => {
+    const cleanDbText = q.text.replace(/[^a-zA-Z0-9]/g, '');
+    const matchingKey = Object.keys(analyticsData.value).find(k => k.replace(/[^a-zA-Z0-9]/g, '') === cleanDbText);
+
+    if (matchingKey && analyticsData.value[matchingKey]) {
+      let ans = analyticsData.value[matchingKey];
+
+      // Auto-convert Spring Boot Maps to Vue Arrays if needed
+      if (!Array.isArray(ans)) {
+        ans = Object.keys(ans).map(key => ({ optionLabel: key, voteCount: ans[key] }));
+      }
+
+      // Use the clean database text for the UI header
+      result[q.text] = ans;
     }
   });
+
   return result;
 });
 
+// 🛡️ BULLETPROOF TEXT QUESTIONS (Dictionary Version)
 const textQuestions = computed(() => {
   const result: Record<string, any> = {};
-  Object.entries(analyticsData.value).forEach(([q, ans]) => {
-    if (ans && ans.length > 0 && ans[0].voteCount === undefined) result[q] = ans;
+  const tQuestions = dynamicQuestions.value.filter(q => q.type && q.type.toUpperCase() === 'TEXT');
+
+  tQuestions.forEach(q => {
+    const cleanDbText = q.text.replace(/[^a-zA-Z0-9]/g, '');
+    const matchingKey = Object.keys(analyticsData.value).find(k => k.replace(/[^a-zA-Z0-9]/g, '') === cleanDbText);
+
+    if (matchingKey && analyticsData.value[matchingKey]) {
+      result[q.text] = analyticsData.value[matchingKey];
+    }
   });
+
   return result;
 });
 
-const totalQuestions = computed(() => Object.keys(analyticsData.value).length);
-const radioQuestionsCount = computed(() => Object.keys(radioQuestions.value).length);
-
+// Calculate total responses based on the dictionary structure
 const totalResponses = computed(() => {
-  const firstQ = Object.values(radioQuestions.value)[0];
-  if (!firstQ) return 0;
-  return firstQ.reduce((sum: number, stat: any) => sum + Number(stat.voteCount), 0);
+  const firstKey = Object.keys(radioQuestions.value)[0];
+  if (!firstKey) return 0;
+
+  const stats = radioQuestions.value[firstKey];
+  return stats.reduce((sum: number, stat: any) => sum + Number(stat.voteCount), 0);
 });
 
 const calculatePercentage = (votes: number, allStats: any[]) => {
@@ -672,6 +706,7 @@ onMounted(() => {
   if(isAuthenticated.value) {
     axios.defaults.headers.common['Authorization'] = `Bearer ${sessionStorage.getItem('adminToken')}`;
     fetchMenuItems();
+    fetchQuestions();
     fetchStats();
   }
 });
