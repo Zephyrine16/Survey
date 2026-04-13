@@ -643,14 +643,9 @@ const toggleKeywordFilter = (word: string) => {
 const getImagePath = (item) => {
   if (!item || !item.imageName) return '';
 
-  // 1. Ask Vite where the live server's root folder actually is
-  const baseUrl = import.meta.env.BASE_URL;
+  const cloudName = 'dujzkxisi';
 
-  // 2. Clean up the URL just in case Vite adds an extra slash
-  const cleanBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-
-  // 3. Build the absolute bulletproof path
-  return `${cleanBase}/items/${item.imageName}`;
+  return `https://res.cloudinary.com/${cloudName}/image/upload/items/${item.imageName}`;
 };
 
 const getWordClass = (index) => {

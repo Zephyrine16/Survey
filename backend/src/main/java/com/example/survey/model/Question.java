@@ -1,10 +1,11 @@
 package com.example.survey.model;
 
-import com.example.survey.model.Option;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
-
+import lombok.Data;
 import java.util.List;
 
+@Data // This single word replaces all your getters, setters, and constructors!
 @Entity
 @Table(name = "questions")
 public class Question {
@@ -16,23 +17,14 @@ public class Question {
     @Column(nullable = false)
     private String text;
 
+    @Column(name = "short_text")
+    private String shortText;
+
     @Column(name = "question_type", nullable = false)
+    @JsonProperty("type") // Tells Vue this is "type"
     private String questionType;
 
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OrderBy("id ASC")
     private List<Option> options;
-
-    public Question() {}
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public String getText() { return text; }
-    public void setText(String text) { this.text = text; }
-
-    public String getQuestionType() { return questionType; }
-    public void setQuestionType(String questionType) { this.questionType = questionType; }
-
-    public List<Option> getOptions() { return options; }
-    public void setOptions(List<Option> options) { this.options = options; }
 }
