@@ -491,13 +491,6 @@ const autoSelectFirstFilteredItem = () => {
   }
 };
 
-const correctQuestionOrder = [
-  'Which emotion or physical state most strongly makes you want to order this item?',
-  'In what weather condition does this item feel most satisfying?',
-  'What is the "vibe" of this specific dish?',
-  'Looking at this item, what do you think is a fair "Student-Friendly" price for it?'
-];
-
 // 🛡️ BULLETPROOF RADIO QUESTIONS (Dictionary Version)
 const radioQuestions = computed(() => {
   const result: Record<string, any> = {};
