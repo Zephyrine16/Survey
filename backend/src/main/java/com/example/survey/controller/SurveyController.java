@@ -17,6 +17,9 @@ public class SurveyController {
     @Autowired
     private AnswerRepository answerRepository;
 
+    @Autowired
+    private com.example.survey.repository.MenuItemRepository menuItemRepository;
+
     // ==========================================
     // 1. SAVE SURVEY ANSWERS (Now with Honeypot & @Valid Schema Checks!)
     // ==========================================
@@ -197,5 +200,45 @@ public class SurveyController {
             e.printStackTrace();
             return ResponseEntity.internalServerError().body("{\"error\": \"Failed to wipe data.\"}");
         }
+    }
+
+    // ==========================================
+    // 5. ADMIN TOOLS: MENU ITEM MANAGEMENT (CRUD)
+    // ==========================================
+
+    @PostMapping("/api/admin/menu-items")
+    public ResponseEntity<com.example.survey.model.MenuItem> createMenuItem(@RequestBody com.example.survey.model.MenuItem newItem) {
+        com.example.survey.model.MenuItem savedItem = menuItemRepository.save(newItem);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(savedItem);
+    }
+
+    @PutMapping("/api/admin/menu-items/{id}")
+    public ResponseEntity<com.example.survey.model.MenuItem> updateMenuItem(@PathVariable Long id, @RequestBody com.example.survey.model.MenuItem updatedData) {
+        java.util.Optional<com.example.survey.model.MenuItem> existingItem = menuItemRepository.findById(id);
+
+        if (existingItem.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        com.example.survey.model.MenuItem itemToUpdate = existingItem.get();
+        itemToUpdate.setName(updatedData.getName());
+        itemToUpdate.setCategory(updatedData.getCategory());
+        // If you have subCategory or price, add them here:
+        // itemToUpdate.setSubCategory(updatedData.getSubCategory());
+        itemToUpdate.setImageName(updatedData.getImageName());
+
+        com.example.survey.model.MenuItem savedItem = menuItemRepository.save(itemToUpdate);
+        return ResponseEntity.ok(savedItem);
+    }
+
+    @DeleteMapping("/api/admin/menu-items/{id}")
+    public ResponseEntity<Void> deleteMenuItem(@PathVariable Long id) {
+        if (!menuItemRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Delete the item
+        menuItemRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }
