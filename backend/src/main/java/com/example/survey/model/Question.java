@@ -17,9 +17,6 @@ public class Question {
     @Column(nullable = false)
     private String text;
 
-    @Column(name = "short_text")
-    private String shortText;
-
     @Column(name = "question_type", nullable = false)
     @JsonProperty("type") // Tells Vue this is "type"
     private String questionType;

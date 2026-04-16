@@ -20,9 +20,16 @@ public class SurveyController {
     @Autowired
     private com.example.survey.repository.MenuItemRepository menuItemRepository;
 
+    @Autowired
+    private com.example.survey.repository.QuestionRepository questionRepository;
+
+    @Autowired
+    private com.example.survey.repository.OptionRepository optionRepository;
+
     // ==========================================
     // 1. SAVE SURVEY ANSWERS (Now with Honeypot & @Valid Schema Checks!)
     // ==========================================
+
     @PostMapping("/submit-category")
     public ResponseEntity<?> submitCategoryAnswers(@Valid @RequestBody com.example.survey.dto.SurveySubmissionRequest request) {
 
@@ -84,6 +91,7 @@ public class SurveyController {
     // ==========================================
     // 2. EXPORT THE CSV
     // ==========================================
+
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportReport() {
         List<Object[]> data = answerRepository.getExportData();
@@ -115,6 +123,7 @@ public class SurveyController {
     // ==========================================
     // 3. FETCH REAL DASHBOARD STATISTICS
     // ==========================================
+
     @GetMapping("/analytics/stats/{menuItemId}")
     public ResponseEntity<com.example.survey.dto.DashboardStatsDTO> getItemStats(@PathVariable Long menuItemId) {
         com.example.survey.dto.DashboardStatsDTO stats = new com.example.survey.dto.DashboardStatsDTO();
@@ -191,6 +200,7 @@ public class SurveyController {
     // ==========================================
     // 4. ADMIN TOOLS: NUKE DATABASE (For Testing)
     // ==========================================
+
     @DeleteMapping("/api/admin/clear-data")
     public ResponseEntity<?> clearAllData() {
         try {
@@ -239,6 +249,73 @@ public class SurveyController {
 
         // Delete the item
         menuItemRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ==========================================
+    // 6. ADMIN TOOLS: QUESTION & OPTION MANAGEMENT
+    // ==========================================
+
+    // --- QUESTION CRUD ---
+
+    @PostMapping("/api/admin/questions")
+    public ResponseEntity<com.example.survey.model.Question> createQuestion(@RequestBody com.example.survey.model.Question newQuestion) {
+        com.example.survey.model.Question savedQuestion = questionRepository.save(newQuestion);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(savedQuestion);
+    }
+
+    @PutMapping("/api/admin/questions/{id}")
+    public ResponseEntity<com.example.survey.model.Question> updateQuestion(@PathVariable Long id, @RequestBody com.example.survey.model.Question updatedData) {
+        java.util.Optional<com.example.survey.model.Question> existingQuestion = questionRepository.findById(id);
+
+        if (existingQuestion.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        com.example.survey.model.Question qToUpdate = existingQuestion.get();
+        qToUpdate.setText(updatedData.getText());
+        qToUpdate.setQuestionType(updatedData.getQuestionType()); // "RADIO" or "TEXT"
+
+        com.example.survey.model.Question savedQuestion = questionRepository.save(qToUpdate);
+        return ResponseEntity.ok(savedQuestion);
+    }
+
+    @DeleteMapping("/api/admin/questions/{id}")
+    public ResponseEntity<Void> deleteQuestion(@PathVariable Long id) {
+        if (!questionRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        questionRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // --- OPTION CRUD (For RADIO Questions) ---
+
+    @PostMapping("/api/admin/questions/{questionId}/options")
+    public ResponseEntity<com.example.survey.model.Option> addOptionToQuestion(
+            @PathVariable Long questionId,
+            @RequestBody com.example.survey.model.Option newOption) {
+
+        java.util.Optional<com.example.survey.model.Question> questionOpt = questionRepository.findById(questionId);
+
+        if (questionOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Attach the option to the specific question
+        com.example.survey.model.Question parentQuestion = questionOpt.get();
+        newOption.setQuestion(parentQuestion);
+
+        com.example.survey.model.Option savedOption = optionRepository.save(newOption);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(savedOption);
+    }
+
+    @DeleteMapping("/api/admin/options/{optionId}")
+    public ResponseEntity<Void> deleteOption(@PathVariable Long optionId) {
+        if (!optionRepository.existsById(optionId)) {
+            return ResponseEntity.notFound().build();
+        }
+        optionRepository.deleteById(optionId);
         return ResponseEntity.noContent().build();
     }
 }
