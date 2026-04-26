@@ -310,7 +310,7 @@
               <th>Image</th>
               <th>Name</th>
               <th>Category</th>
-              <th>Image File (Cloudinary)</th>
+              <th>Image File</th>
               <th class="actions-col">Actions</th>
             </tr>
             </thead>
@@ -320,7 +320,11 @@
                 <div class="table-thumb" :style="item.imageName ? { backgroundImage: `url('${getImagePath(item)}')` } : {}"></div>
               </td>
               <td class="fw-bold">{{ item.name }}</td>
-              <td><span class="badge-v2 food-badge" :class="getPillClass(item.category)">{{ item.category }}</span></td>
+              <td>
+                <span class="f-pill" :class="getPillClass(item.category)" style="display: inline-block; padding: 4px 12px; font-size: 0.85rem; pointer-events: none;">
+                  {{ item.category }}
+                </span>
+              </td>
               <td class="code-font">{{ item.imageName || 'No image attached' }}</td>
               <td class="actions-col">
                 <button class="action-btn edit-btn" @click="openEditModal(item)">✏️ Edit</button>
@@ -397,10 +401,23 @@
               </div>
 
               <div class="form-group">
-                <label>Top-Level Category</label>
+                <label>Category</label>
                 <select v-model="editingItem.category" required class="form-input">
-                  <option value="Food">Food</option>
-                  <option value="Drink">Drink</option>
+                  <optgroup label="🍴 Food Options">
+                    <option value="Meal">Meal</option>
+                    <option value="Bread">Bread</option>
+                    <option value="Pasta">Pasta</option>
+                    <option value="Waffle">Waffle</option>
+                  </optgroup>
+                  <optgroup label="🥤 Drink Options">
+                    <option value="Coffee">Coffee</option>
+                    <option value="Non-coffee">Non-coffee</option>
+                    <option value="Frappe Series">Frappe Series</option>
+                    <option value="Float">Float</option>
+                    <option value="Milktea">Milktea</option>
+                    <option value="Sparkling Soda">Sparkling Soda</option>
+                    <option value="Fruit Tea">Fruit Tea</option>
+                  </optgroup>
                 </select>
               </div>
 
@@ -1518,7 +1535,7 @@ onUnmounted(() => {
 .admin-tabs-container { display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
 .tab-btn { background: transparent; border: none; font-size: 1.05rem; font-weight: 600; color: #64748b; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
 .tab-btn:hover { background: #f1f5f9; color: #0f172a; }
-.tab-btn.active { background: #0f172a; color: white; }
+.tab-btn.active { background: #f97316; color: white; }
 
 .manager-layout { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.03); overflow: hidden; }
 .manager-header-row { display: flex; justify-content: space-between; align-items: center; padding: 25px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
@@ -1556,4 +1573,5 @@ onUnmounted(() => {
 .mb-2 { margin-bottom: 0.5rem; }
 .fade-in { animation: fadeIn 0.3s ease-in-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
 </style>
