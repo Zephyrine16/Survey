@@ -17,290 +17,467 @@
           </button>
         </form>
       </div>
-    </div> <div v-else class="dashboard-layout">
+    </div>
 
-    <header class="top-header">
-      <div class="header-left">
-        <div class="logo-icon">📊</div>
-        <div>
-          <h1>Food Preferences Survey</h1>
-          <p class="subtitle">Jan 1 — {{ currentDate }} • {{ totalQuestions }} questions • {{ menuItems.length }} total items</p>
+    <div v-else class="dashboard-layout">
+
+      <header class="top-header">
+        <div class="header-left">
+          <div class="logo-icon">📊</div>
+          <div>
+            <h1>Food Preferences Survey</h1>
+            <p class="subtitle">Jan 1 — {{ currentDate }} • {{ totalQuestions }} questions • {{ menuItems.length }} total items</p>
+          </div>
         </div>
-      </div>
-      <div class="header-right">
-        <span class="live-badge"><span class="dot"></span> Live</span>
+        <div class="header-right">
+          <span class="live-badge"><span class="dot"></span> Live</span>
 
-        <button class="logout-btn" @click="handleLogout">🚪 Log Out</button>
+          <button class="logout-btn" @click="handleLogout">🚪 Log Out</button>
 
-        <button class="danger-btn" @click="showClearModal = true">
-          🗑️ Clear Data
-        </button>
-
-        <button class="export-btn" @click="downloadReport">
-          📥 Export Report
-        </button>
-      </div>
-    </header>
-
-    <section class="kpi-grid">
-      <div class="new-kpi-card global-card">
-        <div class="scope-label"><span class="scope-dot blue-dot"></span> GLOBAL</div>
-        <h2 class="kpi-val">{{ baselineCount }}</h2>
-        <p class="kpi-name">BASELINE METRIC</p>
-        <p class="kpi-desc">Target 30 • {{ baselineCount >= 30 ? 'Goal Reached!' : `Need ${30 - baselineCount} more responses` }}</p>
-      </div>
-
-      <div class="new-kpi-card item-card">
-        <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
-        <h2 class="kpi-val">{{ itemTotal }}</h2>
-        <p class="kpi-name">TOTAL RESPONSES</p>
-        <p class="kpi-desc">For selected menu item</p>
-      </div>
-
-      <div class="new-kpi-card item-card">
-        <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
-        <h2 class="kpi-val">{{ sentiment.posPct }}%</h2>
-        <p class="kpi-name">POSITIVE SENTIMENT</p>
-        <p class="kpi-desc">Happy Reviewers</p>
-      </div>
-
-      <div class="new-kpi-card item-card">
-        <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
-        <h2 class="kpi-val">{{ sentiment.negPct }}%</h2>
-        <p class="kpi-name">NEEDS ATTENTION</p>
-        <p class="kpi-desc">Critical / Negative Feedback</p>
-      </div>
-
-      <div class="new-kpi-card item-card">
-        <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
-        <div class="kpi-val-wrapper">
-            <span class="keyword-pill" style="text-transform: capitalize;">
-              {{ topKeywords.length > 0 ? topKeywords[0] : '-' }}
-            </span>
-        </div>
-        <p class="kpi-name">TOP KEYWORD</p>
-        <p class="kpi-desc">Most used in text reviews</p>
-      </div>
-    </section>
-
-    <section class="navigation-panel" v-if="menuItems.length > 0">
-
-      <div class="filters-row">
-        <div class="category-toggle">
-          <button :class="{ active: activeCategory === 'Food' }" @click="setCategory('Food')">🍴 Food</button>
-          <button :class="{ active: activeCategory === 'Drink' }" @click="setCategory('Drink')">🥤 Drink</button>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="subcategory-pills">
-          <button
-            class="f-pill pill-all"
-            :class="{ active: activeSubcategory === 'All' }"
-            @click="setSubcategory('All')"
-          >
-            All {{ activeCategory }}
+          <button class="danger-btn" @click="showClearModal = true">
+            🗑️ Clear Data
           </button>
 
-          <button
-            v-for="sub in currentSubcategories"
-            :key="sub"
-            class="f-pill"
-            :class="[getPillClass(sub), { active: activeSubcategory === sub }]"
-            @click="setSubcategory(sub)"
-          >
-            {{ sub }}
+          <button class="export-btn" @click="downloadReport">
+            📥 Export Report
           </button>
         </div>
+      </header>
+
+      <div class="admin-tabs-container">
+        <button class="tab-btn" :class="{ active: activeAdminTab === 'analytics' }" @click="activeAdminTab = 'analytics'">
+          📊 Analytics View
+        </button>
+        <button class="tab-btn" :class="{ active: activeAdminTab === 'manager' }" @click="activeAdminTab = 'manager'">
+          ⚙️ Menu Manager
+        </button>
+        <button class="tab-btn" :class="{ active: activeAdminTab === 'questions' }" @click="activeAdminTab = 'questions'">
+          ❓ Question Manager
+        </button>
       </div>
 
-      <div class="item-tabs-container">
-        <div v-if="filteredMenuItems.length === 0" class="empty-filter">
-          No items found in this category.
-        </div>
-
-        <div
-          v-for="item in filteredMenuItems"
-          :key="item.id"
-          class="item-tab"
-          :class="{ active: selectedItemId === item.id }"
-          @click="selectItem(item.id)"
-        >
-          <div
-            class="tab-thumb"
-            :style="item?.imageName ? { backgroundImage: `url('${getImagePath(item)}')` } : {}"
-          ></div>
-
-          <span class="tab-title truncate-text">{{ item.name }}</span>
-          <span class="tab-cat">{{ item.category }}</span>
-        </div>
-      </div>
-    </section>
-
-    <div v-if="isLoading" class="state-message">
-      <h2>Loading analytics for {{ menuItem?.name }}...</h2>
-    </div>
-    <div v-else-if="!menuItem" class="state-message">
-      <h2>Select an item to view analytics.</h2>
-    </div>
-    <div v-else-if="totalResponses === 0" class="state-message empty">
-      <h2>No Data Yet 📭</h2>
-      <p>Nobody has submitted a survey for <strong>{{ menuItem?.name }}</strong> yet. Check back later!</p>
-    </div>
-
-    <section v-else class="cards-grid">
-
-      <div v-for="(answers, question, index) in radioQuestions" :key="question"
-           class="insight-card radio-card-v2"
-           :style="getCategoryStyles(menuItem?.category)">
-        <div
-          class="card-image-header-v2"
-             :style="menuItem?.imageName ? { backgroundImage: `url('${getImagePath(menuItem)}')` } : {}">
-          <div class="image-overlay-v2">
-            <h3 class="truncate-text">{{ menuItem?.name }}</h3>
-            <span class="badge-v2 food-badge" :class="getPillClass(menuItem?.category)">🍴 {{ menuItem?.category }}</span>
-          </div>
-          <span class="q-circle">Q{{ index + 1 }}</span>
-        </div>
-
-        <div class="card-body insight-body">
-          <h4 class="question-title">{{ question }}</h4>
-          <p class="response-count">{{ totalResponses }} response{{ totalResponses === 1 ? '' : 's' }}</p>
-
-          <div class="bars-container">
-            <div v-for="stat in answers" :key="stat.optionLabel" class="bar-row">
-              <span class="bar-label" :title="stat.optionLabel">{{ stat.optionLabel }}</span>
-              <div class="bar-track-v2">
-                <div class="bar-fill orange-solid" :style="{ width: calculatePercentage(stat.voteCount, answers) + '%' }"></div>
-              </div>
-              <span class="bar-value">{{ stat.voteCount }}</span>
-              <span class="bar-percent">{{ calculatePercentage(stat.voteCount, answers) }}%</span>
-            </div>
+      <div v-show="activeAdminTab === 'analytics'">
+        <section class="kpi-grid">
+          <div class="new-kpi-card global-card">
+            <div class="scope-label"><span class="scope-dot blue-dot"></span> GLOBAL</div>
+            <h2 class="kpi-val">{{ baselineCount }}</h2>
+            <p class="kpi-name">BASELINE METRIC</p>
+            <p class="kpi-desc">Target 30 • {{ baselineCount >= 30 ? 'Goal Reached!' : `Need ${30 - baselineCount} more responses` }}</p>
           </div>
 
-          <div class="key-insight-v2">
-            <span class="insight-icon">📈</span>
-            <span><strong>Key insight:</strong> {{ topResponse(answers) }} is the leading choice.</span>
-          </div>
-        </div>
-      </div>
-
-      <div v-for="(answers, question, index) in textQuestions" :key="question"
-           class="insight-card text-card-v2"
-           :style="getCategoryStyles(menuItem?.category)">
-        <div class="text-top-row">
-
-          <div class="text-col-image" :style="menuItem?.imageName ? { backgroundImage: `url('${getImagePath(menuItem)}')` } : {}">
-            <span class="q-circle">Q{{ radioQuestionsCount + index + 1 }}</span>
-            <div class="image-overlay-v2">
-              <h3 class="truncate-text">{{ menuItem?.name }}</h3>
-              <div class="badge-row">
-                <span class="badge-v2 food-badge" :class="getPillClass(menuItem?.category)">🍴 {{ menuItem?.category }}</span>
-                <span class="badge-v2 type-badge">💬 Open-ended</span>
-              </div>
-            </div>
+          <div class="new-kpi-card item-card">
+            <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
+            <h2 class="kpi-val">{{ itemTotal }}</h2>
+            <p class="kpi-name">TOTAL RESPONSES</p>
+            <p class="kpi-desc">For selected menu item</p>
           </div>
 
-          <div class="text-col-sentiment">
-            <h4 class="question-title-v2">{{ question }}</h4>
-            <p class="response-count-v2">{{ answers.length }} text response{{ answers.length === 1 ? '' : 's' }}</p>
-            <p class="section-label">SENTIMENT BREAKDOWN</p>
-
-            <div class="sent-boxes-v2">
-              <div class="s-box-v2 pos"><h2>{{ sentiment.pos }}</h2><span>Positive</span></div>
-              <div class="s-box-v2 neu"><h2>{{ sentiment.neu }}</h2><span>Neutral</span></div>
-              <div class="s-box-v2 neg"><h2>{{ sentiment.neg }}</h2><span>Negative</span></div>
-            </div>
-
-            <div class="sent-bar-thick">
-              <div class="s-fill-thick pos" :style="{ width: sentiment.posPct + '%' }"></div>
-              <div class="s-fill-thick neu" :style="{ width: sentiment.neuPct + '%' }"></div>
-              <div class="s-fill-thick neg" :style="{ width: sentiment.negPct + '%' }"></div>
-            </div>
-
-            <div class="sent-legend">
-              <span class="l-pos">● Positive {{ sentiment.posPct }}%</span>
-              <span class="l-neu">● Neutral {{ sentiment.neuPct }}%</span>
-              <span class="l-neg">● Negative {{ sentiment.negPct }}%</span>
-              <span class="l-total">= 100%</span>
-            </div>
+          <div class="new-kpi-card item-card">
+            <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
+            <h2 class="kpi-val">{{ sentiment.posPct }}%</h2>
+            <p class="kpi-name">POSITIVE SENTIMENT</p>
+            <p class="kpi-desc">Happy Reviewers</p>
           </div>
 
-          <div class="text-col-keywords">
-            <p class="section-label"># TOP KEYWORDS</p>
-            <p class="section-subtext">Automatically extracted from reviews</p>
-            <div class="word-cloud-v2">
-              <span v-if="topKeywords.length === 0" class="w-small" style="color: #94a3b8;">Not enough text data yet.</span>
+          <div class="new-kpi-card item-card">
+            <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
+            <h2 class="kpi-val">{{ sentiment.negPct }}%</h2>
+            <p class="kpi-name">NEEDS ATTENTION</p>
+            <p class="kpi-desc">Critical / Negative Feedback</p>
+          </div>
 
-              <span
-                v-for="(word, index) in topKeywords"
-                :key="word"
-                :class="[getWordClass(index), { 'active-word': activeKeywordFilter === word, 'dimmed-word': activeKeywordFilter && activeKeywordFilter !== word }]"
-                @click="toggleKeywordFilter(word)"
-              >
-                  {{ word }}
+          <div class="new-kpi-card item-card">
+            <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
+            <div class="kpi-val-wrapper">
+                <span class="keyword-pill" style="text-transform: capitalize;">
+                  {{ topKeywords.length > 0 ? topKeywords[0] : '-' }}
                 </span>
             </div>
+            <p class="kpi-name">TOP KEYWORD</p>
+            <p class="kpi-desc">Most used in text reviews</p>
           </div>
-        </div>
+        </section>
 
-        <div class="text-bottom-row">
-
-          <div class="excerpt-header-row">
-            <div class="header-left-side">
-              <p class="section-label mb-0">⚑ RESPONSE EXCERPTS</p>
-              <span class="excerpt-count">{{ Math.min(filteredAnswers(answers).length, 8) }} of {{ filteredAnswers(answers).length }}</span>
+        <section class="navigation-panel" v-if="menuItems.length > 0">
+          <div class="filters-row">
+            <div class="category-toggle">
+              <button :class="{ active: activeCategory === 'Food' }" @click="setCategory('Food')">🍴 Food</button>
+              <button :class="{ active: activeCategory === 'Drink' }" @click="setCategory('Drink')">🥤 Drink</button>
             </div>
-            <div class="excerpt-filters">
-              <button class="f-btn" :class="{ active: activeSentimentFilter === 'All' }" @click="activeSentimentFilter = 'All'">All</button>
-              <button class="f-btn pos-btn" :class="{ active: activeSentimentFilter === 'Positive' }" @click="activeSentimentFilter = 'Positive'">Positive</button>
-              <button class="f-btn neu-btn" :class="{ active: activeSentimentFilter === 'Neutral' }" @click="activeSentimentFilter = 'Neutral'">Neutral</button>
-              <button class="f-btn neg-btn" :class="{ active: activeSentimentFilter === 'Negative' }" @click="activeSentimentFilter = 'Negative'">Negative</button>
 
-              <button v-if="activeKeywordFilter" class="f-btn keyword-clear-btn" @click="activeKeywordFilter = null">
-                Contains: "{{ activeKeywordFilter }}" ✕
+            <div class="divider"></div>
+
+            <div class="subcategory-pills">
+              <button
+                class="f-pill pill-all"
+                :class="{ active: activeSubcategory === 'All' }"
+                @click="setSubcategory('All')"
+              >
+                All {{ activeCategory }}
+              </button>
+
+              <button
+                v-for="sub in currentSubcategories"
+                :key="sub"
+                class="f-pill"
+                :class="[getPillClass(sub), { active: activeSubcategory === sub }]"
+                @click="setSubcategory(sub)"
+              >
+                {{ sub }}
               </button>
             </div>
           </div>
 
-          <div v-if="filteredAnswers(answers).length === 0" class="empty-filter" style="text-align: center; padding: 40px; color: #64748b; font-style: italic;">
-            No responses found matching your filters.
-          </div>
+          <div class="item-tabs-container">
+            <div v-if="filteredMenuItems.length === 0" class="empty-filter">
+              No items found in this category.
+            </div>
 
-          <div v-else class="excerpt-grid-v2">
-            <div v-for="(feedback, i) in filteredAnswers(answers).slice(0, 8)" :key="i" class="exc-card">
-              <p class="exc-text">
-                "{{ feedback.response || feedback.textResponse || (typeof feedback === 'string' ? feedback : 'No text saved in database') }}"
-              </p>
-              <div class="exc-footer">
-                  <span class="exc-tag" :class="getSentimentData(feedback).class">
-                    {{ getSentimentData(feedback).icon }} {{ getSentimentData(feedback).label }}
-                  </span>
+            <div
+              v-for="item in filteredMenuItems"
+              :key="item.id"
+              class="item-tab"
+              :class="{ active: selectedItemId === item.id }"
+              @click="selectItem(item.id)"
+            >
+              <div
+                class="tab-thumb"
+                :style="item?.imageName ? { backgroundImage: `url('${getImagePath(item)}')` } : {}"
+              ></div>
+
+              <span class="tab-title truncate-text">{{ item.name }}</span>
+              <span class="tab-cat">{{ item.category }}</span>
+            </div>
+          </div>
+        </section>
+
+        <div v-if="isLoading" class="state-message">
+          <h2>Loading analytics for {{ menuItem?.name }}...</h2>
+        </div>
+        <div v-else-if="!menuItem" class="state-message">
+          <h2>Select an item to view analytics.</h2>
+        </div>
+        <div v-else-if="itemTotal === 0" class="state-message empty">
+          <h2>No Data Yet 📭</h2>
+          <p>Nobody has submitted a survey for <strong>{{ menuItem?.name }}</strong> yet. Check back later!</p>
+        </div>
+
+        <section v-else class="cards-grid">
+          <div v-for="(answers, question, index) in radioQuestions" :key="question"
+               class="insight-card radio-card-v2"
+               :style="getCategoryStyles(menuItem?.category)">
+            <div
+              class="card-image-header-v2"
+              :style="menuItem?.imageName ? { backgroundImage: `url('${getImagePath(menuItem)}')` } : {}">
+              <div class="image-overlay-v2">
+                <h3 class="truncate-text">{{ menuItem?.name }}</h3>
+                <span class="badge-v2 food-badge" :class="getPillClass(menuItem?.category)">🍴 {{ menuItem?.category }}</span>
+              </div>
+              <span class="q-circle">Q{{ index + 1 }}</span>
+            </div>
+
+            <div class="card-body insight-body">
+              <h4 class="question-title">{{ question }}</h4>
+              <p class="response-count">{{ itemTotal }} response{{ itemTotal === 1 ? '' : 's' }}</p>
+
+              <div class="bars-container">
+                <div v-for="stat in answers" :key="stat.optionLabel" class="bar-row">
+                  <span class="bar-label" :title="stat.optionLabel">{{ stat.optionLabel }}</span>
+                  <div class="bar-track-v2">
+                    <div class="bar-fill orange-solid" :style="{ width: calculatePercentage(stat.voteCount, answers) + '%' }"></div>
+                  </div>
+                  <span class="bar-value">{{ stat.voteCount }}</span>
+                  <span class="bar-percent">{{ calculatePercentage(stat.voteCount, answers) }}%</span>
+                </div>
+              </div>
+
+              <div class="key-insight-v2">
+                <span class="insight-icon">📈</span>
+                <span><strong>Key insight:</strong> {{ topResponse(answers) }} is the leading choice.</span>
               </div>
             </div>
           </div>
 
-        </div>
+          <div v-for="(answers, question, index) in textQuestions" :key="question"
+               class="insight-card text-card-v2"
+               :style="getCategoryStyles(menuItem?.category)">
+            <div class="text-top-row">
 
+              <div class="text-col-image" :style="menuItem?.imageName ? { backgroundImage: `url('${getImagePath(menuItem)}')` } : {}">
+                <span class="q-circle">Q{{ (radioQuestions ? Object.keys(radioQuestions).length : 0) + index + 1 }}</span>
+                <div class="image-overlay-v2">
+                  <h3 class="truncate-text">{{ menuItem?.name }}</h3>
+                  <div class="badge-row">
+                    <span class="badge-v2 food-badge" :class="getPillClass(menuItem?.category)">🍴 {{ menuItem?.category }}</span>
+                    <span class="badge-v2 type-badge">💬 Open-ended</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-col-sentiment">
+                <h4 class="question-title-v2">{{ question }}</h4>
+                <p class="response-count-v2">{{ answers.length }} text response{{ answers.length === 1 ? '' : 's' }}</p>
+                <p class="section-label">SENTIMENT BREAKDOWN</p>
+
+                <div class="sent-boxes-v2">
+                  <div class="s-box-v2 pos"><h2>{{ sentiment.pos }}</h2><span>Positive</span></div>
+                  <div class="s-box-v2 neu"><h2>{{ sentiment.neu }}</h2><span>Neutral</span></div>
+                  <div class="s-box-v2 neg"><h2>{{ sentiment.neg }}</h2><span>Negative</span></div>
+                </div>
+
+                <div class="sent-bar-thick">
+                  <div class="s-fill-thick pos" :style="{ width: sentiment.posPct + '%' }"></div>
+                  <div class="s-fill-thick neu" :style="{ width: sentiment.neuPct + '%' }"></div>
+                  <div class="s-fill-thick neg" :style="{ width: sentiment.negPct + '%' }"></div>
+                </div>
+
+                <div class="sent-legend">
+                  <span class="l-pos">● Positive {{ sentiment.posPct }}%</span>
+                  <span class="l-neu">● Neutral {{ sentiment.neuPct }}%</span>
+                  <span class="l-neg">● Negative {{ sentiment.negPct }}%</span>
+                  <span class="l-total">= 100%</span>
+                </div>
+              </div>
+
+              <div class="text-col-keywords">
+                <p class="section-label"># TOP KEYWORDS</p>
+                <p class="section-subtext">Automatically extracted from reviews</p>
+                <div class="word-cloud-v2">
+                  <span v-if="topKeywords.length === 0" class="w-small" style="color: #94a3b8;">Not enough text data yet.</span>
+
+                  <span
+                    v-for="(word, index) in topKeywords"
+                    :key="word"
+                    :class="[getWordClass(index), { 'active-word': activeKeywordFilter === word, 'dimmed-word': activeKeywordFilter && activeKeywordFilter !== word }]"
+                    @click="toggleKeywordFilter(word)"
+                  >
+                      {{ word }}
+                    </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-bottom-row">
+
+              <div class="excerpt-header-row">
+                <div class="header-left-side">
+                  <p class="section-label mb-0">⚑ RESPONSE EXCERPTS</p>
+                  <span class="excerpt-count">{{ Math.min(filteredAnswers(answers).length, 8) }} of {{ filteredAnswers(answers).length }}</span>
+                </div>
+                <div class="excerpt-filters">
+                  <button class="f-btn" :class="{ active: activeSentimentFilter === 'All' }" @click="activeSentimentFilter = 'All'">All</button>
+                  <button class="f-btn pos-btn" :class="{ active: activeSentimentFilter === 'Positive' }" @click="activeSentimentFilter = 'Positive'">Positive</button>
+                  <button class="f-btn neu-btn" :class="{ active: activeSentimentFilter === 'Neutral' }" @click="activeSentimentFilter = 'Neutral'">Neutral</button>
+                  <button class="f-btn neg-btn" :class="{ active: activeSentimentFilter === 'Negative' }" @click="activeSentimentFilter = 'Negative'">Negative</button>
+
+                  <button v-if="activeKeywordFilter" class="f-btn keyword-clear-btn" @click="activeKeywordFilter = null">
+                    Contains: "{{ activeKeywordFilter }}" ✕
+                  </button>
+                </div>
+              </div>
+
+              <div v-if="filteredAnswers(answers).length === 0" class="empty-filter" style="text-align: center; padding: 40px; color: #64748b; font-style: italic;">
+                No responses found matching your filters.
+              </div>
+
+              <div v-else class="excerpt-grid-v2">
+                <div v-for="(feedback, i) in filteredAnswers(answers).slice(0, 8)" :key="i" class="exc-card">
+                  <p class="exc-text">
+                    "{{ feedback.response || feedback.textResponse || (typeof feedback === 'string' ? feedback : 'No text saved in database') }}"
+                  </p>
+                  <div class="exc-footer">
+                      <span class="exc-tag" :class="getSentimentData(feedback).class">
+                        {{ getSentimentData(feedback).icon }} {{ getSentimentData(feedback).label }}
+                      </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
 
-    </section>
+      <div v-if="activeAdminTab === 'manager'" class="manager-layout fade-in">
+        <div class="manager-header-row">
+          <h2>Menu Item Database</h2>
+          <button class="nav-btn orange-solid" @click="openNewItemModal">+ Add New Item</button>
+        </div>
 
-    <Teleport to="body">
-      <div v-if="showClearModal" class="modal-overlay">
-        <div class="modal-card danger-card">
-          <div class="modal-icon text-red">⚠️</div>
-          <h2>Wipe All Data?</h2>
-          <p>This will permanently delete <strong>all survey responses</strong> from the database. This action cannot be undone!</p>
-          <div class="modal-actions">
-            <button class="nav-btn secondary" @click="showClearModal = false">Cancel</button>
-            <button class="nav-btn danger-solid" @click="clearAllData">Yes, Nuke It</button>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+            <tr>
+              <th>Image</th>
+              <th>Name</th>
+              <th>Category</th>
+              <th>Image File</th>
+              <th class="actions-col">Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="item in menuItems" :key="item.id">
+              <td>
+                <div class="table-thumb" :style="item.imageName ? { backgroundImage: `url('${getImagePath(item)}')` } : {}"></div>
+              </td>
+              <td class="fw-bold">{{ item.name }}</td>
+              <td>
+                <span class="f-pill" :class="getPillClass(item.category)" style="display: inline-block; padding: 4px 12px; font-size: 0.85rem; pointer-events: none;">
+                  {{ item.category }}
+                </span>
+              </td>
+              <td class="code-font">{{ item.imageName || 'No image attached' }}</td>
+              <td class="actions-col">
+                <button class="action-btn edit-btn" @click="openEditModal(item)">✏️ Edit</button>
+                <button class="action-btn del-btn" @click="deleteMenuItem(item.id)">🗑️</button>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div v-if="activeAdminTab === 'questions'" class="manager-layout fade-in">
+        <div class="manager-header-row">
+          <h2>Survey Questions</h2>
+          <button class="nav-btn orange-solid" @click="openNewQuestionModal">+ Add New Question</button>
+        </div>
+
+        <div class="table-container" style="padding: 20px;">
+          <div v-for="(q, index) in dynamicQuestions" :key="q.id" class="insight-card mb-4" style="border: 1px solid #e2e8f0;">
+            <div class="manager-header-row" style="background: white; border-bottom: none; padding: 15px 20px;">
+              <div>
+                <span class="q-circle" style="position: static; display: inline-block; margin-right: 10px;">Q{{ index + 1 }}</span>
+                <strong style="font-size: 1.1rem; color: #0f172a;">{{ q.text }}</strong>
+                <span class="badge-v2 ml-2" :class="q.type === 'TEXT' ? 'type-badge' : 'food-badge'">
+                  {{ q.type === 'TEXT' ? '💬 Open-ended (Text)' : '🔘 Multiple Choice (Radio)' }}
+                </span>
+              </div>
+              <div>
+                <button class="action-btn edit-btn" @click="openEditQuestionModal(q)">✏️ Edit</button>
+                <button class="action-btn del-btn" @click="deleteQuestion(q.id)">🗑️</button>
+              </div>
+            </div>
+
+            <div v-if="q.type !== 'TEXT'" style="padding: 0 20px 20px 60px;">
+              <p class="section-label mb-2">Available Options:</p>
+              <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                <span v-for="opt in q.options" :key="opt.id" class="f-pill" style="display: flex; align-items: center; gap: 8px;">
+                  {{ opt.icon }} {{ opt.text }}
+                  <button @click="deleteOption(opt.id)" style="background: none; border: none; color: #ef4444; cursor: pointer; font-weight: bold;">✕</button>
+                </span>
+                <button @click="addNewOption(q.id)" class="f-pill" style="border: 1px dashed #cbd5e1; background: transparent; cursor: pointer;">
+                  + Add Option
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </Teleport>
 
-  </div> </div> </template>
+      <Teleport to="body">
+        <div v-if="showClearModal" class="modal-overlay">
+          <div class="modal-card danger-card">
+            <div class="modal-icon text-red">⚠️</div>
+            <h2>Wipe All Data?</h2>
+            <p>This will permanently delete <strong>all survey responses</strong> from the database. This action cannot be undone!</p>
+            <div class="modal-actions">
+              <button class="nav-btn secondary" @click="showClearModal = false">Cancel</button>
+              <button class="nav-btn danger-solid" @click="clearAllData">Yes, Nuke It</button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div v-if="showItemModal" class="modal-overlay">
+          <div class="modal-card form-card">
+            <h2>{{ editingItem.id ? 'Edit Menu Item' : 'Create New Item' }}</h2>
+            <p class="section-subtext mb-4">Updates will immediately reflect on the live survey.</p>
+
+            <form @submit.prevent="saveMenuItem" class="edit-form">
+              <div class="form-group">
+                <label>Item Name</label>
+                <input type="text" v-model="editingItem.name" required placeholder="e.g. Classic Waffle" class="form-input" />
+              </div>
+
+              <div class="form-group">
+                <label>Category</label>
+                <select v-model="editingItem.category" required class="form-input">
+                  <optgroup label="🍴 Food Options">
+                    <option value="Meal">Meal</option>
+                    <option value="Bread">Bread</option>
+                    <option value="Pasta">Pasta</option>
+                    <option value="Waffle">Waffle</option>
+                  </optgroup>
+                  <optgroup label="🥤 Drink Options">
+                    <option value="Coffee">Coffee</option>
+                    <option value="Non-coffee">Non-coffee</option>
+                    <option value="Frappe Series">Frappe Series</option>
+                    <option value="Float">Float</option>
+                    <option value="Milktea">Milktea</option>
+                    <option value="Sparkling Soda">Sparkling Soda</option>
+                    <option value="Fruit Tea">Fruit Tea</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Cloudinary Image</label>
+                <div class="image-upload-box">
+                  <div v-if="editingItem.imageName" class="preview-thumb" :style="{ backgroundImage: `url('${getImagePath({imageName: editingItem.imageName})}')` }"></div>
+                  <div v-else class="preview-empty">🖼️</div>
+                  <div class="upload-controls">
+                    <p class="code-font mb-2">{{ editingItem.imageName || 'No image selected' }}</p>
+                    <button type="button" class="f-btn pos-btn" @click="openCloudinaryWidget">☁️ Upload / Change Photo</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="modal-actions mt-4">
+                <button type="button" class="nav-btn secondary" @click="showItemModal = false">Cancel</button>
+                <button type="submit" class="nav-btn orange-solid" :disabled="isSavingItem">
+                  {{ isSavingItem ? 'Saving...' : '💾 Save Item' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div v-if="showQuestionModal" class="modal-overlay">
+          <div class="modal-card form-card">
+            <h2>{{ editingQuestion.id ? 'Edit Question' : 'Create New Question' }}</h2>
+            <p class="section-subtext mb-4">Note: Changing a question's text will update it on the live survey immediately.</p>
+
+            <form @submit.prevent="saveQuestion" class="edit-form">
+              <div class="form-group">
+                <label>Question Text</label>
+                <input type="text" v-model="editingQuestion.text" required placeholder="e.g. How was the presentation?" class="form-input" />
+              </div>
+
+              <div class="form-group">
+                <label>Input Type</label>
+                <select v-model="editingQuestion.type" required class="form-input">
+                  <option value="RADIO">🔘 Multiple Choice (Radio Buttons)</option>
+                  <option value="TEXT">💬 Open-ended (Text Area)</option>
+                </select>
+              </div>
+
+              <div class="modal-actions mt-4">
+                <button type="button" class="nav-btn secondary" @click="showQuestionModal = false">Cancel</button>
+                <button type="submit" class="nav-btn orange-solid" :disabled="isSavingQuestion">
+                  {{ isSavingQuestion ? 'Saving...' : '💾 Save Question' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </Teleport>
+
+    </div>
+  </div>
+</template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue';
@@ -675,6 +852,157 @@ const fetchStats = async () => {
 };
 
 let securityInterceptor: number | null = null;
+
+const activeAdminTab = ref('analytics');
+const showItemModal = ref(false);
+const isSavingItem = ref(false);
+const editingItem = ref({
+  id: null as number | null,
+  name: '',
+  category: 'Food',
+  imageName: ''
+});
+
+const openNewItemModal = () => {
+  editingItem.value = { id: null, name: '', category: 'Food', imageName: ''};
+  showItemModal.value = true;
+};
+
+const openEditModal = (item: any) => {
+  editingItem.value = {...item };
+  showItemModal.value = true;
+};
+
+const openCloudinaryWidget = () => {
+  const widget = window.cloudinary.createUploadWidget(
+    {
+      cloudName: 'dujzkxisi',
+      uploadPreset: 'ml_default',
+      folder: 'items',
+      multiple: false,
+      clientAllowedFormats: ['webp', 'png', 'jpeg', 'jpg']
+    },
+    (error: any, result: any) => {
+      if(!error && result && result.event === "success") {
+        editingItem.value.imageName = result.info.public_id.replace('items/', '');
+      }
+    }
+  );
+  widget.open();
+}
+
+const saveMenuItem = async () => {
+  isSavingItem.value = true;
+  try {
+    if(editingItem.value.id) {
+      await axios.put(`/api/admin/menu-items/${editingItem.value.id}`, editingItem.value);
+    } else {
+      await axios.post('/api/admin/menu-items', editingItem.value);
+    }
+
+    await fetchMenuItems();
+    showItemModal.value = false;
+  } catch(error) {
+    console.error("Failed to save item:", error);
+    alert("Error saving item. Check console.");
+  }
+
+  finally {
+    isSavingItem.value = false;
+  }
+};
+
+const deleteMenuItem = async (id: number) => {
+  if(!confirm ("Are you sure you want to delete this menu item? This cannot be undone!")) return;
+
+  try {
+  await axios.delete(`/api/admin/menu-items/${id}`);
+  await fetchMenuItems();
+  } catch(error) {
+  console.error("Failed to delete item:", error);
+  alert("Could not delete item. It might have survey responses tied to it!");
+  }
+};
+
+const showQuestionModal = ref(false);
+const isSavingQuestion = ref(false);
+
+const editingQuestion = ref({
+  id: null as number | null,
+  text: '',
+  type: 'RADIO'
+});
+
+const openNewQuestionModal = () => {
+  editingQuestion.value = { id: null, text: '', type: 'RADIO' };
+  showQuestionModal.value = true;
+};
+
+const openEditQuestionModal = (q: any) => {
+  editingQuestion.value = { id: q.id, text: q.text, type: q.type || q.questionType || 'RADIO' };
+  showQuestionModal.value = true;
+};
+
+const saveQuestion = async () => {
+  isSavingQuestion.value = true;
+  try {
+    const payload = { text: editingQuestion.value.text, type: editingQuestion.value.type };
+    if(editingQuestion.value.id) {
+      await axios.put(`/api/admin/questions/${editingQuestion.value.id}`, payload);
+    }
+    else {
+      await axios.post('/api/admin/questions', payload);
+    }
+
+    await fetchQuestions();
+    showQuestionModal.value = false;
+  } catch(error) {
+    console.error("Failed to save question: ", error);
+    alert("Error saving question.");
+  }
+
+  finally {
+    isSavingQuestion.value = false;
+  }
+};
+
+const deleteQuestion = async (id: number) => {
+  if(!confirm("🚨 Delete this question? All survey analytics tied to it will be permanently lost!")) return;
+  try {
+    await axios.delete(`/api/admin/questions/${id}`);
+    await fetchQuestions();
+  } catch(error) {
+    console.error("Failed to delete question:", error);
+    alert("Could not delete question.");
+  }
+};
+
+const addNewOption = async (questionId: number) => {
+  const optionText = prompt("Enter the new option label (e.g., 'Too Salty'):");
+  if(!optionText) return;
+
+  const optionIcon = prompt("Enter an emoji for this option (optional):") || "🔘";
+
+  try {
+    await axios.post(`/api/admin/questions/${questionId}/options`, {
+      text: optionText,
+      icon: optionIcon
+    });
+    await fetchQuestions();
+  } catch(error) {
+    console.error("Failed to add option:", error);
+  }
+};
+
+const deleteOption = async (optionId: number) => {
+  if(!confirm("Remove this option from the survey?")) return;
+  try {
+    await axios.delete(`/api/admin/options/${optionId}`);
+    await fetchQuestions();
+  } catch(error) {
+    console.error("Failed to delete option:", error)
+  }
+};
 
 onMounted(() => {
   securityInterceptor = axios.interceptors.response.use(
@@ -1193,4 +1521,50 @@ onUnmounted(() => {
   background: var(--c-main, #f97316) !important;
   color: white !important;
 }
+
+/* ==========================================
+   ⚙️ MENU MANAGER STYLES
+   ========================================== */
+.admin-tabs-container { display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
+.tab-btn { background: transparent; border: none; font-size: 1.05rem; font-weight: 600; color: #64748b; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+.tab-btn:hover { background: #f1f5f9; color: #0f172a; }
+.tab-btn.active { background: #f97316; color: white; }
+
+.manager-layout { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.03); overflow: hidden; }
+.manager-header-row { display: flex; justify-content: space-between; align-items: center; padding: 25px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+.manager-header-row h2 { margin: 0; font-size: 1.4rem; color: #0f172a; }
+.orange-solid { background: #f97316; color: white; border: none; }
+.orange-solid:hover { background: #ea580c; }
+
+.table-container { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; text-align: left; }
+.data-table th { background: #f1f5f9; color: #475569; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 15px 25px; font-weight: 700; border-bottom: 2px solid #e2e8f0; }
+.data-table td { padding: 15px 25px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; color: #334155; }
+.data-table tr:hover td { background: #f8fafc; }
+
+.table-thumb { width: 50px; height: 50px; border-radius: 8px; background-size: cover; background-position: center; border: 1px solid #e2e8f0; }
+.fw-bold { font-weight: 600; color: #0f172a !important; }
+.code-font { font-family: 'Courier New', monospace; font-size: 0.85rem; color: #64748b; }
+.actions-col { text-align: right; width: 180px; }
+.action-btn { background: white; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-left: 8px; }
+.edit-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+.del-btn { color: #ef4444; border-color: #fca5a5; background: #fef2f2; }
+.del-btn:hover { background: #ef4444; color: white; border-color: #ef4444; }
+
+/* Form Modal Styles */
+.form-card { max-width: 550px; text-align: left; }
+.edit-form { display: flex; flex-direction: column; gap: 20px; }
+.form-group { display: flex; flex-direction: column; gap: 8px; }
+.form-group label { font-size: 0.9rem; font-weight: 600; color: #475569; }
+.form-input { padding: 12px 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; color: #0f172a; background: #f8fafc; transition: all 0.2s; }
+.form-input:focus { outline: none; border-color: #f97316; background: white; box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1); }
+.image-upload-box { display: flex; align-items: center; gap: 20px; padding: 15px; border: 1px dashed #cbd5e1; border-radius: 8px; background: #f8fafc; }
+.preview-thumb { width: 80px; height: 80px; border-radius: 10px; background-size: cover; background-position: center; border: 1px solid #e2e8f0; }
+.preview-empty { width: 80px; height: 80px; border-radius: 10px; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; border: 1px dashed #94a3b8; }
+.mt-4 { margin-top: 1.5rem; }
+.mb-4 { margin-bottom: 1.5rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.fade-in { animation: fadeIn 0.3s ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
 </style>
