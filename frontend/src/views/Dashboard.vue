@@ -51,6 +51,9 @@
         <button class="tab-btn" :class="{ active: activeAdminTab === 'manager' }" @click="activeAdminTab = 'manager'">
           ⚙️ Menu Manager
         </button>
+        <button class="tab-btn" :class="{ active: activeAdminTab === 'questions' }" @click="activeAdminTab = 'questions'">
+          ❓ Question Manager
+        </button>
       </div>
 
       <div v-show="activeAdminTab === 'analytics'">
@@ -96,7 +99,6 @@
         </section>
 
         <section class="navigation-panel" v-if="menuItems.length > 0">
-
           <div class="filters-row">
             <div class="category-toggle">
               <button :class="{ active: activeCategory === 'Food' }" @click="setCategory('Food')">🍴 Food</button>
@@ -161,7 +163,6 @@
         </div>
 
         <section v-else class="cards-grid">
-
           <div v-for="(answers, question, index) in radioQuestions" :key="question"
                class="insight-card radio-card-v2"
                :style="getCategoryStyles(menuItem?.category)">
@@ -291,46 +292,83 @@
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+      </div>
 
+      <div v-if="activeAdminTab === 'manager'" class="manager-layout fade-in">
+        <div class="manager-header-row">
+          <h2>Menu Item Database</h2>
+          <button class="nav-btn orange-solid" @click="openNewItemModal">+ Add New Item</button>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+            <tr>
+              <th>Image</th>
+              <th>Name</th>
+              <th>Category</th>
+              <th>Image File (Cloudinary)</th>
+              <th class="actions-col">Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="item in menuItems" :key="item.id">
+              <td>
+                <div class="table-thumb" :style="item.imageName ? { backgroundImage: `url('${getImagePath(item)}')` } : {}"></div>
+              </td>
+              <td class="fw-bold">{{ item.name }}</td>
+              <td><span class="badge-v2 food-badge" :class="getPillClass(item.category)">{{ item.category }}</span></td>
+              <td class="code-font">{{ item.imageName || 'No image attached' }}</td>
+              <td class="actions-col">
+                <button class="action-btn edit-btn" @click="openEditModal(item)">✏️ Edit</button>
+                <button class="action-btn del-btn" @click="deleteMenuItem(item.id)">🗑️</button>
+              </td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div v-if="activeAdminTab === 'questions'" class="manager-layout fade-in">
+        <div class="manager-header-row">
+          <h2>Survey Questions</h2>
+          <button class="nav-btn orange-solid" @click="openNewQuestionModal">+ Add New Question</button>
+        </div>
+
+        <div class="table-container" style="padding: 20px;">
+          <div v-for="(q, index) in dynamicQuestions" :key="q.id" class="insight-card mb-4" style="border: 1px solid #e2e8f0;">
+            <div class="manager-header-row" style="background: white; border-bottom: none; padding: 15px 20px;">
+              <div>
+                <span class="q-circle" style="position: static; display: inline-block; margin-right: 10px;">Q{{ index + 1 }}</span>
+                <strong style="font-size: 1.1rem; color: #0f172a;">{{ q.text }}</strong>
+                <span class="badge-v2 ml-2" :class="q.type === 'TEXT' ? 'type-badge' : 'food-badge'">
+                  {{ q.type === 'TEXT' ? '💬 Open-ended (Text)' : '🔘 Multiple Choice (Radio)' }}
+                </span>
+              </div>
+              <div>
+                <button class="action-btn edit-btn" @click="openEditQuestionModal(q)">✏️ Edit</button>
+                <button class="action-btn del-btn" @click="deleteQuestion(q.id)">🗑️</button>
+              </div>
             </div>
 
+            <div v-if="q.type !== 'TEXT'" style="padding: 0 20px 20px 60px;">
+              <p class="section-label mb-2">Available Options:</p>
+              <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                <span v-for="opt in q.options" :key="opt.id" class="f-pill" style="display: flex; align-items: center; gap: 8px;">
+                  {{ opt.icon }} {{ opt.text }}
+                  <button @click="deleteOption(opt.id)" style="background: none; border: none; color: #ef4444; cursor: pointer; font-weight: bold;">✕</button>
+                </span>
+                <button @click="addNewOption(q.id)" class="f-pill" style="border: 1px dashed #cbd5e1; background: transparent; cursor: pointer;">
+                  + Add Option
+                </button>
+              </div>
+            </div>
           </div>
-
-        </section>
-      </div> <div v-if="activeAdminTab === 'manager'" class="manager-layout fade-in">
-      <div class="manager-header-row">
-        <h2>Menu Item Database</h2>
-        <button class="nav-btn orange-solid" @click="openNewItemModal">+ Add New Item</button>
+        </div>
       </div>
-
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-          <tr>
-            <th>Image</th>
-            <th>Name</th>
-            <th>Category</th>
-            <th>Image File (Cloudinary)</th>
-            <th class="actions-col">Actions</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr v-for="item in menuItems" :key="item.id">
-            <td>
-              <div class="table-thumb" :style="item.imageName ? { backgroundImage: `url('${getImagePath(item)}')` } : {}"></div>
-            </td>
-            <td class="fw-bold">{{ item.name }}</td>
-            <td><span class="badge-v2 food-badge" :class="getPillClass(item.category)">{{ item.category }}</span></td>
-            <td class="code-font">{{ item.imageName || 'No image attached' }}</td>
-            <td class="actions-col">
-              <button class="action-btn edit-btn" @click="openEditModal(item)">✏️ Edit</button>
-              <button class="action-btn del-btn" @click="deleteMenuItem(item.id)">🗑️</button>
-            </td>
-          </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
 
       <Teleport to="body">
         <div v-if="showClearModal" class="modal-overlay">
@@ -353,7 +391,6 @@
             <p class="section-subtext mb-4">Updates will immediately reflect on the live survey.</p>
 
             <form @submit.prevent="saveMenuItem" class="edit-form">
-
               <div class="form-group">
                 <label>Item Name</label>
                 <input type="text" v-model="editingItem.name" required placeholder="e.g. Classic Waffle" class="form-input" />
@@ -385,7 +422,37 @@
                   {{ isSavingItem ? 'Saving...' : '💾 Save Item' }}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      </Teleport>
 
+      <Teleport to="body">
+        <div v-if="showQuestionModal" class="modal-overlay">
+          <div class="modal-card form-card">
+            <h2>{{ editingQuestion.id ? 'Edit Question' : 'Create New Question' }}</h2>
+            <p class="section-subtext mb-4">Note: Changing a question's text will update it on the live survey immediately.</p>
+
+            <form @submit.prevent="saveQuestion" class="edit-form">
+              <div class="form-group">
+                <label>Question Text</label>
+                <input type="text" v-model="editingQuestion.text" required placeholder="e.g. How was the presentation?" class="form-input" />
+              </div>
+
+              <div class="form-group">
+                <label>Input Type</label>
+                <select v-model="editingQuestion.type" required class="form-input">
+                  <option value="RADIO">🔘 Multiple Choice (Radio Buttons)</option>
+                  <option value="TEXT">💬 Open-ended (Text Area)</option>
+                </select>
+              </div>
+
+              <div class="modal-actions mt-4">
+                <button type="button" class="nav-btn secondary" @click="showQuestionModal = false">Cancel</button>
+                <button type="submit" class="nav-btn orange-solid" :disabled="isSavingQuestion">
+                  {{ isSavingQuestion ? 'Saving...' : '💾 Save Question' }}
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -844,6 +911,86 @@ const deleteMenuItem = async (id: number) => {
   } catch(error) {
   console.error("Failed to delete item:", error);
   alert("Could not delete item. It might have survey responses tied to it!");
+  }
+};
+
+const showQuestionModal = ref(false);
+const isSavingQuestion = ref(false);
+
+const editingQuestion = ref({
+  id: null as number | null,
+  text: '',
+  type: 'RADIO'
+});
+
+const openNewQuestionModal = () => {
+  editingQuestion.value = { id: null, text: '', type: 'RADIO' };
+  showQuestionModal.value = true;
+};
+
+const openEditQuestionModal = (q: any) => {
+  editingQuestion.value = { id: q.id, text: q.text, type: q.type || q.questionType || 'RADIO' };
+  showQuestionModal.value = true;
+};
+
+const saveQuestion = async () => {
+  isSavingQuestion.value = true;
+  try {
+    const payload = { text: editingQuestion.value.text, type: editingQuestion.value.type };
+    if(editingQuestion.value.id) {
+      await axios.put(`/api/admin/questions/${editingQuestion.value.id}`, payload);
+    }
+    else {
+      await axios.post('/api/admin/questions', payload);
+    }
+
+    await fetchQuestions();
+    showQuestionModal.value = false;
+  } catch(error) {
+    console.error("Failed to save question: ", error);
+    alert("Error saving question.");
+  }
+
+  finally {
+    isSavingQuestion.value = false;
+  }
+};
+
+const deleteQuestion = async (id: number) => {
+  if(!confirm("🚨 Delete this question? All survey analytics tied to it will be permanently lost!")) return;
+  try {
+    await axios.delete(`/api/admin/questions/${id}`);
+    await fetchQuestions();
+  } catch(error) {
+    console.error("Failed to delete question:", error);
+    alert("Could not delete question.");
+  }
+};
+
+const addNewOption = async (questionId: number) => {
+  const optionText = prompt("Enter the new option label (e.g., 'Too Salty'):");
+  if(!optionText) return;
+
+  const optionIcon = prompt("Enter an emoji for this option (optional):") || "🔘";
+
+  try {
+    await axios.post(`/api/admin/questions/${questionId}/options`, {
+      text: optionText,
+      icon: optionIcon
+    });
+    await fetchQuestions();
+  } catch(error) {
+    console.error("Failed to add option:", error);
+  }
+};
+
+const deleteOption = async (optionId: number) => {
+  if(!confirm("Remove this option from the survey?")) return;
+  try {
+    await axios.delete(`/api/admin/options/${optionId}`);
+    await fetchQuestions();
+  } catch(error) {
+    console.error("Failed to delete option:", error)
   }
 };
 
