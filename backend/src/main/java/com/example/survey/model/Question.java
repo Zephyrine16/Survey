@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
 
-@Data // This single word replaces all your getters, setters, and constructors!
+@Data
 @Entity
 @Table(name = "questions")
 public class Question {
@@ -18,7 +18,7 @@ public class Question {
     private String text;
 
     @Column(name = "question_type", nullable = false)
-    @JsonProperty("type") // Tells Vue this is "type"
+    @JsonProperty("type")
     private String questionType;
 
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, fetch = FetchType.EAGER)

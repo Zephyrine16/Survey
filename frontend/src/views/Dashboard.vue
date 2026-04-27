@@ -32,7 +32,7 @@
         <div class="header-right">
           <span class="live-badge"><span class="dot"></span> Live</span>
 
-          <button class="logout-btn" @click="handleLogout">🚪 Log Out</button>
+          <button class="logout-btn" @click="showLogoutModal = true">🚪 Log Out</button>
 
           <button class="danger-btn" @click="showClearModal = true">
             🗑️ Clear Data
@@ -45,6 +45,8 @@
       </header>
 
       <div class="admin-tabs-container">
+        <div class="sliding-highlight" :class="activeAdminTab"></div>
+
         <button class="tab-btn" :class="{ active: activeAdminTab === 'analytics' }" @click="activeAdminTab = 'analytics'">
           📊 Analytics View
         </button>
@@ -101,8 +103,14 @@
         <section class="navigation-panel" v-if="menuItems.length > 0">
           <div class="filters-row">
             <div class="category-toggle">
-              <button :class="{ active: activeCategory === 'Food' }" @click="setCategory('Food')">🍴 Food</button>
-              <button :class="{ active: activeCategory === 'Drink' }" @click="setCategory('Drink')">🥤 Drink</button>
+              <div class="sliding-bg" :class="activeCategory === 'Drink' ? 'slide-right' : 'slide-left'"></div>
+
+              <button :class="{ active: activeCategory === 'Food' }" @click="setCategory('Food')">
+                🍴 Food
+              </button>
+              <button :class="{ active: activeCategory === 'Drink' }" @click="setCategory('Drink')">
+                🥤 Drink
+              </button>
             </div>
 
             <div class="divider"></div>
@@ -298,9 +306,11 @@
       </div>
 
       <div v-if="activeAdminTab === 'manager'" class="manager-layout fade-in">
-        <div class="manager-header-row">
+        <div class="manager-header-row" style="display: flex; justify-content: space-between; align-items: center;">
           <h2>Menu Item Database</h2>
-          <button class="nav-btn orange-solid" @click="openNewItemModal">+ Add New Item</button>
+          <div>
+            <button class="nav-btn orange-solid" @click="openNewItemModal" style="white-space: nowrap; padding: 10px 20px;">+ Add New Item</button>
+          </div>
         </div>
 
         <div class="table-container">
@@ -328,7 +338,7 @@
               <td class="code-font">{{ item.imageName || 'No image attached' }}</td>
               <td class="actions-col">
                 <button class="action-btn edit-btn" @click="openEditModal(item)">✏️ Edit</button>
-                <button class="action-btn del-btn" @click="deleteMenuItem(item.id)">🗑️</button>
+                <button class="action-btn del-btn" @click="confirmDeleteItem(item.id)">🗑️</button>
               </td>
             </tr>
             </tbody>
@@ -337,9 +347,11 @@
       </div>
 
       <div v-if="activeAdminTab === 'questions'" class="manager-layout fade-in">
-        <div class="manager-header-row">
+        <div class="manager-header-row" style="display: flex; justify-content: space-between; align-items: center;">
           <h2>Survey Questions</h2>
-          <button class="nav-btn orange-solid" @click="openNewQuestionModal">+ Add New Question</button>
+          <div>
+            <button class="nav-btn orange-solid" @click="openNewQuestionModal" style="white-space: nowrap; padding: 10px 20px;">+ Add New Question</button>
+          </div>
         </div>
 
         <div class="table-container" style="padding: 20px;">
@@ -354,7 +366,7 @@
               </div>
               <div>
                 <button class="action-btn edit-btn" @click="openEditQuestionModal(q)">✏️ Edit</button>
-                <button class="action-btn del-btn" @click="deleteQuestion(q.id)">🗑️</button>
+                <button class="action-btn del-btn" @click="confirmDeleteQuestion(q.id)">🗑️</button>
               </div>
             </div>
 
@@ -365,7 +377,7 @@
                   {{ opt.icon }} {{ opt.text }}
                   <button @click="deleteOption(opt.id)" style="background: none; border: none; color: #ef4444; cursor: pointer; font-weight: bold;">✕</button>
                 </span>
-                <button @click="addNewOption(q.id)" class="f-pill" style="border: 1px dashed #cbd5e1; background: transparent; cursor: pointer;">
+                <button @click="openAddOptionModal(q.id)" class="f-pill" style="border: 1px dashed #cbd5e1; background: transparent; cursor: pointer;">
                   + Add Option
                 </button>
               </div>
@@ -475,6 +487,101 @@
         </div>
       </Teleport>
 
+      <Teleport to="body">
+        <div v-if="showLogoutModal" class="modal-overlay">
+          <div class="modal-card form-card" style="text-align: center; max-width: 400px;">
+            <div class="modal-icon" style="font-size: 3rem; margin-bottom: 15px;">👋</div>
+            <h2 style="color: #0f172a;">Ready to leave?</h2>
+            <p class="section-subtext mb-4">Are you sure you want to log out of the admin dashboard?</p>
+
+            <div class="modal-actions" style="justify-content: center; margin-top: 25px;">
+              <button class="nav-btn secondary" @click="showLogoutModal = false">Cancel</button>
+
+              <button class="nav-btn orange-solid" @click="handleLogout">Yes, Log Out</button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div v-if="showAddOptionModal" class="modal-overlay">
+          <div class="modal-card form-card">
+            <h2>Add New Option</h2>
+            <p class="section-subtext mb-4">Create a new choice for this multiple-choice question.</p>
+
+            <form @submit.prevent="submitNewOption" class="edit-form">
+              <div class="form-group">
+                <label>Option Text / Label</label>
+                <input type="text" v-model="optionForm.text" required placeholder="e.g. Too Salty, Perfect, etc." class="form-input" />
+              </div>
+
+              <div class="form-group">
+                <label>Emoji Icon (Optional)</label>
+                <div class="emoji-picker-container">
+                  <div class="selected-emoji-preview">
+                    {{ optionForm.icon || '❌' }}
+                  </div>
+                  <div class="emoji-grid">
+                    <button
+                      type="button"
+                      v-for="emo in quickEmojis"
+                      :key="emo"
+                      @click="optionForm.icon = emo"
+                      class="emo-btn"
+                      :class="{ 'active-emo': optionForm.icon === emo }"
+                    >
+                      {{ emo }}
+                    </button>
+                    <button type="button" @click="optionForm.icon = ''" class="emo-btn text-red" title="Clear Emoji">🚫</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="modal-actions mt-4">
+                <button type="button" class="nav-btn secondary" @click="showAddOptionModal = false">Cancel</button>
+                <button type="submit" class="nav-btn orange-solid" :disabled="isSavingOption">
+                  {{ isSavingOption ? 'Saving...' : '💾 Add Option' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div v-if="showDeleteQuestionModal" class="modal-overlay">
+          <div class="modal-card danger-card" style="text-align: center; max-width: 400px;">
+            <div class="modal-icon text-red" style="font-size: 3rem; margin-bottom: 15px;">🚨</div>
+            <h2 style="color: #0f172a;">Delete Question?</h2>
+            <p class="section-subtext mb-4">
+              Are you sure? All survey analytics tied to this question will be permanently lost!
+            </p>
+
+            <div class="modal-actions" style="justify-content: center; margin-top: 25px;">
+              <button class="nav-btn secondary" @click="showDeleteQuestionModal = false">Cancel</button>
+              <button class="nav-btn danger-solid" @click="executeDeleteQuestion">Yes, Delete</button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div v-if="showDeleteItemModal" class="modal-overlay">
+          <div class="modal-card danger-card" style="text-align: center; max-width: 400px;">
+            <div class="modal-icon text-red" style="font-size: 3rem; margin-bottom: 15px;">🚨</div>
+            <h2 style="color: #0f172a;">Delete Menu Item?</h2>
+            <p class="section-subtext mb-4">
+              Are you sure? This will permanently remove the item from your database and the live survey!
+            </p>
+
+            <div class="modal-actions" style="justify-content: center; margin-top: 25px;">
+              <button class="nav-btn secondary" @click="showDeleteItemModal = false">Cancel</button>
+              <button class="nav-btn danger-solid" @click="executeDeleteItem">Yes, Delete</button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
     </div>
   </div>
 </template>
@@ -517,6 +624,8 @@ const handleLogin = async () => {
 };
 
 const handleLogout = async () => {
+  showLogoutModal.value = false;
+  if (!confirm("Are you sure you want to log out?")) return;
   sessionStorage.removeItem('adminToken');
   delete axios.defaults.headers.common['Authorization'];
   isAuthenticated.value = false;
@@ -856,6 +965,14 @@ let securityInterceptor: number | null = null;
 const activeAdminTab = ref('analytics');
 const showItemModal = ref(false);
 const isSavingItem = ref(false);
+const showLogoutModal = ref(false);
+const showAddOptionModal = ref(false);
+const isSavingOption = ref(false);
+const showDeleteQuestionModal = ref(false);
+const showDeleteItemModal = ref(false);
+const questionToDelete = ref<number | null>(null);
+const itemToDelete = ref<number | null>(null);
+
 const editingItem = ref({
   id: null as number | null,
   name: '',
@@ -966,31 +1083,76 @@ const saveQuestion = async () => {
   }
 };
 
-const deleteQuestion = async (id: number) => {
-  if(!confirm("🚨 Delete this question? All survey analytics tied to it will be permanently lost!")) return;
+const confirmDeleteItem = (id: number) => {
+  itemToDelete.value = id; // Remember which item we are deleting
+  showDeleteItemModal.value = true; // Open the custom modal
+};
+
+const executeDeleteItem = async () => {
+  if (!itemToDelete.value) return;
+
   try {
-    await axios.delete(`/api/admin/questions/${id}`);
-    await fetchQuestions();
-  } catch(error) {
+    await axios.delete(`/api/admin/menu-items/${itemToDelete.value}`);
+    // 👇 Note: Ensure this matches the function name you use to load your table data!
+    // It might be called fetchItems(), loadMenu(), etc.
+    await fetchMenuItems();
+
+    showDeleteItemModal.value = false; // Close modal
+    itemToDelete.value = null; // Clear memory
+  } catch (error) {
+    console.error("Failed to delete menu item:", error);
+    alert("Could not delete menu item.");
+  }
+};
+
+const confirmDeleteQuestion = (id: number) => {
+  questionToDelete.value = id; // Remember which question we are deleting
+  showDeleteQuestionModal.value = true; // Open the custom modal
+};
+
+const executeDeleteQuestion = async () => {
+  if (!questionToDelete.value) return;
+
+  try {
+    await axios.delete(`/api/admin/questions/${questionToDelete.value}`);
+    await fetchQuestions(); // Refresh the list
+    showDeleteQuestionModal.value = false; // Close modal
+    questionToDelete.value = null; // Clear memory
+  } catch (error) {
     console.error("Failed to delete question:", error);
     alert("Could not delete question.");
   }
 };
 
-const addNewOption = async (questionId: number) => {
-  const optionText = prompt("Enter the new option label (e.g., 'Too Salty'):");
-  if(!optionText) return;
+const quickEmojis = ['🔘', '⭐', '❤️', '👍', '👎', '🧂', '🌶️', '🧀', '🍋', '🍫', '☕', '🍰', '🍔', '🍕', '🥗', '😊', '😐', '😞'];
 
-  const optionIcon = prompt("Enter an emoji for this option (optional):") || "🔘";
+const optionForm = ref({
+  questionId: null as number | null,
+  text: '',
+  icon: ''
+});
 
+const openAddOptionModal = (questionId: number) => {
+  optionForm.value = { questionId: questionId, text: '', icon: '🔘' }; // Reset form
+  showAddOptionModal.value = true;
+};
+
+const submitNewOption = async () => {
+  if (!optionForm.value.questionId || !optionForm.value.text) return;
+
+  isSavingOption.value = true;
   try {
-    await axios.post(`/api/admin/questions/${questionId}/options`, {
-      text: optionText,
-      icon: optionIcon
+    await axios.post(`/api/admin/questions/${optionForm.value.questionId}/options`, {
+      text: optionForm.value.text,
+      icon: optionForm.value.icon
     });
     await fetchQuestions();
-  } catch(error) {
+    showAddOptionModal.value = false;
+  } catch (error) {
     console.error("Failed to add option:", error);
+    alert("Error saving option.");
+  } finally {
+    isSavingOption.value = false;
   }
 };
 
@@ -1203,16 +1365,15 @@ onUnmounted(() => {
 /* OPTION 1 NAVIGATION PANEL */
 .navigation-panel { background: white; border-radius: 16px; margin-bottom: 30px; border: 1px solid #e2e8f0; box-shadow: 0 2px 10px rgba(0,0,0,0.02); overflow: hidden; }
 .filters-row { display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid #f1f5f9; background: #fafbfc; gap: 20px;}
-
-.category-toggle { display: flex; background: #e2e8f0; border-radius: 8px; padding: 4px; }
-.category-toggle button { background: transparent; border: none; padding: 6px 16px; border-radius: 6px; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.2s; }
-.category-toggle button.active { background: white; color: #0f172a; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-
+.category-toggle { position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; background: #e2e8f0; padding: 4px; border-radius: 12px; user-select: none; }
+.category-toggle button { position: relative; z-index: 2; background: transparent !important; border: none; padding: 8px 24px; font-weight: 600; color: #64748b; cursor: pointer; transition: color 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.category-toggle button.active { color: #0f172a; }
+.category-toggle .sliding-bg { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); z-index: 1; }
+.category-toggle .sliding-bg.slide-left { transform: translateX(0%); }
+.category-toggle .sliding-bg.slide-right { transform: translateX(100%); }
 .divider { width: 1px; height: 24px; background: #cbd5e1; }
-
 .subcategory-pills { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 2px;}
 .subcategory-pills::-webkit-scrollbar { display: none; }
-
 .f-pill { padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; border: 1px solid; }
 
 .pill-default { background: #f1f5f9; border-color: #e2e8f0; color: #475569; }
@@ -1394,7 +1555,6 @@ onUnmounted(() => {
    ✨ PREMIUM FINISHING TOUCHES ✨
    ========================================================================== */
 
-/* 1. Premium Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -1409,13 +1569,11 @@ onUnmounted(() => {
 ::-webkit-scrollbar-thumb:hover {
   background-color: rgba(148, 163, 184, 0.6);
 }
-/* Specifically force the custom scrollbar on our horizontal nav rows */
 .subcategory-pills::-webkit-scrollbar,
 .item-tabs-container::-webkit-scrollbar {
   display: block;
 }
 
-/* 2. Tactile Hover States ("Lift" Effect) */
 .item-tab {
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s, border-bottom-color 0.2s;
 }
@@ -1432,7 +1590,6 @@ onUnmounted(() => {
   border-color: #cbd5e1;
 }
 
-/* 3. Blockquote Styling for Excerpts */
 .exc-card {
   position: relative;
   z-index: 1;
@@ -1446,7 +1603,7 @@ onUnmounted(() => {
   left: 10px;
   font-family: Georgia, serif;
   font-size: 6rem;
-  color: rgba(148, 163, 184, 0.12); /* Oversized, faint quote mark in background */
+  color: rgba(148, 163, 184, 0.12);
   z-index: -1;
   line-height: 1;
 }
@@ -1457,9 +1614,7 @@ onUnmounted(() => {
   font-size: 0.95rem;
 }
 
-/* 4. Better Contrast on Image Headers */
 .card-image-header-v2::before {
-  /* Darker gradient + subtle glass blur */
   background: linear-gradient(to top, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.4) 60%, transparent 100%);
   backdrop-filter: blur(2px);
 }
@@ -1468,7 +1623,6 @@ onUnmounted(() => {
   backdrop-filter: blur(2px);
 }
 
-/* 5. Designed Empty States */
 .state-message.empty {
   background: white;
   border: 2px dashed #cbd5e1;
@@ -1487,7 +1641,6 @@ onUnmounted(() => {
   font-size: 1.6rem;
 }
 .state-message.empty h2::before {
-  /* Turns the text emoji into a designed UI icon */
   content: '📭';
   font-size: 3.5rem;
   background: #f8fafc;
@@ -1526,9 +1679,14 @@ onUnmounted(() => {
    ⚙️ MENU MANAGER STYLES
    ========================================== */
 .admin-tabs-container { display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
-.tab-btn { background: transparent; border: none; font-size: 1.05rem; font-weight: 600; color: #64748b; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
 .tab-btn:hover { background: #f1f5f9; color: #0f172a; }
-.tab-btn.active { background: #f97316; color: white; }
+.admin-tabs-container { position: relative; display: inline-grid; grid-template-columns: 1fr 1fr 1fr; background: #f8fafc; padding: 6px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #e2e8f0; }
+.tab-btn { position: relative; z-index: 2; background: transparent !important; border: none; padding: 12px 24px; font-weight: bold; color: #64748b; cursor: pointer; transition: color 0.3s ease; text-align: center; }
+.tab-btn.active { color: white !important; }
+.sliding-highlight { position: absolute; top: 6px; bottom: 6px; left: 6px; width: calc(33.333% - 4px); background: #f97316; border-radius: 8px; transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1); z-index: 1; }
+.sliding-highlight.analytics { transform: translateX(0%); }
+.sliding-highlight.manager { transform: translateX(100%); }
+.sliding-highlight.questions { transform: translateX(200%); }
 
 .manager-layout { background: white; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.03); overflow: hidden; }
 .manager-header-row { display: flex; justify-content: space-between; align-items: center; padding: 25px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
