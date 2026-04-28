@@ -272,14 +272,22 @@ const fetchQuestions = async () => {
   try {
     const response = await axios.get('/questions/all');
 
-    const mappedQuestions = response.data.map((q: any) => {
+    const sortedQuestions = [...response.data].sort((a: any, b: any) => {
+      const aId = typeof a.id === 'number' ? a.id : Number(a.id) || 0;
+      const bId = typeof b.id === 'number' ? b.id : Number(b.id) || 0;
+      return aId - bId;
+    });
+
+    const mappedQuestions = sortedQuestions.map((q: any) => {
       let uiType = '';
 
       if (q.type === 'TEXT') {
         uiType = 'textarea';
-      } else if (q.id === 1) {
+      }
+      else if (q.id === 1) {
         uiType = 'vertical-radio';
-      } else {
+      }
+      else {
         uiType = 'grid-radio';
       }
 
@@ -336,17 +344,15 @@ const answeredItems = computed(() => {
   });
 });
 
-const getImagePath = (item) => {
+const getImagePath = (item: any) => {
   if (!item || !item.imageName) return '';
 
-  const cloudName = 'dujzkxisi';
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+  const safeImageName = encodeURIComponent(item.imageName);
 
-  return `https://res.cloudinary.com/${cloudName}/image/upload/items/${item.imageName}`;
+  return `https://res.cloudinary.com/${cloudName}/image/upload/items/${safeImageName}`;
 };
 
-/**
- * Helper to match badge colors based on category.
- */
 const getPillClass = (cat: string | undefined) => {
   if (!cat) return 'pill-default';
 

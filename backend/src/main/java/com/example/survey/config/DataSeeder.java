@@ -1,6 +1,10 @@
 package com.example.survey.config;
 
+import com.example.survey.model.Option;
+import com.example.survey.model.Question;
 import com.example.survey.repository.MenuItemRepository;
+import com.example.survey.repository.OptionRepository;
+import com.example.survey.repository.QuestionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -12,50 +16,83 @@ public class DataSeeder implements CommandLineRunner {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    // Inject your JPA Repositories
     @Autowired
-    private MenuItemRepository menuItemRepository;
+    private QuestionRepository questionRepository;
+
+    @Autowired
+    private OptionRepository optionRepository;
 
     @Override
     public void run(String... args) throws Exception {
         // Fix any existing text for Question 5
-        jdbcTemplate.execute("UPDATE questions SET text = 'How would you describe this dish to the AI Chatbot?' WHERE question_type = 'TEXT'");
+        jdbcTemplate.execute("UPDATE questions SET text = 'How would you describe this dish to the AI chatbot?' WHERE question_type = 'TEXT'");
 
-        Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM questions", Integer.class);
+        // Use JPA to check if the table is empty
+        long count = questionRepository.count();
 
-        if (count != null && count == 0) {
-            System.out.println("Database is empty. Seeding initial survey data...");
+        if (count == 0) {
+            System.out.println("Database is empty. Seeding initial survey data safely via JPA...");
 
-            // UPDATED SQL: Now includes short_text for questions and icon for options!
-            String sql = """
-                INSERT INTO questions (text, short_text, question_type) VALUES 
-                ('Which emotion or physical state most strongly makes you want to order this item?', 'Which emotion makes you crave it?', 'RADIO'),
-                ('In what weather condition does this item feel most satisfying?', 'What weather suits it best?', 'RADIO'),
-                ('What is the "vibe" of this specific dish?', 'What''s the vibe of the dish?', 'RADIO'),
-                ('Looking at this item, what do you think is a fair "Student-Friendly" price for it?', 'What''s a fair student price?', 'RADIO'),
-                ('How would you describe this dish to the AI chatbot?', 'Describe it to an AI.', 'TEXT');
-                
-                INSERT INTO options (label, sub_description, icon, question_id) VALUES
-                ('Stressed/Overwhelmed', '(I need comfort/energy)', '😩', 1),
-                ('Happy/Celebratory', '(I want to reward myself)', '😊', 1),
-                ('Tired/Low Energy', '(I need a boost/caffeine)', '😴', 1),
-                ('Relaxed/Chilling', '(I want to enjoy the rooftop/alfresco vibe)', '😌', 1),
-                ('Focused/Working', '(I need something light/non-distracting)', '🎯', 1),
-                
-                ('Hot/Sunny', '(Refreshing/Cold items)', '☀️', 2),
-                ('Cold/Rainy', '(Warm/Hearty items)', '🌧️', 2),
-                ('Any Weather', '(All-around staples)', '⛅', 2),
-                
-                ('Heavy Meal', '(Lunch/Dinner)', '🍽️', 3),
-                ('Light Snack', '(Pica-pica/Quick bite)', '🥗', 3),
-                ('Drink/Refreshment', NULL, '🥤', 3),
-                
-                ('Under ₱150', '(Budget)', NULL, 4),
-                ('₱150 - ₱249', '(Standard)', NULL, 4),
-                ('₱250 and above', '(Premium)', NULL, 4);
-            """;
+            // --- QUESTION 1 ---
+            Question q1 = new Question();
+            q1.setText("Which emotion or physical state most strongly makes you want to order this item?");
+            q1.setQuestionType("RADIO");
+            q1 = questionRepository.save(q1); // Save it to generate the real ID!
 
-            jdbcTemplate.execute(sql);
+            createOption("Stressed/Overwhelmed", "(I need comfort/energy)", "😩", q1);
+            createOption("Happy/Celebratory", "(I want to reward myself)", "😊", q1);
+            createOption("Tired/Low Energy", "(I need a boost/caffeine)", "😴", q1);
+            createOption("Relaxed/Chilling", "(I want to enjoy the rooftop/alfresco vibe)", "😌", q1);
+            createOption("Focused/Working", "(I need something light/non-distracting)", "🎯", q1);
+
+            // --- QUESTION 2 ---
+            Question q2 = new Question();
+            q2.setText("In what weather condition does this item feel most satisfying?");
+            q2.setQuestionType("RADIO");
+            q2 = questionRepository.save(q2);
+
+            createOption("Hot/Sunny", "(Refreshing/Cold items)", "☀️", q2);
+            createOption("Cold/Rainy", "(Warm/Hearty items)", "🌧️", q2);
+            createOption("Any Weather", "(All-around staples)", "⛅", q2);
+
+            // --- QUESTION 3 ---
+            Question q3 = new Question();
+            q3.setText("What is the \"vibe\" of this specific dish?");
+            q3.setQuestionType("RADIO");
+            q3 = questionRepository.save(q3);
+
+            createOption("Heavy Meal", "(Lunch/Dinner)", "🍽️", q3);
+            createOption("Light Snack", "(Pica-pica/Quick bite)", "🥗", q3);
+            createOption("Drink/Refreshment", null, "🥤", q3);
+
+            // --- QUESTION 4 ---
+            Question q4 = new Question();
+            q4.setText("Looking at this item, what do you think is a fair \"Student-Friendly\" price for it?");
+            q4.setQuestionType("RADIO");
+            q4 = questionRepository.save(q4);
+
+            createOption("Under ₱150", "(Budget)", null, q4);
+            createOption("₱150 - ₱249", "(Standard)", null, q4);
+            createOption("₱250 and above", "(Premium)", null, q4);
+
+            // --- QUESTION 5 (TEXT) ---
+            Question q5 = new Question();
+            q5.setText("How would you describe this dish to the AI chatbot?");
+            q5.setQuestionType("TEXT");
+            questionRepository.save(q5); // No options needed for text!
+
             System.out.println("EYE-DINE Survey data seeded successfully!");
         }
+    }
+
+    // 🛠️ HELPER METHOD: Keeps your code clean and automatically links the Option to the Question
+    private void createOption(String label, String subDesc, String icon, Question question) {
+        Option opt = new Option();
+        opt.setLabel(label);
+        opt.setSub_description(subDesc);
+        opt.setIcon(icon);
+        opt.setQuestion(question); // Automatically maps the true Foreign Key!
+        optionRepository.save(opt);
     }
 }

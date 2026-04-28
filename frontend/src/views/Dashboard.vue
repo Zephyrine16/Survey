@@ -940,12 +940,13 @@ const toggleKeywordFilter = (word: string) => {
   }
 };
 
-const getImagePath = (item) => {
+const getImagePath = (item: any) => {
   if (!item || !item.imageName) return '';
 
-  const cloudName = 'dujzkxisi';
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+  const safeImageName = encodeURIComponent(item.imageName);
 
-  return `https://res.cloudinary.com/${cloudName}/image/upload/items/${item.imageName}`;
+  return `https://res.cloudinary.com/${cloudName}/image/upload/items/${safeImageName}`;
 };
 
 const getWordClass = (index) => {
