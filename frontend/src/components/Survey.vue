@@ -270,7 +270,7 @@ const questions = ref<any[]>([]);
 // 2. The perfectly balanced fetch function
 const fetchQuestions = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/questions/all');
+    const response = await axios.get('/questions/all');
 
     const mappedQuestions = response.data.map((q: any) => {
       let uiType = '';
