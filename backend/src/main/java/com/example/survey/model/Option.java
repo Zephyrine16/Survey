@@ -21,7 +21,7 @@ public class Option {
     private String icon;
 
     @Column(name = "sub_description")
-    @JsonProperty("sub") // Tells Vue this is "sub"
+    @JsonProperty("sub")
     private String sub_description;
 
     @ManyToOne
