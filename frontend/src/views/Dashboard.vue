@@ -374,8 +374,11 @@
               <p class="section-label mb-2">Available Options:</p>
               <div style="display: flex; flex-wrap: wrap; gap: 10px;">
                 <span v-for="opt in q.options" :key="opt.id" class="f-pill" style="display: flex; align-items: center; gap: 8px;">
-                  {{ opt.icon }} {{ opt.text }}
-                  <button @click="deleteOption(opt.id)" style="background: none; border: none; color: #ef4444; cursor: pointer; font-weight: bold;">✕</button>
+                  <span v-if="opt.icon">{{ opt.icon }}</span>
+
+                  <span>{{ opt.text || opt.label || opt.name || '⚠️ Blank Option' }}</span>
+
+                  <button @click="confirmDeleteOption(opt.id)" style="background: none; border: none; color: #ef4444; cursor: pointer; font-weight: bold;">✕</button>
                 </span>
                 <button @click="openAddOptionModal(q.id)" class="f-pill" style="border: 1px dashed #cbd5e1; background: transparent; cursor: pointer;">
                   + Add Option
@@ -582,6 +585,23 @@
         </div>
       </Teleport>
 
+      <Teleport to="body">
+        <div v-if="showDeleteOptionModal" class="modal-overlay">
+          <div class="modal-card danger-card" style="text-align: center; max-width: 400px;">
+            <div class="modal-icon text-red" style="font-size: 3rem; margin-bottom: 15px;">🚨</div>
+            <h2 style="color: #0f172a;">Remove Option?</h2>
+            <p class="section-subtext mb-4">
+              Are you sure you want to remove this option? It will disappear from the live survey immediately.
+            </p>
+
+            <div class="modal-actions" style="justify-content: center; margin-top: 25px;">
+              <button class="nav-btn secondary" @click="showDeleteOptionModal = false">Cancel</button>
+              <button class="nav-btn danger-solid" @click="executeDeleteOption">Yes, Remove It</button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
     </div>
   </div>
 </template>
@@ -625,10 +645,11 @@ const handleLogin = async () => {
 
 const handleLogout = async () => {
   showLogoutModal.value = false;
-  if (!confirm("Are you sure you want to log out?")) return;
+
   sessionStorage.removeItem('adminToken');
   delete axios.defaults.headers.common['Authorization'];
   isAuthenticated.value = false;
+
   window.location.reload();
 }
 
@@ -1156,13 +1177,26 @@ const submitNewOption = async () => {
   }
 };
 
-const deleteOption = async (optionId: number) => {
-  if(!confirm("Remove this option from the survey?")) return;
+const showDeleteOptionModal = ref(false);
+const optionToDelete = ref<number | null>(null);
+
+const confirmDeleteOption = (optionId: number) => {
+  optionToDelete.value = optionId;
+  showDeleteOptionModal.value = true;
+};
+
+const executeDeleteOption = async () => {
+  if (!optionToDelete.value) return;
+
   try {
-    await axios.delete(`/api/admin/options/${optionId}`);
+    await axios.delete(`/api/admin/options/${optionToDelete.value}`);
     await fetchQuestions();
-  } catch(error) {
-    console.error("Failed to delete option:", error)
+
+    showDeleteOptionModal.value = false;
+    optionToDelete.value = null;
+  } catch (error) {
+    console.error("Failed to delete option:", error);
+    alert("Could not delete option.");
   }
 };
 
