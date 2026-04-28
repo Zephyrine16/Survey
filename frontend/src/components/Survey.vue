@@ -2,7 +2,7 @@
   <div class="survey-layout">
 
     <div v-if="!hasStarted" class="welcome-screen">
-      <div class="welcome-card">
+      <div class="welcome-card glass-effect">
         <div class="welcome-icon">🍴</div>
         <h1>Welcome to CaféRater!</h1>
         <p>Help us build a smarter AI by rating our menu items. Your feedback directly shapes the future of our cafe!</p>
@@ -753,8 +753,41 @@ onUnmounted(() => {
 
 .action-footer { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-top: 20px; }
 .incomplete-warning { flex: 1; text-align: center; margin: 0; color: #ef4444; font-size: 0.85rem; font-style: italic; font-weight: 500; animation: fadeIn 0.3s ease-in-out; }
-
 .header-finish-btn:disabled { background-color: #cbd5e1 !important; color: #64748b !important; cursor: not-allowed; animation: none !important; box-shadow: none !important; opacity: 0.7; }
-
 .empty-review { text-align: center; padding: 40px 20px; color: #64748b; font-size: 1.05rem; font-style: italic; }
+
+/* 🧊 MAXIMUM TRANSLUCENCY GLASS EFFECT */
+.welcome-card.glass-effect {
+  /* Dropped the white tint down to just 5% (0.05) */
+  background: rgba(255, 255, 255, 0.05) !important;
+
+  /* Lowered the blur from 25px to 12px so you see more of the cafe behind it */
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+
+  /* Keep the thin border so the glass still has an "edge" */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+}
+
+/* Ensure the disclaimer box stands out with a solid white background */
+.welcome-card.glass-effect .disclaimer-box {
+  background: #ffffff; /* Solid white background */
+  border: 1px solid #e2e8f0; /* A soft gray border to define its edges */
+  color: #334155; /* Ensures the text stays dark and readable */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Optional: A tiny shadow to lift it slightly */
+}
+
+/* 📝 BOOST TEXT READABILITY ON GLASS */
+.welcome-card.glass-effect h1 {
+  color: #ffffff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); /* Soft shadow lifts it off the background */
+}
+
+.welcome-card.glass-effect > p {
+  color: rgba(255, 255, 255, 0.95); /* Bright white with a tiny bit of softness */
+  font-weight: 500; /* Making the font slightly thicker helps against busy backgrounds */
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
 </style>
