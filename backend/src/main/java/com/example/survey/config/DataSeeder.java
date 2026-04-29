@@ -2,7 +2,6 @@ package com.example.survey.config;
 
 import com.example.survey.model.Option;
 import com.example.survey.model.Question;
-import com.example.survey.repository.MenuItemRepository;
 import com.example.survey.repository.OptionRepository;
 import com.example.survey.repository.QuestionRepository;
 import org.springframework.beans.factory.annotation.Autowired;

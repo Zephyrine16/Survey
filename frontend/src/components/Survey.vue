@@ -348,6 +348,12 @@ const getImagePath = (item: any) => {
   if (!item || !item.imageName) return '';
 
   const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+
+  if (!cloudName || cloudName.trim() === '') {
+    console.error('Missing VITE_CLOUDINARY_CLOUD_NAME environment variable.');
+    return '';
+  }
+
   const safeImageName = encodeURIComponent(item.imageName);
 
   return `https://res.cloudinary.com/${cloudName}/image/upload/items/${safeImageName}`;
