@@ -27,7 +27,7 @@ public class SurveyController {
     private com.example.survey.repository.OptionRepository optionRepository;
 
     // ==========================================
-    // 1. SAVE SURVEY ANSWERS (Now with Honeypot & @Valid Schema Checks!)
+    // 1. SAVE SURVEY ANSWERS
     // ==========================================
 
     @PostMapping("/submit-category")
@@ -44,29 +44,30 @@ public class SurveyController {
             // Extract the actual answers array from the wrapper
             List<CategorySubmissionDTO> payload = request.getAnswers();
 
-            // 2. CHECK SURVEY LIMIT
-            Long totalParticipants = answerRepository.countTotalParticipants();
-            if(totalParticipants != null && totalParticipants >= 30) {
-                return ResponseEntity.badRequest().body("{\"error\": \"LIMIT_REACHED\"}");
-            }
-
-            // 3. SANITIZE AND SAVE
-            for (CategorySubmissionDTO dto : payload) {
-                if (dto.getTextResponse() != null && !dto.getTextResponse().isEmpty()) {
-                    String cleanText = HtmlUtils.htmlEscape(dto.getTextResponse());
-                    if (cleanText.length() > 250) {
-                        cleanText = cleanText.substring(0, 250);
-                    }
-                    dto.setTextResponse(cleanText);
+            // Synchronized block prevents race conditions for concurrent requests
+            synchronized (this) {
+                Long totalParticipants = answerRepository.countTotalParticipants();
+                if(totalParticipants != null && totalParticipants >= 30) {
+                    return ResponseEntity.badRequest().body("{\"error\": \"LIMIT_REACHED\"}");
                 }
 
-                answerRepository.saveRawAnswer(
-                        dto.getUserId(),
-                        dto.getMenuItemId(),
-                        dto.getQuestionId(),
-                        dto.getSelectedOptionId(),
-                        dto.getTextResponse()
-                );
+                for (CategorySubmissionDTO dto : payload) {
+                    if (dto.getTextResponse() != null && !dto.getTextResponse().isEmpty()) {
+                        String cleanText = HtmlUtils.htmlEscape(dto.getTextResponse());
+                        if (cleanText.length() > 250) {
+                            cleanText = cleanText.substring(0, 250);
+                        }
+                        dto.setTextResponse(cleanText);
+                    }
+
+                    answerRepository.saveRawAnswer(
+                            dto.getUserId(),
+                            dto.getMenuItemId(),
+                            dto.getQuestionId(),
+                            dto.getSelectedOptionId(),
+                            dto.getTextResponse()
+                    );
+                }
             }
 
             return ResponseEntity.ok().body("{\"message\": \"Category saved successfully!\"}");
@@ -99,13 +100,32 @@ public class SurveyController {
         StringBuilder csv = new StringBuilder("\uFEFFSession ID,Menu Item,Question,Selected Option,Text Response\n");
 
         for (Object[] row : data) {
-            String email = row[0] != null ? row[0].toString() : "Anonymous";
-            String item = row[1] != null ? row[1].toString().replace(",", "") : "";
-            String question = row[2] != null ? row[2].toString().replace(",", "") : "";
-            String option = row[3] != null ? row[3].toString().replace(",", "") : "";
-            String textResponse = row[4] != null ? row[4].toString().replace("\n", " ").replace(",", "") : "";
+            String userId = row[0] != null ? row[0].toString() : "Anonymous";
+            if(userId.startsWith("=") || userId.startsWith("+") || userId.startsWith("-") || userId.startsWith("@")) {
+                userId = "'" + userId;
+            }
 
-            csv.append(email).append(",")
+            String item = row[1] != null ? row[1].toString().replace(",", "") : "";
+            if(item.startsWith("=") || item.startsWith("+") || item.startsWith("-") || item.startsWith("@")) {
+                item = "'" + item;
+            }
+
+            String question = row[2] != null ? row[2].toString().replace(",", "") : "";
+            if(question.startsWith("=") || question.startsWith("+") || question.startsWith("-") || question.startsWith("@")) {
+                question = "'" + question;
+            }
+
+            String option = row[3] != null ? row[3].toString().replace(",", "") : "";
+            if(option.startsWith("=") || option.startsWith("+") || option.startsWith("-") || option.startsWith("@")) {
+                option = "'" + option;
+            }
+
+            String textResponse = row[4] != null ? row[4].toString().replace("\n", " ").replace(",", "") : "";
+            if(textResponse.startsWith("=") || textResponse.startsWith("+") || textResponse.startsWith("-") || textResponse.startsWith("@")) {
+                textResponse = "'" + textResponse;
+            }
+
+            csv.append(userId).append(",")
                     .append(item).append(",")
                     .append(question).append(",")
                     .append(option).append(",")

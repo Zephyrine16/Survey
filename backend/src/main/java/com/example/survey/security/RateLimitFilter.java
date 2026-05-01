@@ -1,5 +1,7 @@
 package com.example.survey.security;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,14 +10,16 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    // This acts as a temporary memory bank: it stores an IP Address and the time they are allowed to post next
-    private final Map<String, Long> ipCooldowns = new ConcurrentHashMap<>();
+    // 1. This automatically deletes entries 15 seconds after they are added!
+    private final Cache<String, Boolean> ipCooldowns = Caffeine.newBuilder()
+            .expireAfterWrite(15, TimeUnit.SECONDS)
+            .maximumSize(10000)
+            .build();
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -23,21 +27,22 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        // 1. We only want to rate-limit the public survey submission endpoints!
-        if (path.startsWith("/submit-survey") || path.startsWith("/submit-category")) {
+        // 2. We only want to rate-limit the public category submission endpoint!
+        if (path.startsWith("/submit-category")) {
             String clientIp = request.getRemoteAddr();
-            long currentTime = System.currentTimeMillis();
 
-            // 2. Check if this IP is on cooldown
-            if (ipCooldowns.containsKey(clientIp) && currentTime < ipCooldowns.get(clientIp)) {
+            // 3. Check if this IP is on cooldown
+            if(ipCooldowns.getIfPresent(clientIp) != null) {
                 System.out.println("Blocked spam attempt from IP: " + clientIp);
                 response.setStatus(429); // HTTP 429 = "Too Many Requests"
                 response.getWriter().write("Please wait a few seconds before submitting again.");
-                return; // Stop the request dead in its tracks
+                return;
             }
 
-            // 3. Put them on a 15-second cooldown (15,000 milliseconds)
-            ipCooldowns.put(clientIp, currentTime + 15000);
+            // 4. Put them in the cache.
+            // We just use 'Boolean.TRUE' as a dummy value because we only care about the Key (the IP address).
+            // Caffeine will automatically delete this entire entry in exactly 15 seconds.
+            ipCooldowns.put(clientIp, Boolean.TRUE);
         }
 
         // Allow the request to pass through normally
