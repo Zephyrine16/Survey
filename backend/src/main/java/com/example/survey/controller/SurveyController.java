@@ -101,15 +101,29 @@ public class SurveyController {
 
         for (Object[] row : data) {
             String userId = row[0] != null ? row[0].toString() : "Anonymous";
-
             if(userId.startsWith("=") || userId.startsWith("+") || userId.startsWith("-") || userId.startsWith("@")) {
                 userId = "'" + userId;
             }
 
             String item = row[1] != null ? row[1].toString().replace(",", "") : "";
+            if(item.startsWith("=") || item.startsWith("+") || item.startsWith("-") || item.startsWith("@")) {
+                item = "'" + item;
+            }
+
             String question = row[2] != null ? row[2].toString().replace(",", "") : "";
+            if(question.startsWith("=") || question.startsWith("+") || question.startsWith("-") || question.startsWith("@")) {
+                question = "'" + question;
+            }
+
             String option = row[3] != null ? row[3].toString().replace(",", "") : "";
+            if(option.startsWith("=") || option.startsWith("+") || option.startsWith("-") || option.startsWith("@")) {
+                option = "'" + option;
+            }
+
             String textResponse = row[4] != null ? row[4].toString().replace("\n", " ").replace(",", "") : "";
+            if(textResponse.startsWith("=") || textResponse.startsWith("+") || textResponse.startsWith("-") || textResponse.startsWith("@")) {
+                textResponse = "'" + textResponse;
+            }
 
             csv.append(userId).append(",")
                     .append(item).append(",")
