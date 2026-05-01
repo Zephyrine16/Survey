@@ -17,8 +17,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     // 1. This automatically deletes entries 15 seconds after they are added!
     private final Cache<String, Boolean> ipCooldowns = Caffeine.newBuilder()
-            .expireAfterWrite(15, TimeUnit.SECONDS) // 15-second cooldown
-            .maximumSize(10000) // Never store more than 10,000 IPs at once
+            .expireAfterWrite(15, TimeUnit.SECONDS)
+            .maximumSize(10000)
             .build();
 
     @Override
@@ -27,8 +27,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        // 2. We only want to rate-limit the public survey submission endpoints!
-        if (path.startsWith("/submit-survey") || path.startsWith("/submit-category")) {
+        // 2. We only want to rate-limit the public category submission endpoint!
+        if (path.startsWith("/submit-category")) {
             String clientIp = request.getRemoteAddr();
 
             // 3. Check if this IP is on cooldown
