@@ -16,13 +16,15 @@ public class SurveyService {
     @Autowired
     private AnswerRepository answerRepository;
 
+    public static final long PARTICIPANT_LIMIT = 30L;
+
     // This annotation locks the transaction at the database level.
     // It guarantees the count check and inserts happen atomically.
     @Transactional(isolation = Isolation.SERIALIZABLE)
     public boolean saveSurveyIfUnderLimit(List<CategorySubmissionDTO> payload) {
 
         Long totalParticipants = answerRepository.countTotalParticipants();
-        if(totalParticipants != null && totalParticipants >= 30) {
+        if(totalParticipants != null && totalParticipants >= PARTICIPANT_LIMIT) {
             return false;
         }
 
