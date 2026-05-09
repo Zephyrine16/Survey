@@ -26,6 +26,9 @@ public class SurveyController {
     @Autowired
     private com.example.survey.repository.OptionRepository optionRepository;
 
+    @Autowired
+    private com.example.survey.service.SurveyService surveyService;
+
     // ==========================================
     // 1. SAVE SURVEY ANSWERS
     // ==========================================
@@ -44,30 +47,9 @@ public class SurveyController {
             // Extract the actual answers array from the wrapper
             List<CategorySubmissionDTO> payload = request.getAnswers();
 
-            // Synchronized block prevents race conditions for concurrent requests
-            synchronized (this) {
-                Long totalParticipants = answerRepository.countTotalParticipants();
-                if(totalParticipants != null && totalParticipants >= 30) {
-                    return ResponseEntity.badRequest().body("{\"error\": \"LIMIT_REACHED\"}");
-                }
-
-                for (CategorySubmissionDTO dto : payload) {
-                    if (dto.getTextResponse() != null && !dto.getTextResponse().isEmpty()) {
-                        String cleanText = HtmlUtils.htmlEscape(dto.getTextResponse());
-                        if (cleanText.length() > 250) {
-                            cleanText = cleanText.substring(0, 250);
-                        }
-                        dto.setTextResponse(cleanText);
-                    }
-
-                    answerRepository.saveRawAnswer(
-                            dto.getUserId(),
-                            dto.getMenuItemId(),
-                            dto.getQuestionId(),
-                            dto.getSelectedOptionId(),
-                            dto.getTextResponse()
-                    );
-                }
+            boolean isSaved = surveyService.saveSurveyIfUnderLimit(payload);
+            if(!isSaved) {
+                return ResponseEntity.badRequest().body("{\"error\": \"LIMIT_REACHED\"}");
             }
 
             return ResponseEntity.ok().body("{\"message\": \"Category saved successfully!\"}");
@@ -98,6 +80,10 @@ public class SurveyController {
         List<Object[]> data = answerRepository.getExportData();
 
         StringBuilder csv = new StringBuilder("\uFEFFSession ID,Menu Item,Question,Selected Option,Text Response\n");
+
+        // ==========================================
+        // MUST REFACTOR!!!
+        // ==========================================
 
         for (Object[] row : data) {
             String userId = row[0] != null ? row[0].toString() : "Anonymous";

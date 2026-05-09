@@ -112,7 +112,7 @@
                     :class="{ 'has-content': getAnswer(currentItem?.id, q.id)?.length > 0 }"
                     placeholder="Describe this dish as if you're telling an AI what it tastes, looks, and feels like..."
                     :value="getAnswer(currentItem?.id, q.id) || ''"
-                    @input="setTextAnswer(currentItem?.id, q.id, $event.target.value)"
+                    @input="setTextAnswer(currentItem?.id, q.id, ($event.target as HTMLInputElement).value)"
                     maxlength="250"
                   ></textarea>
                   <div class="char-count">
@@ -390,7 +390,7 @@ const shuffleArray = (array: any[]) => {
 const fetchMenuItems = async () => {
   try {
     const response = await axios.get('/menu-items');
-    let allItems = response.data;
+    const allItems = response.data;
     shuffleArray(allItems);
     menuItems.value = allItems.slice(0, 15);
   } catch (error) {
