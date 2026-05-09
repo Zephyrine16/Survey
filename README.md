@@ -20,7 +20,7 @@ A professional full-stack application designed for high-volume menu evaluation a
 | Component | Technology |
 | :--- | :--- |
 | **Frontend** | Vue 3 (Composition API), Vite, Axios |
-| **Backend** | Java 17, Spring Boot, Spring Security |
+| **Backend** | Java 25, Spring Boot, Spring Security |
 | **Database** | PostgreSQL |
 | **Auth** | JWT (JSON Web Tokens) |
 | **Hosting** | Render (CI/CD Pipeline) |
