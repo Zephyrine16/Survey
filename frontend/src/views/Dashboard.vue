@@ -911,11 +911,6 @@ const activeCategory = ref('Food')
 const activeSubcategory = ref('All')
 const selectedItemId = ref<number | null>(null)
 
-const currentDate = new Date().toLocaleDateString('en-US', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-})
 const baselineCount = ref(0)
 const showClearModal = ref(false)
 
