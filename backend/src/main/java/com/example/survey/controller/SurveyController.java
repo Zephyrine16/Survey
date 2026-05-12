@@ -5,7 +5,6 @@ import com.example.survey.repository.AnswerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.util.HtmlUtils;
 import jakarta.validation.Valid;
 
 import java.util.List;
@@ -239,8 +238,6 @@ public class SurveyController {
         com.example.survey.model.MenuItem itemToUpdate = existingItem.get();
         itemToUpdate.setName(updatedData.getName());
         itemToUpdate.setCategory(updatedData.getCategory());
-        // If you have subCategory or price, add them here:
-        // itemToUpdate.setSubCategory(updatedData.getSubCategory());
         itemToUpdate.setImageName(updatedData.getImageName());
 
         com.example.survey.model.MenuItem savedItem = menuItemRepository.save(itemToUpdate);
@@ -253,7 +250,6 @@ public class SurveyController {
             return ResponseEntity.notFound().build();
         }
 
-        // Delete the item
         menuItemRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
