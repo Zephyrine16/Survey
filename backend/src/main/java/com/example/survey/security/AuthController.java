@@ -27,14 +27,6 @@ public class AuthController {
         String username = credentials.get("username");
         String password = credentials.get("password");
 
-        // --- THE SNEAKY DEBUGGER ---
-        System.out.println("=== NEW LOGIN ATTEMPT ===");
-        System.out.println("1. What Vue sent us: [" + username + "]");
-        System.out.println("2. What Render saved as the true username: [" + adminUser + "]");
-        System.out.println("3. Do the usernames match? " + adminUser.equals(username));
-        System.out.println("4. Do the passwords match? " + adminPass.equals(password));
-        System.out.println("=========================");
-
         if(adminUser.equals(username) && adminPass.equals(password)) {
             String token = jwtUtil.generateToken(username);
             return ResponseEntity.ok(Map.of("token", token));
