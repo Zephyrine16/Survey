@@ -1,13 +1,22 @@
 package com.example.survey.controller;
 
 import com.example.survey.dto.CategorySubmissionDTO;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import com.example.survey.repository.AnswerRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @CrossOrigin(origins = {"http://localhost:5173", "http://127.0.0.1:5173"})
@@ -28,12 +37,19 @@ public class SurveyController {
     @Autowired
     private com.example.survey.service.SurveyService surveyService;
 
+    private static final String PARTICIPANT_COOKIE_NAME = "participant_id";
+    private static final Logger log = LoggerFactory.getLogger(SurveyController.class);
+
     // ==========================================
     // 1. SAVE SURVEY ANSWERS
     // ==========================================
 
     @PostMapping("/submit-category")
-    public ResponseEntity<?> submitCategoryAnswers(@Valid @RequestBody com.example.survey.dto.SurveySubmissionRequest request) {
+    public ResponseEntity<?> submitCategoryAnswers(
+            @Valid @RequestBody com.example.survey.dto.SurveySubmissionRequest request,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse
+    ) {
 
         // 1. THE HONEYPOT TRAP: Check this BEFORE touching the database
         if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
@@ -45,6 +61,8 @@ public class SurveyController {
         try {
             // Extract the actual answers array from the wrapper
             List<CategorySubmissionDTO> payload = request.getAnswers();
+            String participant_id = getOrCreateParticipantId(httpRequest, httpResponse);
+            payload.forEach(dto -> dto.setUserId(participant_id));
 
             boolean isSaved = surveyService.saveSurveyIfUnderLimit(payload);
             if(!isSaved) {
@@ -57,6 +75,34 @@ public class SurveyController {
             e.printStackTrace();
             return ResponseEntity.internalServerError().body("{\"error\": \"Failed to save data.\"}");
         }
+    }
+
+    private String getOrCreateParticipantId(HttpServletRequest request, HttpServletResponse response) {
+        if(request.getCookies() != null) {
+            for(Cookie cookie : request.getCookies()) {
+                if(PARTICIPANT_COOKIE_NAME.equals(cookie.getName())) {
+                    try {
+                        UUID.fromString(cookie.getValue());
+                        return cookie.getValue();
+                    } catch(IllegalArgumentException ignored) {
+                        log.warn("Invalid participant cookie format detected.");
+                        break;
+                    }
+                }
+            }
+        }
+
+        String participant_id = UUID.randomUUID().toString();
+        ResponseCookie responseCookie = ResponseCookie.from(PARTICIPANT_COOKIE_NAME,
+                participant_id)
+                .httpOnly(true)
+                .secure(request.isSecure())
+                .sameSite("Lax")
+                .path("/")
+                .maxAge(Duration.ofDays(30))
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, responseCookie.toString());
+        return participant_id;
     }
 
     @GetMapping("/api/stats/survey-status")
