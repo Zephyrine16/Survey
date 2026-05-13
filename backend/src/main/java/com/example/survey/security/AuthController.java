@@ -40,11 +40,10 @@ public class AuthController {
         String clientIp = request.getRemoteAddr();
         String rateLimitKey = (username == null ? "unknown" : username) + "|" + clientIp;
 
-        int failures = failedLoginAttempts.getIfPresent(rateLimitKey) == null
-                ? 0
-                : failedLoginAttempts.getIfPresent(rateLimitKey);
+        Integer failures = failedLoginAttempts.getIfPresent(rateLimitKey);
+        int failureCount = failures == null ? 0 : failures;
 
-        if (failures >= MAX_FAILED_ATTEMPTS) {
+        if (failureCount >= MAX_FAILED_ATTEMPTS) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("error", "Too many failed login attempts. Try again later."));
         }
@@ -55,7 +54,7 @@ public class AuthController {
             return ResponseEntity.ok(Map.of("token", token));
         }
 
-        failedLoginAttempts.put(rateLimitKey, failures + 1);
+        failedLoginAttempts.put(rateLimitKey, failureCount + 1);
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid credentials"));
     }
 }

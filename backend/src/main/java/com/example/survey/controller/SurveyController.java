@@ -5,6 +5,8 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import com.example.survey.repository.AnswerRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -36,6 +38,7 @@ public class SurveyController {
     private com.example.survey.service.SurveyService surveyService;
 
     private static final String PARTICIPANT_COOKIE_NAME = "participant_id";
+    private static final Logger log = LoggerFactory.getLogger(SurveyController.class);
 
     // ==========================================
     // 1. SAVE SURVEY ANSWERS
@@ -82,6 +85,7 @@ public class SurveyController {
                         UUID.fromString(cookie.getValue());
                         return cookie.getValue();
                     } catch (IllegalArgumentException ignored) {
+                        log.warn("Invalid participant cookie format from IP {}", request.getRemoteAddr());
                         break;
                     }
                 }
