@@ -1,13 +1,22 @@
 package com.example.survey.dto;
 
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
 public class CategorySubmissionDTO {
 
     // 1. THIS IS THE FIX: It is now a String!
     private String userId;
 
+    @NotNull(message = "menuItemId is required")
     private Long menuItemId;
+
+    @NotNull(message = "questionId is required")
     private Long questionId;
+
     private Long selectedOptionId;
+
+    @Size(max = 250, message = "textResponse cannot exceed 250 characters")
     private String textResponse;
 
     // --- GETTERS & SETTERS ---

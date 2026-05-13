@@ -53,7 +53,7 @@ public class SurveyController {
 
         // 1. THE HONEYPOT TRAP: Check this BEFORE touching the database
         if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
-            System.out.println("🛡️ Bot blocked! Honeypot field was triggered.");
+            log.info("Bot honeypot triggered on submit-category.");
             // Return a fake success so the bot goes away and doesn't try a different attack
             return ResponseEntity.ok().body("{\"message\": \"Category saved successfully!\"}");
         }
@@ -72,7 +72,7 @@ public class SurveyController {
             return ResponseEntity.ok().body("{\"message\": \"Category saved successfully!\"}");
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to save survey category submission.", e);
             return ResponseEntity.internalServerError().body("{\"error\": \"Failed to save data.\"}");
         }
     }
@@ -257,7 +257,7 @@ public class SurveyController {
             answerRepository.deleteAll();
             return ResponseEntity.ok().body("{\"message\": \"All database records wiped!\"}");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Failed to clear survey data.", e);
             return ResponseEntity.internalServerError().body("{\"error\": \"Failed to wipe data.\"}");
         }
     }
