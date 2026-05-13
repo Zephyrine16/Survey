@@ -38,7 +38,7 @@ public class AuthController {
         String username = credentials.get("username");
         String password = credentials.get("password");
         String clientIp = request.getRemoteAddr();
-        String rateLimitKey = (username == null ? "unknown" : username) + "|" + clientIp;
+        String rateLimitKey = clientIp;
 
         Integer failures = failedLoginAttempts.getIfPresent(rateLimitKey);
         int failureCount = failures == null ? 0 : failures;

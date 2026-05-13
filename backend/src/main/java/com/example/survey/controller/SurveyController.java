@@ -85,7 +85,7 @@ public class SurveyController {
                         UUID.fromString(cookie.getValue());
                         return cookie.getValue();
                     } catch (IllegalArgumentException ignored) {
-                        log.warn("Invalid participant cookie format from IP {}", request.getRemoteAddr());
+                        log.warn("Invalid participant cookie format detected.");
                         break;
                     }
                 }
