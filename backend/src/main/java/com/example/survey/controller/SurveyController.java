@@ -126,7 +126,7 @@ public class SurveyController {
     public ResponseEntity<byte[]> exportReport() {
         List<Object[]> data = answerRepository.getExportData();
 
-        StringBuilder csv = new StringBuilder("\uFEFFSession ID,Menu Item,Question,Selected Option,Text Response\n");
+        StringBuilder csv = new StringBuilder("\uFEFF\"Session ID\",\"Menu Item\",\"Question\",\"Selected Option\",\"Text Response\"\n");
 
         for (Object[] row : data) {
             String userId = csvSafe(row[0], "Anonymous");
