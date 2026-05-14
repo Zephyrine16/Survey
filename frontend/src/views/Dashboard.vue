@@ -742,7 +742,7 @@
                 <label>Option Text / Label</label>
                 <input
                   type="text"
-                  v-model="optionForm.text"
+                  v-model="optionForm.label"
                   required
                   placeholder="e.g. Too Salty, Perfect, etc."
                   class="form-input"
@@ -860,7 +860,8 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import axios from 'axios'
 
 //Security State
-const isAuthenticated = ref(!!sessionStorage.getItem('adminToken'))
+const isAuthenticated = ref(false)
+const adminToken = ref<string | null>(null)
 const username = ref('')
 const password = ref('')
 const loginError = ref('')
@@ -877,7 +878,7 @@ const handleLogin = async () => {
     })
 
     const token = response.data.token
-    sessionStorage.setItem('adminToken', token)
+    adminToken.value = token
 
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
 
@@ -895,7 +896,7 @@ const handleLogin = async () => {
 const handleLogout = async () => {
   showLogoutModal.value = false
 
-  sessionStorage.removeItem('adminToken')
+  adminToken.value = null
   delete axios.defaults.headers.common['Authorization']
   isAuthenticated.value = false
 
@@ -1068,32 +1069,24 @@ const autoSelectFirstFilteredItem = () => {
 const radioQuestions = computed(() => {
   const result: Record<string, any> = {}
 
-  // Forgiving type check: If it's not explicitly TEXT, it's a chart!
   const rQuestions = dynamicQuestions.value.filter(
     (q) => !q.type || q.type.toUpperCase() !== 'TEXT',
   )
 
   rQuestions.forEach((q) => {
-    const cleanDbText = q.text.replace(/[^a-zA-Z0-9]/g, '')
-    const matchingKey = Object.keys(analyticsData.value).find(
-      (k) => k.replace(/[^a-zA-Z0-9]/g, '') === cleanDbText,
-    )
-
-    if (matchingKey && analyticsData.value[matchingKey]) {
-      let ans = analyticsData.value[matchingKey]
-
-      // Auto-convert Spring Boot Maps to Vue Arrays if needed
+    const analyticsKey  = String(q.id)
+    let ans = analyticsData.value[analyticsKey]
+    if(ans) {
       if (!Array.isArray(ans)) {
         ans = Object.keys(ans).map((key) => ({ optionLabel: key, voteCount: ans[key] }))
       }
 
-      // Use the clean database text for the UI header
       result[q.text] = ans
     }
   })
 
   return result
-})
+});
 
 // 🛡️ BULLETPROOF TEXT QUESTIONS (Dictionary Version)
 const textQuestions = computed(() => {
@@ -1101,13 +1094,9 @@ const textQuestions = computed(() => {
   const tQuestions = dynamicQuestions.value.filter((q) => q.type && q.type.toUpperCase() === 'TEXT')
 
   tQuestions.forEach((q) => {
-    const cleanDbText = q.text.replace(/[^a-zA-Z0-9]/g, '')
-    const matchingKey = Object.keys(analyticsData.value).find(
-      (k) => k.replace(/[^a-zA-Z0-9]/g, '') === cleanDbText,
-    )
-
-    if (matchingKey && analyticsData.value[matchingKey]) {
-      result[q.text] = analyticsData.value[matchingKey]
+    const analyticsKey = String(q.id)
+    if (analyticsData.value[analyticsKey]) {
+      result[q.text] = analyticsData.value[analyticsKey]
     }
   })
 
@@ -1337,10 +1326,16 @@ const openEditModal = (item: any) => {
 }
 
 const openCloudinaryWidget = () => {
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+  if (!cloudName || !uploadPreset) {
+    alert('Cloudinary environment variables are missing.')
+    return
+  }
   const widget = window.cloudinary.createUploadWidget(
     {
-      cloudName: 'dujzkxisi',
-      uploadPreset: 'ml_default',
+      cloudName,
+      uploadPreset,
       folder: 'items',
       multiple: false,
       clientAllowedFormats: ['webp', 'png', 'jpeg', 'jpg'],
@@ -1488,22 +1483,22 @@ const quickEmojis = [
 
 const optionForm = ref({
   questionId: null as number | null,
-  text: '',
+  label:'',
   icon: '',
 })
 
 const openAddOptionModal = (questionId: number) => {
-  optionForm.value = { questionId: questionId, text: '', icon: '🔘' } // Reset form
+  optionForm.value = { questionId: questionId, label: '', icon: '🔘' } // Reset form
   showAddOptionModal.value = true
 }
 
 const submitNewOption = async () => {
-  if (!optionForm.value.questionId || !optionForm.value.text) return
+  if (!optionForm.value.questionId || !optionForm.value.label) return
 
   isSavingOption.value = true
   try {
     await axios.post(`/api/admin/questions/${optionForm.value.questionId}/options`, {
-      text: optionForm.value.text,
+      label: optionForm.value.label,
       icon: optionForm.value.icon,
     })
     await fetchQuestions()
@@ -1545,7 +1540,7 @@ onMounted(() => {
     (error) => {
       if (error.response && (error.response.status === 401 || error.response.status === 403)) {
         console.warn('Session expired! Returning to login screen...')
-        sessionStorage.removeItem('adminToken')
+        adminToken.value = null
 
         delete axios.defaults.headers.common['Authorization']
         isAuthenticated.value = false
@@ -1553,14 +1548,6 @@ onMounted(() => {
       return Promise.reject(error)
     },
   )
-
-  if (isAuthenticated.value) {
-    axios.defaults.headers.common['Authorization'] =
-      `Bearer ${sessionStorage.getItem('adminToken')}`
-    fetchMenuItems()
-    fetchQuestions()
-    fetchStats()
-  }
 })
 
 onUnmounted(() => {

@@ -2,6 +2,8 @@ package com.example.survey.config;
 
 import com.example.survey.model.MenuItem;
 import com.example.survey.repository.MenuItemRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -10,6 +12,7 @@ import java.util.List;
 
 @Component
 public class MenuSeeder implements CommandLineRunner {
+    private static final Logger log = LoggerFactory.getLogger(MenuSeeder.class);
     private final MenuItemRepository menuItemRepository;
 
     public MenuSeeder(MenuItemRepository menuItemRepository) {
@@ -135,7 +138,7 @@ public class MenuSeeder implements CommandLineRunner {
             fullMenu.add(createItem("Blueberry Fruit Tea", "Fruit Tea"));
 
             menuItemRepository.saveAll(fullMenu);
-            System.out.println("✅ Successfully added " + fullMenu.size() + " items to the database!");
+            log.info("Successfully added {} menu items to the database.", fullMenu.size());
         }
     }
 
