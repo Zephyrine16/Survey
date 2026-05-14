@@ -1,6 +1,9 @@
 package com.example.survey.controller;
 
 import com.example.survey.dto.CategorySubmissionDTO;
+import com.example.survey.dto.MenuItemRequest;
+import com.example.survey.dto.OptionRequest;
+import com.example.survey.dto.QuestionRequest;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -19,7 +22,6 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@CrossOrigin(origins = {"http://localhost:5173", "http://127.0.0.1:5173"})
 public class SurveyController {
 
     @Autowired
@@ -126,35 +128,12 @@ public class SurveyController {
 
         StringBuilder csv = new StringBuilder("\uFEFFSession ID,Menu Item,Question,Selected Option,Text Response\n");
 
-        // ==========================================
-        // MUST REFACTOR!!!
-        // ==========================================
-
         for (Object[] row : data) {
-            String userId = row[0] != null ? row[0].toString() : "Anonymous";
-            if(userId.startsWith("=") || userId.startsWith("+") || userId.startsWith("-") || userId.startsWith("@")) {
-                userId = "'" + userId;
-            }
-
-            String item = row[1] != null ? row[1].toString().replace(",", "") : "";
-            if(item.startsWith("=") || item.startsWith("+") || item.startsWith("-") || item.startsWith("@")) {
-                item = "'" + item;
-            }
-
-            String question = row[2] != null ? row[2].toString().replace(",", "") : "";
-            if(question.startsWith("=") || question.startsWith("+") || question.startsWith("-") || question.startsWith("@")) {
-                question = "'" + question;
-            }
-
-            String option = row[3] != null ? row[3].toString().replace(",", "") : "";
-            if(option.startsWith("=") || option.startsWith("+") || option.startsWith("-") || option.startsWith("@")) {
-                option = "'" + option;
-            }
-
-            String textResponse = row[4] != null ? row[4].toString().replace("\n", " ").replace(",", "") : "";
-            if(textResponse.startsWith("=") || textResponse.startsWith("+") || textResponse.startsWith("-") || textResponse.startsWith("@")) {
-                textResponse = "'" + textResponse;
-            }
+            String userId = csvSafe(row[0], "Anonymous");
+            String item = csvSafe(row[1], "");
+            String question = csvSafe(row[2], "");
+            String option = csvSafe(row[3], "");
+            String textResponse = csvSafe(row[4], "");
 
             csv.append(userId).append(",")
                     .append(item).append(",")
@@ -268,13 +247,18 @@ public class SurveyController {
     // ==========================================
 
     @PostMapping("/api/admin/menu-items")
-    public ResponseEntity<com.example.survey.model.MenuItem> createMenuItem(@RequestBody com.example.survey.model.MenuItem newItem) {
-        com.example.survey.model.MenuItem savedItem = menuItemRepository.save(newItem);
+    public ResponseEntity<com.example.survey.model.MenuItem> createMenuItem(@Valid @RequestBody MenuItemRequest newItem) {
+        com.example.survey.model.MenuItem item = new com.example.survey.model.MenuItem();
+        item.setName(newItem.getName().trim());
+        item.setCategory(newItem.getCategory().trim());
+        item.setPrice(newItem.getPrice());
+        item.setImageName(newItem.getImageName());
+        com.example.survey.model.MenuItem savedItem = menuItemRepository.save(item);
         return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(savedItem);
     }
 
     @PutMapping("/api/admin/menu-items/{id}")
-    public ResponseEntity<com.example.survey.model.MenuItem> updateMenuItem(@PathVariable Long id, @RequestBody com.example.survey.model.MenuItem updatedData) {
+    public ResponseEntity<com.example.survey.model.MenuItem> updateMenuItem(@PathVariable Long id, @Valid @RequestBody MenuItemRequest updatedData) {
         java.util.Optional<com.example.survey.model.MenuItem> existingItem = menuItemRepository.findById(id);
 
         if (existingItem.isEmpty()) {
@@ -282,8 +266,9 @@ public class SurveyController {
         }
 
         com.example.survey.model.MenuItem itemToUpdate = existingItem.get();
-        itemToUpdate.setName(updatedData.getName());
-        itemToUpdate.setCategory(updatedData.getCategory());
+        itemToUpdate.setName(updatedData.getName().trim());
+        itemToUpdate.setCategory(updatedData.getCategory().trim());
+        itemToUpdate.setPrice(updatedData.getPrice());
         itemToUpdate.setImageName(updatedData.getImageName());
 
         com.example.survey.model.MenuItem savedItem = menuItemRepository.save(itemToUpdate);
@@ -307,13 +292,16 @@ public class SurveyController {
     // --- QUESTION CRUD ---
 
     @PostMapping("/api/admin/questions")
-    public ResponseEntity<com.example.survey.model.Question> createQuestion(@RequestBody com.example.survey.model.Question newQuestion) {
-        com.example.survey.model.Question savedQuestion = questionRepository.save(newQuestion);
+    public ResponseEntity<com.example.survey.model.Question> createQuestion(@Valid @RequestBody QuestionRequest newQuestion) {
+        com.example.survey.model.Question question = new com.example.survey.model.Question();
+        question.setText(newQuestion.getText().trim());
+        question.setQuestionType(newQuestion.getType());
+        com.example.survey.model.Question savedQuestion = questionRepository.save(question);
         return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(savedQuestion);
     }
 
     @PutMapping("/api/admin/questions/{id}")
-    public ResponseEntity<com.example.survey.model.Question> updateQuestion(@PathVariable Long id, @RequestBody com.example.survey.model.Question updatedData) {
+    public ResponseEntity<com.example.survey.model.Question> updateQuestion(@PathVariable Long id, @Valid @RequestBody QuestionRequest updatedData) {
         java.util.Optional<com.example.survey.model.Question> existingQuestion = questionRepository.findById(id);
 
         if (existingQuestion.isEmpty()) {
@@ -321,8 +309,8 @@ public class SurveyController {
         }
 
         com.example.survey.model.Question qToUpdate = existingQuestion.get();
-        qToUpdate.setText(updatedData.getText());
-        qToUpdate.setQuestionType(updatedData.getQuestionType()); // "RADIO" or "TEXT"
+        qToUpdate.setText(updatedData.getText().trim());
+        qToUpdate.setQuestionType(updatedData.getType());
 
         com.example.survey.model.Question savedQuestion = questionRepository.save(qToUpdate);
         return ResponseEntity.ok(savedQuestion);
@@ -342,7 +330,7 @@ public class SurveyController {
     @PostMapping("/api/admin/questions/{questionId}/options")
     public ResponseEntity<com.example.survey.model.Option> addOptionToQuestion(
             @PathVariable Long questionId,
-            @RequestBody com.example.survey.model.Option newOption) {
+            @Valid @RequestBody OptionRequest newOption) {
 
         java.util.Optional<com.example.survey.model.Question> questionOpt = questionRepository.findById(questionId);
 
@@ -352,9 +340,13 @@ public class SurveyController {
 
         // Attach the option to the specific question
         com.example.survey.model.Question parentQuestion = questionOpt.get();
-        newOption.setQuestion(parentQuestion);
+        com.example.survey.model.Option option = new com.example.survey.model.Option();
+        option.setLabel(newOption.getLabel().trim());
+        option.setIcon(newOption.getIcon());
+        option.setSub_description(newOption.getSub());
+        option.setQuestion(parentQuestion);
 
-        com.example.survey.model.Option savedOption = optionRepository.save(newOption);
+        com.example.survey.model.Option savedOption = optionRepository.save(option);
         return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(savedOption);
     }
 
@@ -365,5 +357,25 @@ public class SurveyController {
         }
         optionRepository.deleteById(optionId);
         return ResponseEntity.noContent().build();
+    }
+
+    private String csvSafe(Object rawValue, String defaultValue) {
+        String value = rawValue == null ? defaultValue : rawValue.toString();
+        value = value.replace("\r", " ").replace("\n", " ");
+        value = neutralizeSpreadsheetFormula(value);
+        return escapeCsv(value);
+    }
+
+    private String neutralizeSpreadsheetFormula(String value) {
+        String trimmed = value.stripLeading();
+        if (trimmed.startsWith("=") || trimmed.startsWith("+") || trimmed.startsWith("-") || trimmed.startsWith("@")) {
+            return "'" + value;
+        }
+        return value;
+    }
+
+    private String escapeCsv(String value) {
+        String escaped = value.replace("\"", "\"\"");
+        return "\"" + escaped + "\"";
     }
 }

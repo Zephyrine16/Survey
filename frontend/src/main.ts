@@ -3,10 +3,10 @@ import './assets/main.css'
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
-import axios from 'axios' // <-- 1. Import Axios here
+import axios from 'axios'
 
-// <-- 2. Tell Axios to use your live Render backend for all requests
-axios.defaults.baseURL = 'https://survey-backend-dxb5.onrender.com';
+axios.defaults.baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest'
 
 const app = createApp(App)
 

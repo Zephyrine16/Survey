@@ -144,6 +144,23 @@ spring.datasource.password=YOUR_POSTGRES_PASSWORD
 
 > **💡 Tip:** Make sure these credentials match what you set up in PostgreSQL earlier.
 
+Set these required backend environment variables before startup:
+
+```bash
+export ADMIN_USER=your_admin_username
+export ADMIN_PASSWORD_HASH='$2a$10$replace_with_bcrypt_hash'
+export JWT_SECRET='replace_with_a_long_random_secret'
+```
+
+You can generate a bcrypt hash for your admin password with:
+
+```bash
+python - <<'PY'
+import bcrypt
+print(bcrypt.hashpw(b"your_admin_password", bcrypt.gensalt()).decode())
+PY
+```
+
 ---
 
 #### 🚀 Run the Server
@@ -203,6 +220,14 @@ Install all required Node modules:
 npm install
 ```
 ⏱️ *This may take a minute or two...*
+
+Create a frontend `.env` file in `/frontend` with:
+
+```bash
+VITE_API_BASE_URL=http://localhost:8080
+VITE_CLOUDINARY_CLOUD_NAME=your_cloud_name
+VITE_CLOUDINARY_UPLOAD_PRESET=your_upload_preset
+```
 
 ---
 

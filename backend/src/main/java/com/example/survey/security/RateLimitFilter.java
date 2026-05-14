@@ -6,6 +6,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -14,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
+    private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);
 
     // 1. This automatically deletes entries 15 seconds after they are added!
     private final Cache<String, Boolean> ipCooldowns = Caffeine.newBuilder()
@@ -29,11 +32,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         // 2. We only want to rate-limit the public category submission endpoint!
         if (path.startsWith("/submit-category")) {
-            String clientIp = request.getRemoteAddr();
+            String clientIp = extractClientIp(request);
 
             // 3. Check if this IP is on cooldown
             if(ipCooldowns.getIfPresent(clientIp) != null) {
-                System.out.println("Blocked spam attempt from IP: " + clientIp);
+                log.warn("Blocked repeated submit-category request from IP {}", clientIp);
                 response.setStatus(429); // HTTP 429 = "Too Many Requests"
                 response.getWriter().write("Please wait a few seconds before submitting again.");
                 return;
@@ -47,5 +50,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         // Allow the request to pass through normally
         filterChain.doFilter(request, response);
+    }
+
+    private String extractClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }

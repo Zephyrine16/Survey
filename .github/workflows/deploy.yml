@@ -21,7 +21,7 @@ jobs:
       - name: Build Backend with Maven
         run: |
           cd backend
-          ./mvnw clean package -Dmaven.test.skip=true
+          ./mvnw clean test package
 
       - name: Trigger Render Backend Deploy
         if: success()
@@ -43,7 +43,8 @@ jobs:
       - name: Compile Vue Production Files
         run: |
           cd frontend
-          npm install
+          npm ci
+          npm audit --audit-level=high
           npm run build
 
       - name: Trigger Render Frontend Deploy
