@@ -30,7 +30,7 @@ public class SurveyService {
 
         for(CategorySubmissionDTO dto : payload) {
             if(dto.getTextResponse() != null && !dto.getTextResponse().isEmpty()) {
-                String cleanText = HtmlUtils.htmlUnescape(dto.getTextResponse());
+                String cleanText = HtmlUtils.htmlEscape(dto.getTextResponse());
                 if(cleanText.length() > 250) {
                     cleanText = cleanText.substring(0, 250);
                 }

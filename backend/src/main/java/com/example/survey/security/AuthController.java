@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-@CrossOrigin(origins = "*") // <-- Added this to prevent CORS errors with Vue!
 @RestController
 @RequestMapping("/api/admin")
 public class AuthController {
