@@ -152,6 +152,8 @@ export ADMIN_PASSWORD_HASH='$2a$10$replace_with_bcrypt_hash'
 export JWT_SECRET='replace_with_a_long_random_secret'
 ```
 
+> **Migration note:** older deployments that used `ADMIN_PASS` must switch to `ADMIN_PASSWORD_HASH` (bcrypt hash only).
+
 You can generate a bcrypt hash for your admin password with:
 
 ```bash
@@ -228,6 +230,8 @@ VITE_API_BASE_URL=http://localhost:8080
 VITE_CLOUDINARY_CLOUD_NAME=your_cloud_name
 VITE_CLOUDINARY_UPLOAD_PRESET=your_upload_preset
 ```
+
+Admin auth tokens are now held in runtime memory only (not persisted in browser storage), so admin users are required to sign in again after a full page refresh.
 
 ---
 
