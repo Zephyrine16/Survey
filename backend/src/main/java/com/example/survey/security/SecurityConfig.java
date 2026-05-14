@@ -47,7 +47,7 @@ public class SecurityConfig {
                         .requestMatchers("/analytics/**", "/api/stats/**", "/export", "/api/admin/clear-data").authenticated()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(rateLimitFilter, JwtAuthFilter.class)
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
