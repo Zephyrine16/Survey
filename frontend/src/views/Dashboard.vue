@@ -38,8 +38,8 @@
           <div>
             <h1>Food Preferences Survey</h1>
             <p class="subtitle">
-              {{ (this as any).totalQuestions }}
-              {{ menuItems.length }} total items
+              {{ dynamicQuestions.length }} Questions •
+              {{ menuItems.length }} Items
             </p>
           </div>
         </div>
