@@ -23,18 +23,18 @@ public class AnalyticsController {
     private QuestionRepository questionRepository;
 
     @GetMapping("/{menuItemId}")
-    public Map<String, Object> getAnalyticsForMenuItem(@PathVariable Long menuItemId) {
-        Map<String, Object> dashboardData = new HashMap<>();
+    public Map<Long, Object> getAnalyticsForMenuItem(@PathVariable Long menuItemId) {
+        Map<Long, Object> dashboardData = new HashMap<>();
 
         List<Question> questions = questionRepository.findAll();
         for(Question question : questions) {
             if("RADIO".equals(question.getQuestionType())) {
                 List<OptionCountDTO> stats = answerRepository.countVotesByOption(menuItemId, question.getId());
-                dashboardData.put(question.getText(), stats);
+                dashboardData.put(question.getId(), stats);
             }
             else if("TEXT".equals(question.getQuestionType())) {
                 List<TextFeedbackDTO> feedback = answerRepository.findTextResponse(menuItemId, question.getId());
-                dashboardData.put(question.getText(), feedback);
+                dashboardData.put(question.getId(), feedback);
             }
         }
         return dashboardData;

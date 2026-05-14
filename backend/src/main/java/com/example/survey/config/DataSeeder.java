@@ -3,6 +3,8 @@ package com.example.survey.config;
 import com.example.survey.model.Option;
 import com.example.survey.model.Question;
 import com.example.survey.repository.OptionRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.example.survey.repository.QuestionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -11,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class DataSeeder implements CommandLineRunner {
+    private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -31,7 +34,7 @@ public class DataSeeder implements CommandLineRunner {
         long count = questionRepository.count();
 
         if (count == 0) {
-            System.out.println("Database is empty. Seeding initial survey data safely via JPA...");
+            log.info("Database is empty. Sending initial survey data safely via JPA...");
 
             // --- QUESTION 1 ---
             Question q1 = new Question();
@@ -81,7 +84,7 @@ public class DataSeeder implements CommandLineRunner {
             q5.setQuestionType("TEXT");
             questionRepository.save(q5); // No options needed for text!
 
-            System.out.println("EYE-DINE Survey data seeded successfully!");
+            log.info("EYE-DINE Survey data seeded successfully.");
         }
     }
 
