@@ -1,7 +1,8 @@
 # Step 1: Build the application
-FROM maven:3.9.6-eclipse-temurin-25 AS build
+FROM container-registry.oracle.com/java/openjdk:25 AS build
 WORKDIR /app
 COPY . .
+RUN chmod +x ./mvnw
 RUN mvn clean package "-Dmaven.test.skip=true"
 
 # Step 2: Run the application
