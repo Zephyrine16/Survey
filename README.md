@@ -1,6 +1,6 @@
 # 📊 Menu Intelligence & Feedback Ecosystem
 
-A professional full-stack application designed for high-volume menu evaluation and data-driven insights. This project utilizes a modern decoupled architecture with a Vue.js frontend and a Java Spring Boot backend.
+A professional full-stack application designed for high-volume menu evaluation and data-driven insights. This project uses a modern decoupled architecture with a Vue.js frontend and a Java Spring Boot backend.
 
 **🔗 [Live Demo](https://survey-frontend-u6k3.onrender.com)**
 
@@ -17,13 +17,13 @@ A professional full-stack application designed for high-volume menu evaluation a
 
 ## 🛠️ Technical Stack
 
-| Component | Technology |
-| :--- | :--- |
-| **Frontend** | Vue 3 (Composition API), Vite, Axios |
-| **Backend** | Java 17, Spring Boot, Spring Security |
-| **Database** | PostgreSQL |
-| **Auth** | JWT (JSON Web Tokens) |
-| **Hosting** | Render (CI/CD Pipeline) |
+| Component    | Technology                            |
+|:-------------|:--------------------------------------|
+| **Frontend** | Vue 3 (Composition API), Vite, Axios  |
+| **Backend**  | Java 17, Spring Boot, Spring Security |
+| **Database** | PostgreSQL                            |
+| **Auth**     | JWT (JSON Web Tokens)                 |
+| **Hosting**  | Render (CI/CD Pipeline)               |
 
 ---
 
@@ -51,7 +51,7 @@ Before downloading the code, ensure you have the following installed on your com
 Choose the right development environment for each part of the project:
 
 **For Backend (Recommended):**  
-[IntelliJ IDEA Community Edition](https://www.jetbrains.com/idea/download/) - Highly recommended for Spring Boot development
+[IntelliJ IDEA Community Edition](https://www.jetbrains.com/idea/download/) – Highly recommended for Spring Boot development
 
 **For Frontend:**  
 [Visual Studio Code (VS Code)](https://code.visualstudio.com/) - Lightweight and powerful for Vue.js
@@ -62,7 +62,7 @@ Choose the right development environment for each part of the project:
 
 #### ☕ Java Development Kit (JDK)
 
-**Version 17 or higher required**
+**Version 17 or higher is required**
 
 [Download Eclipse Temurin JDK](https://adoptium.net/)
 
@@ -144,6 +144,25 @@ spring.datasource.password=YOUR_POSTGRES_PASSWORD
 
 > **💡 Tip:** Make sure these credentials match what you set up in PostgreSQL earlier.
 
+Set these required backend environment variables before startup:
+
+```bash
+export ADMIN_USER=your_admin_username
+export ADMIN_PASSWORD_HASH='$2a$10$replace_with_bcrypt_hash'
+export JWT_SECRET='replace_with_a_long_random_secret'
+```
+
+> **Migration note:** older deployments that used `ADMIN_PASS` must switch to `ADMIN_PASSWORD_HASH` (bcrypt hash only).
+You can generate a bcrypt hash for your admin password with:
+
+```bash
+python - <<'PY'
+import bcrypt
+print(bcrypt.hashpw(b"your_admin_password", bcrypt.gensalt()).decode())
+PY
+```
+
+
 ---
 
 #### 🚀 Run the Server
@@ -224,7 +243,7 @@ Once the server starts, you'll see a local URL in the terminal (usually `http://
 - **Windows/Linux:** `Ctrl` + `Click` on the URL
 - **Mac:** `Cmd` + `Click` on the URL
 
-Or simply copy the URL and paste it into your browser!
+Or copy the URL and paste it into your browser!
 
 ---
 
