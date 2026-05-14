@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ] # Only deploys when you push to main
+    branches: [ main ] # Only deploys when you push to the main
 
 jobs:
   # --- BACKEND JOB ---
@@ -21,7 +21,7 @@ jobs:
       - name: Build Backend with Maven
         run: |
           cd backend
-          ./mvnw clean package -Dmaven.test.skip=true
+          ./mvnw clean test package
 
       - name: Trigger Render Backend Deploy
         if: success()
@@ -43,7 +43,9 @@ jobs:
       - name: Compile Vue Production Files
         run: |
           cd frontend
-          npm install
+          npm ci
+          # Fail deploy on high/critical findings; moderate/low are tracked separately.
+          npm audit --audit-level=high
           npm run build
 
       - name: Trigger Render Frontend Deploy
