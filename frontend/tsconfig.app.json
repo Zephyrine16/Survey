@@ -15,7 +15,6 @@
     "noImplicitAny": false,
     "noUnusedLocals": false,
     "strictNullChecks": false,
-    "suppressImplicitAnyIndexErrors": true,
     "skipLibCheck": true
   }
 }

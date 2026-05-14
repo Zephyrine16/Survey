@@ -44,7 +44,8 @@ jobs:
         run: |
           cd frontend
           npm ci
-          # Fail deploy on high/critical findings; moderate/low are tracked separately.        
+          # Fail deploy on high/critical findings; moderate/low are tracked separately.
+          npm audit --audit-level=high
           npm run build
 
       - name: Trigger Render Frontend Deploy
