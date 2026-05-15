@@ -62,7 +62,7 @@ Choose the right development environment for each part of the project:
 
 #### ☕ Java Development Kit (JDK)
 
-**Version 17 or higher is required**
+**Version 21 or higher is required**
 
 [Download Eclipse Temurin JDK](https://adoptium.net/)
 
@@ -147,9 +147,14 @@ spring.datasource.password=YOUR_POSTGRES_PASSWORD
 Set these required backend environment variables before startup:
 
 ```bash
+export DATABASE_URL='jdbc:postgresql://localhost:5432/postgres'
+export DB_USERNAME='your_postgres_username'
+export DB_PASSWORD='your_postgres_password'
+export DB_SSL_MODE='disable'
 export ADMIN_USER=your_admin_username
 export ADMIN_PASSWORD_HASH='$2a$10$replace_with_bcrypt_hash'
 export JWT_SECRET='replace_with_a_long_random_secret'
+export CORS_ALLOWED_ORIGINS='http://localhost:5173'
 ```
 
 > **Migration note:** older deployments that used `ADMIN_PASS` must switch to `ADMIN_PASSWORD_HASH` (bcrypt hash only).
@@ -231,6 +236,14 @@ Launch the Vue development server:
 
 ```bash
 npm run dev
+```
+
+Set frontend environment variables in `frontend/.env`:
+
+```bash
+VITE_API_BASE_URL=http://localhost:8080
+VITE_CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+VITE_CLOUDINARY_UPLOAD_PRESET=your_upload_preset
 ```
 
 ---
