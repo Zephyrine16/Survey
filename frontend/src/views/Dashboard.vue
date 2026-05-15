@@ -1249,8 +1249,7 @@ const getImagePath = (item: any) => {
   const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
 
   if (!cloudName || cloudName.trim() === '') {
-    console.error('Missing VITE_CLOUDINARY_CLOUD_NAME environment variable.')
-    return ''
+    return `/items/${encodeURIComponent(item.imageName)}`
   }
 
   const safeImageName = encodeURIComponent(item.imageName)

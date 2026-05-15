@@ -7,6 +7,7 @@ import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import java.nio.charset.StandardCharsets;
 
 import java.security.Key;
 import java.util.Date;
@@ -22,7 +23,16 @@ public class JwtUtil {
     // Build the secure key AFTER Spring injects the secretString
     @PostConstruct
     public void init() {
-        this.key = Keys.hmacShaKeyFor(secretString.getBytes());
+        if(secretString == null || secretString.isBlank()) {
+            throw new IllegalStateException("JWT secret must be configured.");
+        }
+
+        byte[] secretBytes = secretString.trim().getBytes(StandardCharsets.UTF_8);
+        if(secretBytes.length < 32) {
+            throw new IllegalStateException("JWT secret must be at least 32 bytes for HS256.");
+        }
+
+        this.key = Keys.hmacShaKeyFor(secretBytes);
     }
 
     public String generateToken(String username) {

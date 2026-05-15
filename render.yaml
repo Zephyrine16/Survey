@@ -1,0 +1,56 @@
+databases:
+  - name: survey-postgres
+    plan: free
+    databaseName: survey
+    user: survey
+
+services:
+  - type: web
+    name: survey-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./backend/Dockerfile
+    autoDeploy: true
+    plan: free
+    healthCheckPath: /api/stats/survey-status
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: DATABASE_URL
+        fromDatabase:
+          name: survey-postgres
+          property: connectionString
+      - key: DB_USERNAME
+        fromDatabase:
+          name: survey-postgres
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: survey-postgres
+          property: password
+      - key: DB_SSL_MODE
+        value: require
+      - key: ADMIN_USER
+        sync: false
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://survey-frontend.onrender.com
+
+  - type: web
+    name: survey-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+    plan: free
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://survey-backend.onrender.com
