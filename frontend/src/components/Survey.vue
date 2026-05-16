@@ -193,7 +193,7 @@
             <button
               class="nav-btn secondary"
               @click="
-                showConfirmModal = false
+                showConfirmModal = false;
                 showReviewModal = true
               "
             >
