@@ -46,7 +46,6 @@ services:
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
     autoDeploy: true
-    plan: free
     routes:
       - type: rewrite
         source: /*
