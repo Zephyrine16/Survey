@@ -126,10 +126,10 @@
                     placeholder="Describe this dish as if you're telling an AI what it tastes, looks, and feels like..."
                     :value="getAnswer(currentItem?.id, q.id) || ''"
                     @input="
-                      setTextAnswer(
+                      handleTextInput(
                         currentItem?.id,
                         q.id,
-                        ($event.target as HTMLInputElement).value,
+                        $event
                       )
                     "
                     maxlength="250"
@@ -535,6 +535,13 @@ const setTextAnswer = (itemId: number | undefined, questionId: number, text: str
   if (!itemId) return
   if (!answers.value[itemId]) answers.value[itemId] = {}
   answers.value[itemId][questionId] = text
+}
+
+const handleTextInput = (itemId: number | undefined, questionId: number, event: Event) => {
+  const target = event.target as HTMLTextAreaElement;
+  if (target) {
+    setTextAnswer(itemId, questionId, target.value);
+  }
 }
 
 const getAnswer = (itemId: number | undefined, questionId: number) => {
