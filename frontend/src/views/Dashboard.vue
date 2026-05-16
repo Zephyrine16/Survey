@@ -38,8 +38,7 @@
           <div>
             <h1>Food Preferences Survey</h1>
             <p class="subtitle">
-              {{ dynamicQuestions.length }} Questions •
-              {{ menuItems.length }} Items
+              {{ dynamicQuestions.length }} Questions • {{ menuItems.length }} Items
             </p>
           </div>
         </div>
@@ -1023,25 +1022,10 @@ const fetchQuestions = async () => {
   }
 }
 
-const fetchAnalyticsForCurrentItem = async () => {
-  if (!selectedItemId.value) return
-  isLoading.value = true
-  try {
-    const response = await axios.get(`/analytics/${selectedItemId.value}`)
-    analyticsData.value = response.data
-  } catch (error) {
-    console.error(`Error fetching analytics for item ${selectedItemId.value}:`, error)
-    analyticsData.value = {}
-  } finally {
-    isLoading.value = false
-  }
-}
-
 const selectItem = async (itemId) => {
   selectedItemId.value = itemId
   activeKeywordFilter.value = null
-  fetchItemStats(itemId)
-  fetchAnalyticsForCurrentItem()
+  await fetchCombinedAnalyticsForItem(itemId)
 }
 
 const setCategory = (category: string) => {
@@ -1264,24 +1248,33 @@ const getWordClass = (index) => {
   return 'w-small'
 }
 
-const fetchItemStats = async (menuItemId) => {
+const applyItemStats = (data: any) => {
+  globalTotal.value = data?.globalTotal ?? 0
+  itemTotal.value = data?.itemTotal ?? 0
+  engagementPct.value = data?.engagementPct ?? 0
+  sentiment.value = {
+    pos: data?.positiveCount ?? 0,
+    neu: data?.neutralCount ?? 0,
+    neg: data?.negativeCount ?? 0,
+    posPct: data?.positivePct ?? 0,
+    neuPct: data?.neutralPct ?? 0,
+    negPct: data?.negativePct ?? 0,
+  }
+  topKeywords.value = data?.topKeywords || []
+}
+
+const fetchCombinedAnalyticsForItem = async (menuItemId: number) => {
+  isLoading.value = true
   try {
-    const response = await axios.get(`/analytics/stats/${menuItemId}`)
-    const data = response.data
-    globalTotal.value = data.globalTotal
-    itemTotal.value = data.itemTotal
-    engagementPct.value = data.engagementPct
-    sentiment.value = {
-      pos: data.positiveCount,
-      neu: data.neutralCount,
-      neg: data.negativeCount,
-      posPct: data.positivePct,
-      neuPct: data.neutralPct,
-      negPct: data.negativePct,
-    }
-    topKeywords.value = data.topKeywords || []
+    const response = await axios.get(`/analytics/combined/${menuItemId}`)
+    analyticsData.value = response.data?.analyticsData || {}
+    applyItemStats(response.data?.stats)
   } catch (error) {
-    console.error('Failed to load real stats', error)
+    console.error(`Error fetching combined analytics for item ${menuItemId}:`, error)
+    analyticsData.value = {}
+    applyItemStats(null)
+  } finally {
+    isLoading.value = false
   }
 }
 
