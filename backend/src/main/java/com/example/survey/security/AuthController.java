@@ -31,7 +31,8 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    private static final int MAX_FAILED_ATTEMPTS = 5;
+    @Value("${security.max-failed-attempts}")
+    private int maxFailedAttempts;
 
     private final Cache<String, Integer> failedLoginAttempts = Caffeine.newBuilder()
             .expireAfterWrite(15, TimeUnit.MINUTES)
@@ -48,7 +49,7 @@ public class AuthController {
         Integer failures = failedLoginAttempts.getIfPresent(rateLimitKey);
         int failureCount = failures == null ? 0 : failures;
 
-        if(failureCount >= MAX_FAILED_ATTEMPTS) {
+        if(failureCount >= maxFailedAttempts) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("error", "Too many failed login attempts. Try again later."));
         }

@@ -857,6 +857,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import axios from 'axios'
+import { MENU_CATEGORIES } from '@/config/menuCategories'
+import { DASHBOARD_UI_TEXT } from '@/config/uiText'
 
 //Security State
 const isAuthenticated = ref(false)
@@ -886,7 +888,7 @@ const handleLogin = async () => {
     fetchQuestions()
     fetchStats()
   } catch (error) {
-    loginError.value = 'Invalid username or password'
+    loginError.value = DASHBOARD_UI_TEXT.invalidLoginCredentials
   } finally {
     isLoggingIn.value = false
   }
@@ -914,16 +916,8 @@ const selectedItemId = ref<number | null>(null)
 const baselineCount = ref(0)
 const showClearModal = ref(false)
 
-const foodSubcategories = ['Meal', 'Bread', 'Pasta', 'Waffle']
-const drinkSubcategories = [
-  'Coffee',
-  'Non-coffee',
-  'Frappe Series',
-  'Float',
-  'Milktea',
-  'Sparkling Soda',
-  'Fruit Tea',
-]
+const foodSubcategories = MENU_CATEGORIES.food
+const drinkSubcategories = MENU_CATEGORIES.drink
 
 const isFood = (cat: string) => {
   if (!cat) return false
