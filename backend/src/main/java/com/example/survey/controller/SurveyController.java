@@ -4,10 +4,12 @@ import com.example.survey.dto.CategorySubmissionDTO;
 import com.example.survey.dto.MenuItemRequest;
 import com.example.survey.dto.OptionRequest;
 import com.example.survey.dto.QuestionRequest;
+import com.example.survey.dto.DashboardStatsDTO;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import com.example.survey.repository.AnswerRepository;
+import com.example.survey.service.AnalyticsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +21,7 @@ import jakarta.validation.Valid;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -39,6 +42,9 @@ public class SurveyController {
     @Autowired
     private com.example.survey.service.SurveyService surveyService;
 
+    @Autowired
+    private AnalyticsService analyticsService;
+
     private static final String PARTICIPANT_COOKIE_NAME = "participant_id";
     private static final Logger log = LoggerFactory.getLogger(SurveyController.class);
 
@@ -53,30 +59,47 @@ public class SurveyController {
             HttpServletResponse httpResponse
     ) {
 
-        // 1. THE HONEYPOT TRAP
-        if (request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty()) {
+        if (isHoneypotTriggered(request)) {
             log.info("Bot honeypot triggered on submit-category.");
-            // Return a fake success so the bot goes away and doesn't try a different attack
-            return ResponseEntity.ok().body("{\"message\": \"Category saved successfully!\"}");
+            return successMessage();
         }
 
         try {
-            // Extract the actual answers array from the wrapper
             List<CategorySubmissionDTO> payload = request.getAnswers();
-            String participant_id = getOrCreateParticipantId(httpRequest, httpResponse);
-            payload.forEach(dto -> dto.setUserId(participant_id));
+            String participantId = getOrCreateParticipantId(httpRequest, httpResponse);
+            assignParticipantToPayload(payload, participantId);
 
             boolean isSaved = surveyService.saveSurveyIfUnderLimit(payload);
             if(!isSaved) {
-                return ResponseEntity.badRequest().body("{\"error\": \"LIMIT_REACHED\"}");
+                return limitReachedResponse();
             }
 
-            return ResponseEntity.ok().body("{\"message\": \"Category saved successfully!\"}");
+            return successMessage();
 
         } catch (Exception e) {
             log.error("Failed to save survey category submission.");
-            return ResponseEntity.internalServerError().body("{\"error\": \"Failed to save data.\"}");
+            return failureMessage();
         }
+    }
+
+    private boolean isHoneypotTriggered(com.example.survey.dto.SurveySubmissionRequest request) {
+        return request.getPhoneNumber() != null && !request.getPhoneNumber().trim().isEmpty();
+    }
+
+    private void assignParticipantToPayload(List<CategorySubmissionDTO> payload, String participantId) {
+        payload.forEach(dto -> dto.setUserId(participantId));
+    }
+
+    private ResponseEntity<String> successMessage() {
+        return ResponseEntity.ok().body("{\"message\": \"Category saved successfully!\"}");
+    }
+
+    private ResponseEntity<String> limitReachedResponse() {
+        return ResponseEntity.badRequest().body("{\"error\": \"LIMIT_REACHED\"}");
+    }
+
+    private ResponseEntity<String> failureMessage() {
+        return ResponseEntity.internalServerError().body("{\"error\": \"Failed to save data.\"}");
     }
 
     private String getOrCreateParticipantId(HttpServletRequest request, HttpServletResponse response) {
@@ -155,61 +178,8 @@ public class SurveyController {
     // ==========================================
 
     @GetMapping("/analytics/stats/{menuItemId}")
-    public ResponseEntity<com.example.survey.dto.DashboardStatsDTO> getItemStats(@PathVariable Long menuItemId) {
-        com.example.survey.dto.DashboardStatsDTO stats = new com.example.survey.dto.DashboardStatsDTO();
-
-        // Fetch base counts (Cleaned up duplicate lines here!)
-        stats.globalTotal = answerRepository.countGlobalTotalResponses();
-        stats.itemTotal = answerRepository.countTotalResponsesForItem(menuItemId);
-
-        // Fetch text reviews for sentiment analysis
-        List<String> reviews = answerRepository.getTextReviewsForItem(menuItemId);
-
-        // Simple Sentiment Analyzer Logic
-        for (String review : reviews) {
-            String lower = review.toLowerCase();
-            if (lower.matches(".*\\b(good|great|love|best|delicious|yummy|perfect|nice|amazing|sweet|comfort|favorite|warm|fresh|hot|filling)\\b.*")) {
-                stats.positiveCount++;
-            } else if (lower.matches(".*\\b(bad|hate|awful|terrible|gross|expensive|worse|bland|nasty|disgusting|dry|salty|cold|hard|stale)\\b.*")) {
-                stats.negativeCount++;
-            } else {
-                stats.neutralCount++;
-            }
-        }
-
-        // Calculate Percentages
-        int totalAnalyzed = stats.positiveCount + stats.neutralCount + stats.negativeCount;
-        if (totalAnalyzed > 0) {
-            stats.positivePct = Math.round(((double) stats.positiveCount / totalAnalyzed) * 1000.0) / 10.0;
-            stats.neutralPct = Math.round(((double) stats.neutralCount / totalAnalyzed) * 1000.0) / 10.0;
-            stats.negativePct = Math.round(((double) stats.negativeCount / totalAnalyzed) * 1000.0) / 10.0;
-        }
-
-        // Keyword Extractor
-        java.util.List<String> stopWords = java.util.Arrays.asList(
-                "the", "and", "is", "it", "to", "a", "of", "for", "in", "on", "this", "but",
-                "very", "so", "with", "i", "was", "not", "have", "that", "like", "just", "my"
-        );
-
-        java.util.Map<String, Integer> wordCounts = new java.util.HashMap<>();
-        for(String review : reviews) {
-            // FIXED: Added a '+' to \\s so it safely removes double-spaces
-            String[] words = review.toLowerCase().replaceAll("[^a-z\\s]", "").split("\\s+");
-            for(String word : words) {
-                if(word.length() > 2 && !stopWords.contains(word)) {
-                    wordCounts.put(word, wordCounts.getOrDefault(word, 0) + 1);
-                }
-            }
-        }
-
-        java.util.List<java.util.Map.Entry<String, Integer>> sortedWords = new java.util.ArrayList<>(wordCounts.entrySet());
-        sortedWords.sort((a, b) -> b.getValue().compareTo(a.getValue()));
-
-        stats.topKeywords = new java.util.ArrayList<>();
-        for(int i = 0; i < Math.min(8, sortedWords.size()); i++) {
-            stats.topKeywords.add(sortedWords.get(i).getKey());
-        }
-
+    public ResponseEntity<DashboardStatsDTO> getItemStats(@PathVariable Long menuItemId) {
+        DashboardStatsDTO stats = analyticsService.getItemStats(menuItemId);
         return ResponseEntity.ok(stats);
     }
 
@@ -370,7 +340,7 @@ public class SurveyController {
         String trimmed = value.stripLeading();
         if(trimmed.startsWith("=") || trimmed.startsWith("+") || trimmed.startsWith("-") ||
         trimmed.startsWith("@")) {
-            return "" + value;
+            return "'" + value;
         }
 
         return value;

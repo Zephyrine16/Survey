@@ -1,15 +1,10 @@
 package com.example.survey.controller;
 
-import com.example.survey.dto.TextFeedbackDTO;
-import com.example.survey.dto.OptionCountDTO;
-import com.example.survey.model.Question;
-import com.example.survey.repository.AnswerRepository;
-import com.example.survey.repository.QuestionRepository;
+import com.example.survey.dto.CombinedAnalyticsDTO;
+import com.example.survey.service.AnalyticsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -17,26 +12,15 @@ import java.util.Map;
 public class AnalyticsController {
 
     @Autowired
-    private AnswerRepository answerRepository;
-
-    @Autowired
-    private QuestionRepository questionRepository;
+    private AnalyticsService analyticsService;
 
     @GetMapping("/{menuItemId}")
     public Map<Long, Object> getAnalyticsForMenuItem(@PathVariable Long menuItemId) {
-        Map<Long, Object> dashboardData = new HashMap<>();
+        return analyticsService.getAnalyticsForMenuItem(menuItemId);
+    }
 
-        List<Question> questions = questionRepository.findAll();
-        for(Question question : questions) {
-            if("RADIO".equals(question.getQuestionType())) {
-                List<OptionCountDTO> stats = answerRepository.countVotesByOption(menuItemId, question.getId());
-                dashboardData.put(question.getId(), stats);
-            }
-            else if("TEXT".equals(question.getQuestionType())) {
-                List<TextFeedbackDTO> feedback = answerRepository.findTextResponse(menuItemId, question.getId());
-                dashboardData.put(question.getId(), feedback);
-            }
-        }
-        return dashboardData;
+    @GetMapping("/combined/{menuItemId}")
+    public CombinedAnalyticsDTO getCombinedAnalytics(@PathVariable Long menuItemId) {
+        return analyticsService.getCombinedAnalytics(menuItemId);
     }
 }
