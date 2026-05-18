@@ -1,7 +1,7 @@
 package com.example.survey.dto;
 
+import com.example.survey.validation.TextResponseLength;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 
 public class CategorySubmissionDTO {
 
@@ -15,7 +15,7 @@ public class CategorySubmissionDTO {
 
     private Long selectedOptionId;
 
-    @Size(max = 250, message = "textResponse cannot exceed 250 characters")
+    @TextResponseLength
     private String textResponse;
 
     // --- GETTERS & SETTERS ---
