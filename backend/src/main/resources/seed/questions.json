@@ -1,0 +1,44 @@
+[
+  {
+    "text": "Which emotion or physical state most strongly makes you want to order this item?",
+    "questionType": "RADIO",
+    "options": [
+      { "label": "Stressed/Overwhelmed", "sub": "(I need comfort/energy)", "icon": "😩" },
+      { "label": "Happy/Celebratory", "sub": "(I want to reward myself)", "icon": "😊" },
+      { "label": "Tired/Low Energy", "sub": "(I need a boost/caffeine)", "icon": "😴" },
+      { "label": "Relaxed/Chilling", "sub": "(I want to enjoy the rooftop/alfresco vibe)", "icon": "😌" },
+      { "label": "Focused/Working", "sub": "(I need something light/non-distracting)", "icon": "🎯" }
+    ]
+  },
+  {
+    "text": "In what weather condition does this item feel most satisfying?",
+    "questionType": "RADIO",
+    "options": [
+      { "label": "Hot/Sunny", "sub": "(Refreshing/Cold items)", "icon": "☀️" },
+      { "label": "Cold/Rainy", "sub": "(Warm/Hearty items)", "icon": "🌧️" },
+      { "label": "Any Weather", "sub": "(All-around staples)", "icon": "⛅" }
+    ]
+  },
+  {
+    "text": "What is the \"vibe\" of this specific dish?",
+    "questionType": "RADIO",
+    "options": [
+      { "label": "Heavy Meal", "sub": "(Lunch/Dinner)", "icon": "🍽️" },
+      { "label": "Light Snack", "sub": "(Pica-pica/Quick bite)", "icon": "🥗" },
+      { "label": "Drink/Refreshment", "icon": "🥤" }
+    ]
+  },
+  {
+    "text": "Looking at this item, what do you think is a fair \"Student-Friendly\" price for it?",
+    "questionType": "RADIO",
+    "options": [
+      { "label": "Under ₱150", "sub": "(Budget)" },
+      { "label": "₱150 - ₱249", "sub": "(Standard)" },
+      { "label": "₱250 and above", "sub": "(Premium)" }
+    ]
+  },
+  {
+    "text": "How would you describe this dish to the AI chatbot?",
+    "questionType": "TEXT"
+  }
+]
