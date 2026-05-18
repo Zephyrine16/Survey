@@ -86,9 +86,11 @@
             <h2 class="kpi-val">{{ baselineCount }}</h2>
             <p class="kpi-name">BASELINE METRIC</p>
             <p class="kpi-desc">
-              Target 30 •
+              Target {{ SURVEY_BASELINE_TARGET }} •
               {{
-                baselineCount >= 30 ? 'Goal Reached!' : `Need ${30 - baselineCount} more responses`
+                baselineCount >= SURVEY_BASELINE_TARGET
+                  ? 'Goal Reached!'
+                  : `Need ${SURVEY_BASELINE_TARGET - baselineCount} more responses`
               }}
             </p>
           </div>
@@ -857,6 +859,21 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import axios from 'axios'
+import {
+  CLOUDINARY_FOLDER,
+  DRINK_SUBCATEGORIES,
+  FOOD_SUBCATEGORIES,
+  QUICK_EMOJIS,
+  REPORT_FILENAME,
+  SURVEY_BASELINE_TARGET,
+} from '../config/constants'
+import {
+  getCategoryPillClass,
+  getCategoryStyles,
+  getImagePath,
+  isDrinkCategory,
+  isFoodCategory,
+} from '../utils/menu'
 
 //Security State
 const isAuthenticated = ref(false)
@@ -914,71 +931,11 @@ const selectedItemId = ref<number | null>(null)
 const baselineCount = ref(0)
 const showClearModal = ref(false)
 
-const foodSubcategories = ['Meal', 'Bread', 'Pasta', 'Waffle']
-const drinkSubcategories = [
-  'Coffee',
-  'Non-coffee',
-  'Frappe Series',
-  'Float',
-  'Milktea',
-  'Sparkling Soda',
-  'Fruit Tea',
-]
-
-const isFood = (cat: string) => {
-  if (!cat) return false
-  const cleanCat = cat.trim().toLowerCase()
-  const foodCats = foodSubcategories.map((s) => s.toLowerCase())
-  return foodCats.includes(cleanCat)
-}
-
-const isDrink = (cat: string) => {
-  if (!cat) return false
-  const cleanCat = cat.trim().toLowerCase()
-  const drinkCats = drinkSubcategories.map((s) => s.toLowerCase())
-  return drinkCats.includes(cleanCat)
-}
-
-const getPillClass = (cat: string | undefined) => {
-  if (!cat) return 'pill-default'
-  const cleanCat = cat.trim().toLowerCase()
-  const map: Record<string, string> = {
-    meal: 'pill-meal',
-    bread: 'pill-bread',
-    pasta: 'pill-pasta',
-    waffle: 'pill-waffle',
-    coffee: 'pill-coffee',
-    'non-coffee': 'pill-noncoffee',
-    'frappe series': 'pill-frappe',
-    float: 'pill-float',
-    'sparkling soda': 'pill-soda',
-    milktea: 'pill-milktea',
-    'fruit tea': 'pill-fruittea',
-  }
-  return map[cleanCat] || 'pill-default'
-}
-
-// DYNAMIC CHART STYLES based on category
-const getCategoryStyles = (cat: string | undefined) => {
-  if (!cat) return {}
-  const cleanCat = cat.trim()
-  const themes: Record<string, Record<string, string>> = {
-    Meal: { '--c-main': '#ef4444', '--c-light': '#fef2f2', '--c-text': '#b91c1c' },
-    Bread: { '--c-main': '#d97706', '--c-light': '#fdf5e6', '--c-text': '#8b5a2b' },
-    Pasta: { '--c-main': '#eab308', '--c-light': '#fefce8', '--c-text': '#854d0e' },
-    Waffle: { '--c-main': '#f97316', '--c-light': '#fff7ed', '--c-text': '#c2410c' },
-    Coffee: { '--c-main': '#f59e0b', '--c-light': '#fffbeb', '--c-text': '#b45309' },
-    'Non-coffee': { '--c-main': '#0ea5e9', '--c-light': '#f0f9ff', '--c-text': '#0284c7' },
-    'Frappe Series': { '--c-main': '#8b5cf6', '--c-light': '#f5f3ff', '--c-text': '#7c3aed' },
-    Float: { '--c-main': '#10b981', '--c-light': '#ecfdf5', '--c-text': '#059669' },
-    'Sparkling Soda': { '--c-main': '#06b6d4', '--c-light': '#ecfeff', '--c-text': '#0891b2' },
-    Milktea: { '--c-main': '#d946ef', '--c-light': '#fdf4ff', '--c-text': '#c026d3' },
-    'Fruit Tea': { '--c-main': '#ec4899', '--c-light': '#fdf2f8', '--c-text': '#be185d' },
-  }
-  return (
-    themes[cleanCat] || { '--c-main': '#f97316', '--c-light': '#fff7ed', '--c-text': '#c2410c' }
-  )
-}
+const foodSubcategories = FOOD_SUBCATEGORIES
+const drinkSubcategories = DRINK_SUBCATEGORIES
+const isFood = isFoodCategory
+const isDrink = isDrinkCategory
+const getPillClass = getCategoryPillClass
 
 const currentSubcategories = computed(() => {
   return activeCategory.value === 'Food' ? foodSubcategories : drinkSubcategories
@@ -1165,7 +1122,7 @@ const downloadReport = async () => {
     const url = window.URL.createObjectURL(new Blob([response.data]))
     const link = document.createElement('a')
     link.href = url
-    link.setAttribute('download', 'CafeRater_Report.csv')
+    link.setAttribute('download', REPORT_FILENAME)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -1225,20 +1182,6 @@ const toggleKeywordFilter = (word: string) => {
   } else {
     activeKeywordFilter.value = word
   }
-}
-
-const getImagePath = (item: any) => {
-  if (!item || !item.imageName) return ''
-
-  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
-
-  if (!cloudName || cloudName.trim() === '') {
-    return `/items/${encodeURIComponent(item.imageName)}`
-  }
-
-  const safeImageName = encodeURIComponent(item.imageName)
-
-  return `https://res.cloudinary.com/${cloudName}/image/upload/items/${safeImageName}`
 }
 
 const getWordClass = (index) => {
@@ -1328,7 +1271,7 @@ const openCloudinaryWidget = () => {
     {
       cloudName,
       uploadPreset,
-      folder: 'items',
+      folder: CLOUDINARY_FOLDER,
       multiple: false,
       clientAllowedFormats: ['webp', 'png', 'jpeg', 'jpg'],
     },
@@ -1452,26 +1395,7 @@ const executeDeleteQuestion = async () => {
   }
 }
 
-const quickEmojis = [
-  '🔘',
-  '⭐',
-  '❤️',
-  '👍',
-  '👎',
-  '🧂',
-  '🌶️',
-  '🧀',
-  '🍋',
-  '🍫',
-  '☕',
-  '🍰',
-  '🍔',
-  '🍕',
-  '🥗',
-  '😊',
-  '😐',
-  '😞',
-]
+const quickEmojis = QUICK_EMOJIS
 
 const optionForm = ref({
   questionId: null as number | null,

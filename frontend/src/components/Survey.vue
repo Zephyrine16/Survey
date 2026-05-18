@@ -71,7 +71,7 @@
                 ></div>
                 <div class="cover-info">
                   <h3>{{ currentItem?.name }}</h3>
-                  <span class="badge" :class="getPillClass(currentItem?.category)"
+                  <span class="badge" :class="getCategoryPillClass(currentItem?.category)"
                     >🍴 {{ currentItem?.category }}</span
                   >
                 </div>
@@ -125,17 +125,12 @@
                     :class="{ 'has-content': getAnswer(currentItem?.id, q.id)?.length > 0 }"
                     placeholder="Describe this dish as if you're telling an AI what it tastes, looks, and feels like..."
                     :value="getAnswer(currentItem?.id, q.id) || ''"
-                    @input="
-                      handleTextInput(
-                        currentItem?.id,
-                        q.id,
-                        $event
-                      )
-                    "
-                    maxlength="250"
+                    @input="handleTextInput(currentItem?.id, q.id, $event)"
+                    maxlength="SURVEY_TEXT_MAX_LENGTH"
                   ></textarea>
                   <div class="char-count">
-                    {{ getAnswer(currentItem?.id, q.id)?.length || 0 }} / 250
+                    {{ getAnswer(currentItem?.id, q.id)?.length || 0 }} /
+                    {{ SURVEY_TEXT_MAX_LENGTH }}
                   </div>
                   <p class="helper-text">
                     Your description helps train a smarter food recommendation AI.
@@ -193,7 +188,7 @@
             <button
               class="nav-btn secondary"
               @click="
-                showConfirmModal = false;
+                showConfirmModal = false
                 showReviewModal = true
               "
             >
@@ -227,7 +222,7 @@
                 <span class="review-item-number">{{ index + 1 }}</span>
                 <div class="review-item-titles">
                   <h3>{{ item.name }}</h3>
-                  <span class="badge" :class="getPillClass(item.category)"
+                  <span class="badge" :class="getCategoryPillClass(item.category)"
                     >🍴 {{ item.category }}</span
                   >
                 </div>
@@ -288,10 +283,11 @@
 <script setup lang="ts">
 import { watch, ref, computed, onMounted, onUnmounted } from 'vue'
 import axios from 'axios'
+import { SURVEY_ITEM_LIMIT, SURVEY_TEXT_MAX_LENGTH } from '../config/constants'
+import { getCategoryPillClass, getImagePath } from '../utils/menu'
 
 // --- State ---
 const hasStarted = ref(false)
-const currentSessionId = Math.random().toString(36).substring(2, 10)
 
 // Modal Flags
 const showLimitModal = ref(false)
@@ -383,38 +379,7 @@ const answeredItems = computed(() => {
   })
 })
 
-const getImagePath = (item: any) => {
-  if (!item || !item.imageName) return ''
 
-  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
-
-  if (!cloudName || cloudName.trim() === '') {
-    return `/items/${encodeURIComponent(item.imageName)}\`;`
-  }
-
-  const safeImageName = encodeURIComponent(item.imageName)
-
-  return `https://res.cloudinary.com/${cloudName}/image/upload/items/${safeImageName}`
-}
-
-const getPillClass = (cat: string | undefined) => {
-  if (!cat) return 'pill-default'
-
-  const map: Record<string, string> = {
-    Meal: 'pill-meal',
-    Bread: 'pill-bread',
-    Pasta: 'pill-pasta',
-    Waffle: 'pill-waffle',
-    Coffee: 'pill-coffee',
-    'Non-coffee': 'pill-noncoffee',
-    'Frappe Series': 'pill-frappe',
-    Float: 'pill-float',
-    'Sparkling Soda': 'pill-soda',
-    Milktea: 'pill-milktea',
-    'Fruit Tea': 'pill-fruittea',
-  }
-  return map[cat.trim()] || 'pill-default'
-}
 
 // --- Methods ---
 
@@ -430,7 +395,7 @@ const fetchMenuItems = async () => {
     const response = await axios.get('/menu-items')
     const allItems = response.data
     shuffleArray(allItems)
-    menuItems.value = allItems.slice(0, 15)
+    menuItems.value = allItems.slice(0, SURVEY_ITEM_LIMIT)
   } catch (error) {
     console.error('Error fetching menu items:', error)
   }
@@ -476,7 +441,6 @@ const executeFinalSubmit = async () => {
         Object.entries(itemAnswers).forEach(([qId, ans]) => {
           const isText = typeof ans === 'string'
           payload.push({
-            userId: currentSessionId,
             menuItemId: item.id,
             questionId: Number(qId),
             selectedOptionId: isText ? null : ans,
@@ -538,9 +502,9 @@ const setTextAnswer = (itemId: number | undefined, questionId: number, text: str
 }
 
 const handleTextInput = (itemId: number | undefined, questionId: number, event: Event) => {
-  const target = event.target as HTMLTextAreaElement;
+  const target = event.target as HTMLTextAreaElement
   if (target) {
-    setTextAnswer(itemId, questionId, target.value);
+    setTextAnswer(itemId, questionId, target.value)
   }
 }
 
