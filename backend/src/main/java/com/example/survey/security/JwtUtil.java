@@ -18,6 +18,9 @@ public class JwtUtil {
     @Value("${jwt.secret}")
     private String secretString;
 
+    @Value("${jwt.expiration-ms:28800000}")
+    private long expirationMs;
+
     private Key key;
 
     // Build the secure key AFTER Spring injects the secretString
@@ -33,13 +36,17 @@ public class JwtUtil {
         }
 
         this.key = Keys.hmacShaKeyFor(secretBytes);
+
+        if(expirationMs <= 0) {
+            throw new IllegalStateException("JWT expiration must be a positive duration in milliseconds.");
+        }
     }
 
     public String generateToken(String username) {
         return Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 8))
+                .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
