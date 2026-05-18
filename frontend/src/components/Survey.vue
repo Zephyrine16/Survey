@@ -379,8 +379,6 @@ const answeredItems = computed(() => {
   })
 })
 
-
-
 // --- Methods ---
 
 const shuffleArray = (array: any[]) => {
