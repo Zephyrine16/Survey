@@ -153,8 +153,25 @@ export DB_PASSWORD='your_postgres_password'
 export DB_SSL_MODE='disable'
 export ADMIN_USER=your_admin_username
 export ADMIN_PASSWORD_HASH='$2a$10$replace_with_bcrypt_hash'
+export ADMIN_LOGIN_MAX_FAILED_ATTEMPTS='5'
+export ADMIN_LOGIN_LOCKOUT_MINUTES='15'
+export ADMIN_LOGIN_CACHE_MAX_SIZE='1000'
 export JWT_SECRET='replace_with_a_long_random_secret'
+export JWT_EXPIRATION_MS='28800000'
 export CORS_ALLOWED_ORIGINS='http://localhost:5173'
+export SURVEY_PARTICIPANT_LIMIT='30'
+export SURVEY_TEXT_RESPONSE_MAX_LENGTH='250'
+export SURVEY_PARTICIPANT_COOKIE_NAME='participant_id'
+export SURVEY_PARTICIPANT_COOKIE_MAX_AGE_DAYS='30'
+export SURVEY_EXPORT_FILENAME='CafeRater_Analytics.csv'
+export RATE_LIMIT_ENABLED='true'
+export RATE_LIMIT_PATH='/submit-category'
+export RATE_LIMIT_WINDOW_SECONDS='15'
+export RATE_LIMIT_MAX_SIZE='10000'
+export RATE_LIMIT_MESSAGE='Please wait a few seconds before submitting again.'
+export SEEDERS_ENABLED='true'
+export SEEDERS_QUESTIONS_PATH='classpath:seed/questions.json'
+export SEEDERS_MENU_ITEMS_PATH='classpath:seed/menu-items.json'
 ```
 
 > **Migration note:** older deployments that used `ADMIN_PASS` must switch to `ADMIN_PASSWORD_HASH` (bcrypt hash only).
@@ -244,6 +261,11 @@ Set frontend environment variables in `frontend/.env`:
 VITE_API_BASE_URL=http://localhost:8080
 VITE_CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
 VITE_CLOUDINARY_UPLOAD_PRESET=your_upload_preset
+VITE_CLOUDINARY_FOLDER=items
+VITE_SURVEY_ITEM_LIMIT=15
+VITE_SURVEY_TEXT_MAX_LENGTH=250
+VITE_SURVEY_BASELINE_TARGET=30
+VITE_REPORT_FILENAME=CafeRater_Analytics.csv
 ```
 
 ---
