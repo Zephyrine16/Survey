@@ -3,32 +3,46 @@ package com.example.survey.config;
 import com.example.survey.model.Option;
 import com.example.survey.model.Question;
 import com.example.survey.repository.OptionRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.example.survey.repository.QuestionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
+
+import java.io.InputStream;
+import java.util.Collections;
+import java.util.List;
 
 @Component
 public class DataSeeder implements CommandLineRunner {
     private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
-
-    // Inject your JPA Repositories
-    @Autowired
     private QuestionRepository questionRepository;
 
     @Autowired
     private OptionRepository optionRepository;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired
+    private ResourceLoader resourceLoader;
+
+    @Autowired
+    private SeederProperties seederProperties;
+
     @Override
     public void run(String... args) throws Exception {
-        // Fix any existing text for Question 5
-        jdbcTemplate.execute("UPDATE questions SET text = 'How would you describe this dish to the AI chatbot?' WHERE question_type = 'TEXT'");
+        if(!seederProperties.isEnabled()) {
+            log.info("Seeders disabled. Skipping question seed.");
+            return;
+        }
 
         // Use JPA to check if the table is empty
         long count = questionRepository.count();
@@ -36,65 +50,68 @@ public class DataSeeder implements CommandLineRunner {
         if (count == 0) {
             log.info("Database is empty. Sending initial survey data safely via JPA...");
 
-            // --- QUESTION 1 ---
-            Question q1 = new Question();
-            q1.setText("Which emotion or physical state most strongly makes you want to order this item?");
-            q1.setQuestionType("RADIO");
-            q1 = questionRepository.save(q1); // Save it to generate the real ID!
+            List<SeedQuestion> seedQuestions = loadSeedQuestions();
+            if(seedQuestions.isEmpty()) {
+                log.warn("No seed questions found at {}", seederProperties.getQuestionsPath());
+                return;
+            }
 
-            createOption("Stressed/Overwhelmed", "(I need comfort/energy)", "😩", q1);
-            createOption("Happy/Celebratory", "(I want to reward myself)", "😊", q1);
-            createOption("Tired/Low Energy", "(I need a boost/caffeine)", "😴", q1);
-            createOption("Relaxed/Chilling", "(I want to enjoy the rooftop/alfresco vibe)", "😌", q1);
-            createOption("Focused/Working", "(I need something light/non-distracting)", "🎯", q1);
+            for(SeedQuestion seedQuestion : seedQuestions) {
+                if(seedQuestion == null || seedQuestion.text() == null || seedQuestion.text(). isBlank()) {
+                    continue;
+                }
 
-            // --- QUESTION 2 ---
-            Question q2 = new Question();
-            q2.setText("In what weather condition does this item feel most satisfying?");
-            q2.setQuestionType("RADIO");
-            q2 = questionRepository.save(q2);
+                Question question = new Question();
+                question.setText(seedQuestion.text().trim());
+                question.setQuestionType(seedQuestion.questionType());
+                question = questionRepository.save(question);
 
-            createOption("Hot/Sunny", "(Refreshing/Cold items)", "☀️", q2);
-            createOption("Cold/Rainy", "(Warm/Hearty items)", "🌧️", q2);
-            createOption("Any Weather", "(All-around staples)", "⛅", q2);
-
-            // --- QUESTION 3 ---
-            Question q3 = new Question();
-            q3.setText("What is the \"vibe\" of this specific dish?");
-            q3.setQuestionType("RADIO");
-            q3 = questionRepository.save(q3);
-
-            createOption("Heavy Meal", "(Lunch/Dinner)", "🍽️", q3);
-            createOption("Light Snack", "(Pica-pica/Quick bite)", "🥗", q3);
-            createOption("Drink/Refreshment", null, "🥤", q3);
-
-            // --- QUESTION 4 ---
-            Question q4 = new Question();
-            q4.setText("Looking at this item, what do you think is a fair \"Student-Friendly\" price for it?");
-            q4.setQuestionType("RADIO");
-            q4 = questionRepository.save(q4);
-
-            createOption("Under ₱150", "(Budget)", null, q4);
-            createOption("₱150 - ₱249", "(Standard)", null, q4);
-            createOption("₱250 and above", "(Premium)", null, q4);
-
-            // --- QUESTION 5 (TEXT) ---
-            Question q5 = new Question();
-            q5.setText("How would you describe this dish to the AI chatbot?");
-            q5.setQuestionType("TEXT");
-            questionRepository.save(q5); // No options needed for text!
+                if(seedQuestion.options() != null) {
+                    for(SeedOption option : seedQuestion.options()) {
+                        if(option == null || option.label() == null || option.label().isBlank()) {
+                            continue;
+                        }
+                        createOption(option.label().trim(), option.sub(), option.icon(), question);
+                    }
+                }
+            }
 
             log.info("EYE-DINE Survey data seeded successfully.");
         }
     }
 
-    // 🛠️ HELPER METHOD: Keeps your code clean and automatically links the Option to the Question
     private void createOption(String label, String subDesc, String icon, Question question) {
         Option opt = new Option();
         opt.setLabel(label);
         opt.setSub_description(subDesc);
         opt.setIcon(icon);
-        opt.setQuestion(question); // Automatically maps the true Foreign Key!
+        opt.setQuestion(question);
         optionRepository.save(opt);
     }
+
+    private List<SeedQuestion> loadSeedQuestions() {
+        Resource resource = resourceLoader.getResource(seederProperties.getQuestionsPath());
+        if(!resource.exists()) {
+            return Collections.emptyList();
+        }
+
+        try(InputStream inputStream = resource.getInputStream()) {
+            return objectMapper.readValue(inputStream, new TypeReference<List<SeedQuestion>>() {});
+        } catch(Exception e) {
+            log.error("Failed to load seed questions from {}", seederProperties.getQuestionsPath(), e);
+            return Collections.emptyList();
+        }
+    }
+
+    private record SeedQuestion(
+            String text,
+            String questionType,
+            List<SeedOption> options
+    ) {}
+
+    private record SeedOption(
+            String label,
+            @com.fasterxml.jackson.annotation.JsonProperty("sub") String sub,
+            String icon
+    ) {}
 }

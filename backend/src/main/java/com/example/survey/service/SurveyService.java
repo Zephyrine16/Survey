@@ -1,5 +1,6 @@
 package com.example.survey.service;
 
+import com.example.survey.config.SurveyProperties;
 import com.example.survey.dto.CategorySubmissionDTO;
 import com.example.survey.repository.AnswerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,8 +26,9 @@ public class SurveyService {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    public static final long PARTICIPANT_LIMIT = 30L;
-    private static final int MAX_TEXT_RESPONSE_LENGTH = 250;
+    @Autowired
+    private SurveyProperties surveyProperties;
+
     private static final String INSERT_ANSWER_SQL = "INSERT INTO answers (user_id, menu_item_id, question_id, option_id, response) VALUES (?, ?, ?, ?, ?)";
 
     // This annotation locks the transaction at the database level.
@@ -46,7 +48,11 @@ public class SurveyService {
 
     private boolean isParticipantLimitReached() {
         Long totalParticipants = answerRepository.countTotalParticipants();
-        return totalParticipants != null && totalParticipants >= PARTICIPANT_LIMIT;
+        long limit = surveyProperties.getParticipantLimit();
+        if(limit <= 0) {
+            return false;
+        }
+        return totalParticipants != null && totalParticipants >= limit;
     }
 
     private List<AnswerInsertRow> mapAndSanitizeRows(List<CategorySubmissionDTO> payload) {
@@ -69,8 +75,9 @@ public class SurveyService {
         }
 
         String cleanText = HtmlUtils.htmlEscape(textResponse);
-        if (cleanText.length() > MAX_TEXT_RESPONSE_LENGTH) {
-            return cleanText.substring(0, MAX_TEXT_RESPONSE_LENGTH);
+        int maxLength = surveyProperties.getTextResponseMaxLength();
+        if(maxLength > 0 && cleanText.length() > maxLength) {
+            return cleanText.substring(0, maxLength);
         }
         return cleanText;
     }

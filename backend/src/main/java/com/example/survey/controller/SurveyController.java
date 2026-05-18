@@ -1,5 +1,6 @@
 package com.example.survey.controller;
 
+import com.example.survey.config.SurveyProperties;
 import com.example.survey.dto.CategorySubmissionDTO;
 import com.example.survey.dto.MenuItemRequest;
 import com.example.survey.dto.OptionRequest;
@@ -21,7 +22,6 @@ import jakarta.validation.Valid;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -45,8 +45,10 @@ public class SurveyController {
     @Autowired
     private AnalyticsService analyticsService;
 
-    private static final String PARTICIPANT_COOKIE_NAME = "participant_id";
     private static final Logger log = LoggerFactory.getLogger(SurveyController.class);
+
+    @Autowired
+    private SurveyProperties surveyProperties;
 
     // ==========================================
     // 1. SAVE SURVEY ANSWERS
@@ -105,7 +107,7 @@ public class SurveyController {
     private String getOrCreateParticipantId(HttpServletRequest request, HttpServletResponse response) {
         if(request.getCookies() != null) {
             for(Cookie cookie : request.getCookies()) {
-                if(PARTICIPANT_COOKIE_NAME.equals(cookie.getName())) {
+                if(surveyProperties.getParticipantCookieName().equals(cookie.getName())) {
                     try {
                         UUID.fromString(cookie.getValue());
                         return cookie.getValue();
@@ -118,13 +120,13 @@ public class SurveyController {
         }
 
         String participant_id = UUID.randomUUID().toString();
-        ResponseCookie responseCookie = ResponseCookie.from(PARTICIPANT_COOKIE_NAME,
+        ResponseCookie responseCookie = ResponseCookie.from(surveyProperties.getParticipantCookieName(),
                 participant_id)
                 .httpOnly(true)
                 .secure(request.isSecure())
                 .sameSite("Lax")
                 .path("/")
-                .maxAge(Duration.ofDays(30))
+                .maxAge(Duration.ofDays(surveyProperties.getParticipantCookieMaxAgeDays()))
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, responseCookie.toString());
         return participant_id;
@@ -133,7 +135,8 @@ public class SurveyController {
     @GetMapping("/api/stats/survey-status")
     public ResponseEntity<?> checkSurveyStatus() {
         Long totalParticipants = answerRepository.countTotalParticipants();
-        boolean isFull = (totalParticipants != null && totalParticipants >= 30);
+        long limit = surveyProperties.getParticipantLimit();
+        boolean isFull = limit > 0 && (totalParticipants != null && totalParticipants >= limit);
 
         return ResponseEntity.ok(java.util.Map.of(
                 "isFull", isFull,
@@ -168,7 +171,7 @@ public class SurveyController {
         byte[] csvBytes = csv.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
         return ResponseEntity.ok()
-                .header("Content-Disposition", "attachment; filename=CafeRater_Analytics.csv")
+                .header("Content-Disposition", "attachment; filename=" + surveyProperties.getExportFilename())
                 .header("Content-Type", "text/csv; charset=UTF-8")
                 .body(csvBytes);
     }
