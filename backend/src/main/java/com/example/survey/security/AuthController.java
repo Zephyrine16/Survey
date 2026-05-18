@@ -1,8 +1,10 @@
 package com.example.survey.security;
 
+import com.example.survey.config.AdminLoginProperties;
 import com.example.survey.dto.AdminLoginRequest;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import jakarta.annotation.PostConstruct;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,12 +33,18 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    private static final int MAX_FAILED_ATTEMPTS = 5;
+    @Autowired
+    private AdminLoginProperties adminLoginProperties;
 
-    private final Cache<String, Integer> failedLoginAttempts = Caffeine.newBuilder()
-            .expireAfterWrite(15, TimeUnit.MINUTES)
-            .maximumSize(1000)
-            .build();
+    private Cache<String, Integer> failedLoginAttempts;
+
+    @PostConstruct
+    public void initCache() {
+        failedLoginAttempts = Caffeine.newBuilder()
+                .expireAfterWrite(adminLoginProperties.getLockoutMinutes(), TimeUnit.MINUTES)
+                .maximumSize(adminLoginProperties.getCacheMaxSize())
+                .build();
+    }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody AdminLoginRequest credentials, HttpServletRequest request) {
@@ -48,7 +56,7 @@ public class AuthController {
         Integer failures = failedLoginAttempts.getIfPresent(rateLimitKey);
         int failureCount = failures == null ? 0 : failures;
 
-        if(failureCount >= MAX_FAILED_ATTEMPTS) {
+        if(failureCount >= adminLoginProperties.getMaxFailedAttempts()) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("error", "Too many failed login attempts. Try again later."));
         }
