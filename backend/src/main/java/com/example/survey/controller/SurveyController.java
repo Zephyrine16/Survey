@@ -56,30 +56,30 @@ public class SurveyController {
 
     @PostMapping("/submit-category")
     public ResponseEntity<?> submitCategoryAnswers(
-            @Valid @RequestBody com.example.survey.dto.SurveySubmissionRequest request,
+            @Valid @RequestBody com.example.survey.dto.SurveySubmissionRequest submissionRequest,
             HttpServletRequest httpRequest,
             HttpServletResponse httpResponse
     ) {
 
-        if (isHoneypotTriggered(request)) {
+        if (isHoneypotTriggered(submissionRequest)) {
             log.info("Bot honeypot triggered on submit-category.");
             return successMessage();
         }
 
         try {
-            List<CategorySubmissionDTO> payload = request.getAnswers();
+            List<CategorySubmissionDTO> categorySubmissions = submissionRequest.getAnswers();
             String participantId = getOrCreateParticipantId(httpRequest, httpResponse);
-            assignParticipantToPayload(payload, participantId);
+            assignParticipantToPayload(categorySubmissions, participantId);
 
-            boolean isSaved = surveyService.saveSurveyIfUnderLimit(payload);
-            if(!isSaved) {
+            boolean savedUnderLimit = surveyService.saveSurveyIfUnderLimit(categorySubmissions);
+            if(!savedUnderLimit) {
                 return limitReachedResponse();
             }
 
             return successMessage();
 
         } catch (Exception e) {
-            log.error("Failed to save survey category submission.");
+            log.error("Failed to save survey category submission.", e);
             return ResponseEntity.internalServerError().body("{\"error\": \"Failed to save data.\"}");
         }
     }
@@ -119,9 +119,10 @@ public class SurveyController {
             }
         }
 
-        String participant_id = UUID.randomUUID().toString();
-        ResponseCookie responseCookie = ResponseCookie.from(surveyProperties.getParticipantCookieName(),
-                participant_id)
+        String participantId = UUID.randomUUID().toString();
+        ResponseCookie responseCookie = ResponseCookie.from(
+                        surveyProperties.getParticipantCookieName(),
+                        participantId)
                 .httpOnly(true)
                 .secure(request.isSecure())
                 .sameSite("Lax")
@@ -129,7 +130,7 @@ public class SurveyController {
                 .maxAge(Duration.ofDays(surveyProperties.getParticipantCookieMaxAgeDays()))
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, responseCookie.toString());
-        return participant_id;
+        return participantId;
     }
 
     @GetMapping("/api/stats/survey-status")
@@ -150,19 +151,19 @@ public class SurveyController {
 
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportReport() {
-        List<Object[]> data = answerRepository.getExportData();
+        List<Object[]> exportRows = answerRepository.getExportData();
 
         StringBuilder csv = new StringBuilder("\uFEFF\"Session ID\",\"Menu Item\",\"Question\",\"Selected Option\",\"Text Response\"\n");
 
-        for (Object[] row : data) {
-            String userId = csvSafe(row[0], "Anonymous");
-            String item = csvSafe(row[1], "");
-            String question = csvSafe(row[2], "");
-            String option = csvSafe(row[3], "");
-            String textResponse = csvSafe(row[4], "");
+        for (Object[] exportRow : exportRows) {
+            String userId = csvSafe(exportRow[0], "Anonymous");
+            String menuItemName = csvSafe(exportRow[1], "");
+            String question = csvSafe(exportRow[2], "");
+            String option = csvSafe(exportRow[3], "");
+            String textResponse = csvSafe(exportRow[4], "");
 
             csv.append(userId).append(",")
-                    .append(item).append(",")
+                    .append(menuItemName).append(",")
                     .append(question).append(",")
                     .append(option).append(",")
                     .append(textResponse).append("\n");
@@ -316,7 +317,7 @@ public class SurveyController {
         com.example.survey.model.Option option = new com.example.survey.model.Option();
         option.setLabel(newOption.getLabel().trim());
         option.setIcon(newOption.getIcon());
-        option.setSub_description(newOption.getSub());
+        option.setSubDescription(newOption.getSub());
         option.setQuestion(parentQuestion);
 
         com.example.survey.model.Option savedOption = optionRepository.save(option);
