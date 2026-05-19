@@ -126,7 +126,7 @@
                     placeholder="Describe this dish as if you're telling an AI what it tastes, looks, and feels like..."
                     :value="getAnswer(currentItem?.id, q.id) || ''"
                     @input="handleTextInput(currentItem?.id, q.id, $event)"
-                    maxlength="SURVEY_TEXT_MAX_LENGTH"
+                    :maxlength="SURVEY_TEXT_MAX_LENGTH"
                   ></textarea>
                   <div class="char-count">
                     {{ getAnswer(currentItem?.id, q.id)?.length || 0 }} /
@@ -187,10 +187,7 @@
           <div class="modal-actions">
             <button
               class="nav-btn secondary"
-              @click="
-                showConfirmModal = false
-                showReviewModal = true
-              "
+              @click="showConfirmModal = false; showReviewModal = true"
             >
               Review Answers
             </button>
