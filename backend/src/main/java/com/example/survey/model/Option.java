@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.Data;
 
-@Data // Generates everything automatically
+@Data
 @Entity
 @Table(name = "options")
 public class Option {
@@ -22,7 +22,7 @@ public class Option {
 
     @Column(name = "sub_description")
     @JsonProperty("sub")
-    private String sub_description;
+    private String subDescription;
 
     @ManyToOne
     @JoinColumn(name = "question_id", nullable = false)
