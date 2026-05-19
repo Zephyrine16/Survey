@@ -81,12 +81,12 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void createOption(String label, String subDesc, String icon, Question question) {
-        Option opt = new Option();
-        opt.setLabel(label);
-        opt.setSub_description(subDesc);
-        opt.setIcon(icon);
-        opt.setQuestion(question);
-        optionRepository.save(opt);
+        Option option = new Option();
+        option.setLabel(label);
+        option.setSubDescription(subDesc);
+        option.setIcon(icon);
+        option.setQuestion(question);
+        optionRepository.save(option);
     }
 
     private List<SeedQuestion> loadSeedQuestions() {
