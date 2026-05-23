@@ -1117,18 +1117,26 @@ const getSentimentData = (feedback) => {
 }
 
 const downloadReport = async () => {
+  let url: string | null = null
+  let link: HTMLAnchorElement | null = null
   try {
     const response = await axios.get('/export', { responseType: 'blob' })
-    const url = window.URL.createObjectURL(new Blob([response.data]))
-    const link = document.createElement('a')
+    url = window.URL.createObjectURL(new Blob([response.data]))
+    link = document.createElement('a')
     link.href = url
     link.setAttribute('download', REPORT_FILENAME)
     document.body.appendChild(link)
     link.click()
-    document.body.removeChild(link)
   } catch (error) {
     console.error('Error downloading report:', error)
     alert('Oops! Could not export the report right now.')
+  } finally {
+    if (link && link.parentNode) {
+      link.parentNode.removeChild(link)
+    }
+    if (url) {
+      window.URL.revokeObjectURL(url)
+    }
   }
 }
 
@@ -1206,18 +1214,25 @@ const applyItemStats = (data: any) => {
   topKeywords.value = data?.topKeywords || []
 }
 
+let analyticsRequestId = 0
+
 const fetchCombinedAnalyticsForItem = async (menuItemId: number) => {
+  const requestId = ++analyticsRequestId
   isLoading.value = true
   try {
     const response = await axios.get(`/analytics/combined/${menuItemId}`)
+    if (requestId !== analyticsRequestId) return
     analyticsData.value = response.data?.analyticsData || {}
     applyItemStats(response.data?.stats)
   } catch (error) {
+    if (requestId !== analyticsRequestId) return
     console.error(`Error fetching combined analytics for item ${menuItemId}:`, error)
     analyticsData.value = {}
     applyItemStats(null)
   } finally {
-    isLoading.value = false
+    if (requestId === analyticsRequestId) {
+      isLoading.value = false
+    }
   }
 }
 

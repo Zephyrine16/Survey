@@ -378,18 +378,19 @@ const answeredItems = computed(() => {
 
 // --- Methods ---
 
-const shuffleArray = (array: any[]) => {
-  for (let i = array.length - 1; i > 0; i--) {
+const shuffleArray = <T>(array: T[]) => {
+  const shuffled = [...array]
+  for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-    ;[array[i], array[j]] = [array[j], array[i]]
+    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
   }
+  return shuffled
 }
 
 const fetchMenuItems = async () => {
   try {
     const response = await axios.get('/menu-items')
-    const allItems = response.data
-    shuffleArray(allItems)
+    const allItems = shuffleArray(response.data)
     menuItems.value = allItems.slice(0, SURVEY_ITEM_LIMIT)
   } catch (error) {
     console.error('Error fetching menu items:', error)

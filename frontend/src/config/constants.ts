@@ -1,26 +1,39 @@
-const parseEnvNumber = (value: string | undefined, fallback: number) => {
-  const parsed = Number.parseInt((value ?? '').trim(), 10)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
-}
-
-const parseEnvString = (value: string | undefined, fallback: string) => {
+const requireEnvNumber = (name: string, value: string | undefined) => {
   const trimmed = (value ?? '').trim()
-  return trimmed.length > 0 ? trimmed : fallback
+  const parsed = Number.parseInt(trimmed, 10)
+  if (!trimmed || !Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(`Missing or invalid ${name} environment variable.`)
+  }
+  return parsed
 }
 
-export const CLOUDINARY_FOLDER = parseEnvString(import.meta.env.VITE_CLOUDINARY_FOLDER, 'items')
-export const SURVEY_ITEM_LIMIT = parseEnvNumber(import.meta.env.VITE_SURVEY_ITEM_LIMIT, 15)
-export const SURVEY_TEXT_MAX_LENGTH = parseEnvNumber(
+const requireEnvString = (name: string, value: string | undefined) => {
+  const trimmed = (value ?? '').trim()
+  if (!trimmed) {
+    throw new Error(`Missing ${name} environment variable.`)
+  }
+  return trimmed
+}
+
+export const CLOUDINARY_FOLDER = requireEnvString(
+  'VITE_CLOUDINARY_FOLDER',
+  import.meta.env.VITE_CLOUDINARY_FOLDER,
+)
+export const SURVEY_ITEM_LIMIT = requireEnvNumber(
+  'VITE_SURVEY_ITEM_LIMIT',
+  import.meta.env.VITE_SURVEY_ITEM_LIMIT,
+)
+export const SURVEY_TEXT_MAX_LENGTH = requireEnvNumber(
+  'VITE_SURVEY_TEXT_MAX_LENGTH',
   import.meta.env.VITE_SURVEY_TEXT_MAX_LENGTH,
-  250,
 )
-export const SURVEY_BASELINE_TARGET = parseEnvNumber(
+export const SURVEY_BASELINE_TARGET = requireEnvNumber(
+  'VITE_SURVEY_BASELINE_TARGET',
   import.meta.env.VITE_SURVEY_BASELINE_TARGET,
-  30,
 )
-export const REPORT_FILENAME = parseEnvString(
+export const REPORT_FILENAME = requireEnvString(
+  'VITE_REPORT_FILENAME',
   import.meta.env.VITE_REPORT_FILENAME,
-  'CafeRater_Analytics.csv',
 )
 
 export const FOOD_SUBCATEGORIES = ['Meal', 'Bread', 'Pasta', 'Waffle']

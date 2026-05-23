@@ -151,6 +151,10 @@ export DATABASE_URL='jdbc:postgresql://localhost:5432/postgres'
 export DB_USERNAME='your_postgres_username'
 export DB_PASSWORD='your_postgres_password'
 export DB_SSL_MODE='disable'
+export SPRING_JPA_HIBERNATE_DDL_AUTO='validate'
+export SPRING_JPA_SHOW_SQL='false'
+export SPRING_SQL_INIT_MODE='never'
+export SPRING_FLYWAY_ENABLED='true'
 export ADMIN_USER=your_admin_username
 export ADMIN_PASSWORD_HASH='$2a$10$replace_with_bcrypt_hash'
 export ADMIN_LOGIN_MAX_FAILED_ATTEMPTS='5'
@@ -172,6 +176,7 @@ export RATE_LIMIT_MESSAGE='Please wait a few seconds before submitting again.'
 export SEEDERS_ENABLED='true'
 export SEEDERS_QUESTIONS_PATH='classpath:seed/questions.json'
 export SEEDERS_MENU_ITEMS_PATH='classpath:seed/menu-items.json'
+export PORT='8080'
 ```
 
 > **Migration note:** older deployments that used `ADMIN_PASS` must switch to `ADMIN_PASSWORD_HASH` (bcrypt hash only).
