@@ -1,20 +1,29 @@
 package com.example.survey.config;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.annotation.Validated;
 
 @Component
-@ConfigurationProperties(prefix = "seeder")
+@ConfigurationProperties(prefix = "seeders")
+@Validated
 public class SeederProperties {
-    private boolean enabled = true;
-    private String questionsPath = "classpath:seed/questions.json";
-    private String menuItemsPath = "classpath:seed/menu-items.json";
+    @NotNull
+    private Boolean enabled;
+
+    @NotBlank
+    private String questionsPath;
+
+    @NotBlank
+    private String menuItemsPath;
 
     public boolean isEnabled() {
-        return enabled;
+        return Boolean.TRUE.equals(enabled);
     }
 
-    public void setEnabled(boolean enabled) {
+    public void setEnabled(Boolean enabled) {
         this.enabled = enabled;
     }
 

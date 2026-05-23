@@ -1,14 +1,26 @@
 package com.example.survey.config;
 
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.annotation.Validated;
 
 @Component
 @ConfigurationProperties(prefix = "admin.login")
+@Validated
 public class AdminLoginProperties {
-    private int maxFailedAttempts = 5;
-    private long lockoutMinutes = 15L;
-    private long cacheMaxSize = 1000L;
+    @NotNull
+    @Positive
+    private Integer maxFailedAttempts;
+
+    @NotNull
+    @Positive
+    private Long lockoutMinutes;
+
+    @NotNull
+    @Positive
+    private Long cacheMaxSize;
 
     public int getMaxFailedAttempts() {
         return maxFailedAttempts;

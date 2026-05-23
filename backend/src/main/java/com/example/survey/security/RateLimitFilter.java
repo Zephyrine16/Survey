@@ -38,7 +38,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        if(!rateLimitProperties.isEnabled()) {
+        if(!Boolean.TRUE.equals(rateLimitProperties.getEnabled())) {
             filterChain.doFilter(request, response);
             return;
         }
