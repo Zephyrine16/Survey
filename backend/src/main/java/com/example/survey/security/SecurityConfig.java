@@ -30,7 +30,7 @@ public class SecurityConfig {
     @Autowired
     private RateLimitFilter rateLimitFilter;
 
-    @Value("${CORS_ALLOWED_ORIGINS:http://localhost:5173}")
+    @Value("${CORS_ALLOWED_ORIGINS}")
     private String allowedOrigins;
 
     @Bean
@@ -65,7 +65,10 @@ public class SecurityConfig {
                         .filter(origin -> !origin.isBlank())
                         .toList();
 
-        configuration.setAllowedOrigins(origins.isEmpty() ? List.of("http://localhost:5173") : origins);
+        if(origins.isEmpty()) {
+            throw new IllegalStateException("CORS_ALLOWED_ORIGINS must be configured.");
+        }
+        configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With",
                 "Accept",

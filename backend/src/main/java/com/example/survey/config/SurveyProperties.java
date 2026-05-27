@@ -1,16 +1,35 @@
 package com.example.survey.config;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.annotation.Validated;
 
 @Component
 @ConfigurationProperties(prefix = "survey")
+@Validated
 public class SurveyProperties {
-    private long participantLimit = 30L;
-    private int textResponseMaxLength = 250;
-    private String participantCookieName = "participant_id";
-    private long participantCookieMaxAgeDays = 30L;
-    private String exportFilename = "CafeRater_Analytics.csv";
+
+    @NotNull
+    @PositiveOrZero
+    private Long participantLimit;
+
+    @NotNull
+    @Positive
+    private Integer textResponseMaxLength;
+
+    @NotBlank
+    private String participantCookieName;
+
+    @NotNull
+    @Positive
+    private Long participantCookieMaxAgeDays;
+
+    @NotBlank
+    private String exportFilename;
 
     public long getParticipantLimit() {
         return participantLimit;
