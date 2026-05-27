@@ -1,12 +1,19 @@
-const requireEnv = (value: string | undefined, name: string) => {
+const requireEnv = (value: string | undefined, name: string, fallback?: string) => {
   const trimmed = (value ?? '').trim()
-  if(!trimmed) {
-    throw new Error(`${name} must be set.`)
+  if (trimmed) {
+    return trimmed
   }
-  return trimmed
+  if (fallback !== undefined) {
+    return fallback
+  }
+  throw new Error(`${name} must be set.`)
 }
 
-const parsePositiveInt = (value: string | undefined, name: string) => {
+const parsePositiveInt = (value: string | undefined, name: string, fallback?: number) => {
+  const trimmed = (value ?? '').trim()
+  if (!trimmed && fallback !== undefined) {
+    return fallback
+  }
   const parsed = Number.parseInt(requireEnv(value, name), 10)
   if (!Number.isFinite(parsed) || parsed <= 0) {
     throw new Error(`${name} must be a positive integer.`)
@@ -14,25 +21,37 @@ const parsePositiveInt = (value: string | undefined, name: string) => {
   return parsed
 }
 
-
+const DEFAULT_CLOUDINARY_FOLDER = 'items'
+const DEFAULT_SURVEY_ITEM_LIMIT = 15
+const DEFAULT_SURVEY_TEXT_MAX_LENGTH = 250
+const DEFAULT_SURVEY_BASELINE_TARGET = 30
+const DEFAULT_REPORT_FILENAME = 'CafeRater_Analytics.csv'
 
 export const CLOUDINARY_FOLDER = requireEnv(
   import.meta.env.VITE_CLOUDINARY_FOLDER,
   'VITE_CLOUDINARY_FOLDER',
+  DEFAULT_CLOUDINARY_FOLDER,
 )
 export const SURVEY_ITEM_LIMIT = parsePositiveInt(
   import.meta.env.VITE_SURVEY_ITEM_LIMIT,
   'VITE_SURVEY_ITEM_LIMIT',
+  DEFAULT_SURVEY_ITEM_LIMIT,
 )
 export const SURVEY_TEXT_MAX_LENGTH = parsePositiveInt(
   import.meta.env.VITE_SURVEY_TEXT_MAX_LENGTH,
   'VITE_SURVEY_TEXT_MAX_LENGTH',
+  DEFAULT_SURVEY_TEXT_MAX_LENGTH,
 )
 export const SURVEY_BASELINE_TARGET = parsePositiveInt(
   import.meta.env.VITE_SURVEY_BASELINE_TARGET,
   'VITE_SURVEY_BASELINE_TARGET',
+  DEFAULT_SURVEY_BASELINE_TARGET,
 )
-export const REPORT_FILENAME = requireEnv(import.meta.env.VITE_REPORT_FILENAME, 'VITE_REPORT_FILENAME')
+export const REPORT_FILENAME = requireEnv(
+  import.meta.env.VITE_REPORT_FILENAME,
+  'VITE_REPORT_FILENAME',
+  DEFAULT_REPORT_FILENAME,
+)
 
 export const FOOD_SUBCATEGORIES = ['Meal', 'Bread', 'Pasta', 'Waffle']
 export const DRINK_SUBCATEGORIES = [
