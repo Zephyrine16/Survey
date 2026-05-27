@@ -30,7 +30,7 @@ public class SecurityConfig {
     @Autowired
     private RateLimitFilter rateLimitFilter;
 
-    @Value("${CORS_ALLOWED_ORIGINS}")
+    @Value("${cors.allowed-origins}")
     private String allowedOrigins;
 
     @Bean
