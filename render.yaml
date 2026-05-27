@@ -38,6 +38,12 @@ services:
         generateValue: true
       - key: CORS_ALLOWED_ORIGINS
         value: https://survey-frontend.onrender.com
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_USER
+        sync: false
+      - key: ADMIN_PASSWORD_HASH
+        sync: false
       - key: SPRING_JPA_HIBERNATE_DDL_AUTO
         value: validate
       - key: SPRING_JPA_SHOW_SQL
