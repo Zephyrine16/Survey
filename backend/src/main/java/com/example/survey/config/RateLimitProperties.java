@@ -1,22 +1,39 @@
 package com.example.survey.config;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.annotation.Validated;
 
 @Component
 @ConfigurationProperties(prefix = "rate-limit")
+@Validated
 public class RateLimitProperties {
-    private boolean enabled = true;
-    private String path = "/submit-category";
-    private long windowSeconds = 15L;
-    private long maxSize = 10000L;
-    private String message = "Please wait a few seconds before submitting again.";
 
-    public boolean isEnabled() {
+    @NotNull
+    private Boolean enabled;
+
+    @NotBlank
+    private String path;
+
+    @NotNull
+    @Positive
+    private Long windowSeconds;
+
+    @NotNull
+    @Positive
+    private Long maxSize;
+
+    @NotBlank
+    private String message;
+
+    public Boolean getEnabled() {
         return enabled;
     }
 
-    public void setEnabled(boolean enabled) {
+    public void setEnabled(Boolean enabled) {
         this.enabled = enabled;
     }
 

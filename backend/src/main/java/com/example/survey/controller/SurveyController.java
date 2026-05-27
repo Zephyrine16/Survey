@@ -151,30 +151,35 @@ public class SurveyController {
 
     @GetMapping("/export")
     public ResponseEntity<byte[]> exportReport() {
-        List<Object[]> exportRows = answerRepository.getExportData();
+        try {
+            List<Object[]> exportRows = answerRepository.getExportData();
 
-        StringBuilder csv = new StringBuilder("\uFEFF\"Session ID\",\"Menu Item\",\"Question\",\"Selected Option\",\"Text Response\"\n");
+            StringBuilder csv = new StringBuilder("\uFEFF\"Session ID\",\"Menu Item\",\"Question\",\"Selected Option\",\"Text Response\"\n");
 
-        for (Object[] exportRow : exportRows) {
-            String userId = csvSafe(exportRow[0], "Anonymous");
-            String menuItemName = csvSafe(exportRow[1], "");
-            String question = csvSafe(exportRow[2], "");
-            String option = csvSafe(exportRow[3], "");
-            String textResponse = csvSafe(exportRow[4], "");
+            for(Object[] exportRow : exportRows) {
+                String userId = csvSafe(exportRow[0], "Anonymous");
+                String menuItemName = csvSafe(exportRow[1], "");
+                String questionText = csvSafe(exportRow[2], "");
+                String optionLabel = csvSafe(exportRow[3], "");
+                String textResponse = csvSafe(exportRow[4], "");
 
-            csv.append(userId).append(",")
-                    .append(menuItemName).append(",")
-                    .append(question).append(",")
-                    .append(option).append(",")
-                    .append(textResponse).append("\n");
+                csv.append(userId).append(",")
+                        .append(menuItemName).append(",")
+                        .append(questionText).append(",")
+                        .append(optionLabel).append(",")
+                        .append(textResponse).append("\n");
+            }
+
+            byte[] csvBytes = csv.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+            return ResponseEntity.ok()
+                    .header("Content-Disposition", "attachment; filename=" + surveyProperties.getExportFilename())
+                    .header("Content-Type", "text/csv; charset=UTF-8")
+                    .body(csvBytes);
+        } catch(Exception e) {
+            log.error("Failed to export report.", e);
+            return ResponseEntity.internalServerError().build();
         }
-
-        byte[] csvBytes = csv.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
-
-        return ResponseEntity.ok()
-                .header("Content-Disposition", "attachment; filename=" + surveyProperties.getExportFilename())
-                .header("Content-Type", "text/csv; charset=UTF-8")
-                .body(csvBytes);
     }
 
     // ==========================================
