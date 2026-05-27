@@ -38,6 +38,48 @@ services:
         generateValue: true
       - key: CORS_ALLOWED_ORIGINS
         value: https://survey-frontend.onrender.com
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: validate
+      - key: SPRING_JPA_SHOW_SQL
+        value: "false"
+      - key: SPRING_SQL_INIT_MODE
+        value: never
+      - key: SPRING_FLYWAY_ENABLED
+        value: "true"
+      - key: ADMIN_LOGIN_MAX_FAILED_ATTEMPTS
+        value: "5"
+      - key: ADMIN_LOGIN_LOCKOUT_MINUTES
+        value: "15"
+      - key: ADMIN_LOGIN_CACHE_MAX_SIZE
+        value: "1000"
+      - key: JWT_EXPIRATION_MS
+        value: "28800000"
+      - key: SURVEY_PARTICIPANT_LIMIT
+        value: "30"
+      - key: SURVEY_TEXT_RESPONSE_MAX_LENGTH
+        value: "250"
+      - key: SURVEY_PARTICIPANT_COOKIE_NAME
+        value: participant_id
+      - key: SURVEY_PARTICIPANT_COOKIE_MAX_AGE_DAYS
+        value: "30"
+      - key: SURVEY_EXPORT_FILENAME
+        value: CafeRater_Analytics.csv
+      - key: RATE_LIMIT_ENABLED
+        value: "true"
+      - key: RATE_LIMIT_PATH
+        value: /submit-category
+      - key: RATE_LIMIT_WINDOW_SECONDS
+        value: "15"
+      - key: RATE_LIMIT_MAX_SIZE
+        value: "10000"
+      - key: RATE_LIMIT_MESSAGE
+        value: Please wait a few seconds before submitting again.
+      - key: SEEDERS_ENABLED
+        value: "true"
+      - key: SEEDERS_QUESTIONS_PATH
+        value: classpath:seed/questions.json
+      - key: SEEDERS_MENU_ITEMS_PATH
+        value: classpath:seed/menu-items.json
 
   - type: web
     name: survey-frontend
@@ -53,3 +95,13 @@ services:
     envVars:
       - key: VITE_API_BASE_URL
         value: https://survey-backend.onrender.com
+      - key: VITE_CLOUDINARY_FOLDER
+        value: items
+      - key: VITE_SURVEY_ITEM_LIMIT
+        value: "15"
+      - key: VITE_SURVEY_TEXT_MAX_LENGTH
+        value: "250"
+      - key: VITE_SURVEY_BASELINE_TARGET
+        value: "30"
+      - key: VITE_REPORT_FILENAME
+        value: CafeRater_Analytics.csv
