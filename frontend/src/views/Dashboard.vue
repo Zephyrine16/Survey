@@ -1277,7 +1277,13 @@ const openCloudinaryWidget = () => {
     },
     (error: any, result: any) => {
       if (!error && result && result.event === 'success') {
-        editingItem.value.imageName = result.info.public_id.replace('items/', '')
+        const publicId = result.info.public_id as string
+        const folderPrefix = CLOUDINARY_FOLDER.replace(/\/+$/, '')
+        if(folderPrefix && publicId.startsWith(`${folderPrefix}/`)) {
+          editingItem.value.imageName = publicId.slice(folderPrefix.length + 1)
+      } else {
+        editingItem.value.imageName = publicId
+        }
       }
     },
   )
