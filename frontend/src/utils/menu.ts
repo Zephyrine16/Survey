@@ -30,13 +30,23 @@ export const getCategoryStyles = (category?: string) => {
 export const getImagePath = (item?: { imageName?: string | null }) => {
   const imageName = item?.imageName?.trim()
   if (!imageName) return ''
-
-  const cloudName = (import.meta.env.VITE_CLOUDINARY_CLOUD_NAME ?? '').trim()
-  const safeImageName = encodeURIComponent(imageName)
-
-  if (!cloudName) {
-    return `/${CLOUDINARY_FOLDER}/${safeImageName}`
+  if (/^https?:\/\//i.test(imageName)) {
+    return imageName
   }
 
-  return `https://res.cloudinary.com/${cloudName}/image/upload/${CLOUDINARY_FOLDER}/${safeImageName}`
+  const cloudName = (import.meta.env.VITE_CLOUDINARY_CLOUD_NAME ?? '').trim()
+  const trimmedImageName = imageName.replace(/^\/+/, '')
+  const imagePath = trimmedImageName.includes('/')
+    ? trimmedImageName
+    : `${CLOUDINARY_FOLDER}/${trimmedImageName}`
+  const safeImagePath = imagePath
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/')
+
+  if (!cloudName) {
+    return `/${safeImagePath}`
+  }
+
+  return `https://res.cloudinary.com/${cloudName}/image/upload/${safeImagePath}`
 }
