@@ -70,7 +70,7 @@ Choose the right development environment for each part of the project:
 
 #### 🟢 Node.js & npm
 
-Required to run the Vue.js frontend. Download the **LTS** (Long Term Support) version.
+Required to run the Vue.js frontend. Download the **LTS** (Long-Term Support) version.
 
 [Download Node.js](https://nodejs.org/)
 
@@ -201,7 +201,7 @@ You have three options to start your Spring Boot application:
 **Option 2: VS Code**
 
 1. Open the `backend` folder in VS Code
-2. Install the **Extension Pack for Java** and **Spring Boot Extension Pack** from the extensions tab
+2. Install the **Extension Pack for Java** and **Spring Boot Extension Pack** from the extension tab
 3. Once installed, navigate to the `SurveyApplication.java` file and click the small `Run` inline link that appears above the `main` method, or use the "Spring Boot Dashboard" in the sidebar
 
 **Option 3: Terminal/Command Line**
