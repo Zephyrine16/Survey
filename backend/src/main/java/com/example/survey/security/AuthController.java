@@ -7,7 +7,7 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.annotation.PostConstruct;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,10 +19,10 @@ import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/api/admin")
+@RequiredArgsConstructor
 public class AuthController {
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
 
     @Value("${admin.username}")
     private String adminUser;
@@ -30,11 +30,8 @@ public class AuthController {
     @Value("${admin.password-hash}")
     private String adminPassHash;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private AdminLoginProperties adminLoginProperties;
+    private final PasswordEncoder passwordEncoder;
+    private final AdminLoginProperties adminLoginProperties;
 
     private Cache<String, Integer> failedLoginAttempts;
 
@@ -50,8 +47,8 @@ public class AuthController {
     public ResponseEntity<?> login(@Valid @RequestBody AdminLoginRequest credentials, HttpServletRequest request) {
         String username = credentials.getUsername();
         String password = credentials.getPassword();
-        String clientIp = extractClientIp(request);
-        String rateLimitKey = clientIp;
+
+        String rateLimitKey = extractClientIp(request);
 
         Integer failures = failedLoginAttempts.getIfPresent(rateLimitKey);
         int failureCount = failures == null ? 0 : failures;
