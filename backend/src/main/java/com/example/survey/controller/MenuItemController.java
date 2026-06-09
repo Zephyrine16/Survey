@@ -2,7 +2,7 @@ package com.example.survey.controller;
 
 import com.example.survey.model.MenuItem;
 import com.example.survey.repository.MenuItemRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -11,10 +11,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/menu-items")
+@RequiredArgsConstructor
 public class MenuItemController {
 
-    @Autowired
-    private MenuItemRepository menuItemRepository;
+    private final MenuItemRepository menuItemRepository;
 
     @GetMapping
     public List<MenuItem> getAllMenuItems() {

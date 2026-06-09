@@ -11,9 +11,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import com.example.survey.repository.AnswerRepository;
 import com.example.survey.service.AnalyticsService;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -25,30 +25,17 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
+@RequiredArgsConstructor
 public class SurveyController {
 
-    @Autowired
-    private AnswerRepository answerRepository;
-
-    @Autowired
-    private com.example.survey.repository.MenuItemRepository menuItemRepository;
-
-    @Autowired
-    private com.example.survey.repository.QuestionRepository questionRepository;
-
-    @Autowired
-    private com.example.survey.repository.OptionRepository optionRepository;
-
-    @Autowired
-    private com.example.survey.service.SurveyService surveyService;
-
-    @Autowired
-    private AnalyticsService analyticsService;
-
+    private final AnswerRepository answerRepository;
+    private final com.example.survey.repository.MenuItemRepository menuItemRepository;
+    private final com.example.survey.repository.QuestionRepository questionRepository;
+    private final com.example.survey.repository.OptionRepository optionRepository;
+    private final com.example.survey.service.SurveyService surveyService;
+    private final AnalyticsService analyticsService;
     private static final Logger log = LoggerFactory.getLogger(SurveyController.class);
-
-    @Autowired
-    private SurveyProperties surveyProperties;
+    private final SurveyProperties surveyProperties;
 
     // ==========================================
     // 1. SAVE SURVEY ANSWERS
@@ -98,10 +85,6 @@ public class SurveyController {
 
     private ResponseEntity<String> limitReachedResponse() {
         return ResponseEntity.badRequest().body("{\"error\": \"LIMIT_REACHED\"}");
-    }
-
-    private ResponseEntity<String> failureMessage() {
-        return ResponseEntity.internalServerError().body("{\"error\": \"Failed to save data.\"}");
     }
 
     private String getOrCreateParticipantId(HttpServletRequest request, HttpServletResponse response) {
