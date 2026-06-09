@@ -3,14 +3,14 @@ package com.example.survey.validation;
 import com.example.survey.config.SurveyProperties;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class TextResponseLengthValidator implements ConstraintValidator<TextResponseLength, String> {
 
-    @Autowired
-    private SurveyProperties surveyProperties;
+    private final SurveyProperties surveyProperties;
 
     @Override
     public boolean isValid(String value, ConstraintValidatorContext context) {
@@ -25,6 +25,4 @@ public class TextResponseLengthValidator implements ConstraintValidator<TextResp
 
         return value.length() <= maxLength;
     }
-
-
 }
