@@ -313,24 +313,16 @@ const fetchQuestions = async () => {
       return aId - bId
     })
 
-    const mappedQuestions = sortedQuestions.map((q: any) => {
-      let uiType = ''
-
+    questions.value = sortedQuestions.map((q: any) => {
       if (q.type === 'TEXT') {
-        uiType = 'textarea'
+        return { ...q, type: 'textarea' }
       } else if (q.id === 1) {
-        uiType = 'vertical-radio'
+        return { ...q, type: 'vertical-radio' }
       } else {
-        uiType = 'grid-radio'
-      }
-
-      return {
-        ...q,
-        type: uiType,
+        return { ...q, type: 'grid-radio' }
       }
     })
 
-    questions.value = mappedQuestions
   } catch (error: any) {
     console.error('Error fetching dynamic questions:', error)
   }
@@ -547,7 +539,7 @@ watch(
   { deep: true },
 )
 
-const handleBeforeUnload = (event) => {
+const handleBeforeUnload = (event: any) => {
   const hasAnswers = Object.keys(answers.value).length > 0
 
   if (hasAnswers) {

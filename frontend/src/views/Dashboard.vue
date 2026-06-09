@@ -899,9 +899,9 @@ const handleLogin = async () => {
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
 
     isAuthenticated.value = true
-    fetchMenuItems()
-    fetchQuestions()
-    fetchStats()
+    await fetchMenuItems()
+    await fetchQuestions()
+    await fetchStats()
   } catch (error) {
     loginError.value = 'Invalid username or password'
   } finally {
@@ -946,8 +946,7 @@ const filteredMenuItems = computed(() => {
     const matchesTopLevel =
       activeCategory.value === 'Food' ? isFood(item.category) : isDrink(item.category)
     if (!matchesTopLevel) return false
-    if (activeSubcategory.value !== 'All' && item.category !== activeSubcategory.value) return false
-    return true
+    return activeSubcategory.value === 'All' || item.category === activeSubcategory.value;
   })
 })
 
@@ -979,7 +978,7 @@ const fetchQuestions = async () => {
   }
 }
 
-const selectItem = async (itemId) => {
+const selectItem = async (itemId: number) => {
   selectedItemId.value = itemId
   activeKeywordFilter.value = null
   await fetchCombinedAnalyticsForItem(itemId)
@@ -1044,15 +1043,6 @@ const textQuestions = computed(() => {
   return result
 })
 
-// Calculate total responses based on the dictionary structure
-const totalResponses = computed(() => {
-  const firstKey = Object.keys(radioQuestions.value)[0]
-  if (!firstKey) return 0
-
-  const stats = radioQuestions.value[firstKey]
-  return stats.reduce((sum: number, stat: any) => sum + Number(stat.voteCount), 0)
-})
-
 const calculatePercentage = (votes: number, allStats: any[]) => {
   const total = allStats.reduce((sum, stat) => sum + Number(stat.voteCount), 0)
   if (total === 0) return 0
@@ -1067,7 +1057,7 @@ const topResponse = (answers: any[]) => {
   return highest.optionLabel
 }
 
-const getSentimentData = (feedback) => {
+const getSentimentData = (feedback: any) => {
   const text = (
     feedback.response ||
     feedback.textResponse ||
@@ -1184,7 +1174,7 @@ const toggleKeywordFilter = (word: string) => {
   }
 }
 
-const getWordClass = (index) => {
+const getWordClass = (index: number) => {
   if (index < 2) return 'w-huge'
   if (index < 4) return 'w-large'
   if (index < 6) return 'w-med'
@@ -1306,18 +1296,6 @@ const saveMenuItem = async () => {
     alert('Error saving item. Check console.')
   } finally {
     isSavingItem.value = false
-  }
-}
-
-const deleteMenuItem = async (id: number) => {
-  if (!confirm('Are you sure you want to delete this menu item? This cannot be undone!')) return
-
-  try {
-    await axios.delete(`/api/admin/menu-items/${id}`)
-    await fetchMenuItems()
-  } catch (error) {
-    console.error('Failed to delete item:', error)
-    alert('Could not delete item. It might have survey responses tied to it!')
   }
 }
 
@@ -2312,7 +2290,7 @@ onUnmounted(() => {
   font-size: 0.75rem;
   font-weight: 600;
   color: #64748b;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
   margin-bottom: 12px;
   text-transform: uppercase;
 }
@@ -2362,7 +2340,7 @@ onUnmounted(() => {
   display: flex;
   border-radius: 8px;
   overflow: hidden;
-  gap: 0px;
+  gap: 0;
   margin-bottom: 12px;
 }
 .s-fill-thick {
@@ -2773,12 +2751,12 @@ onUnmounted(() => {
 }
 
 /* KEYWORD FILTER INTERACTIONS */
-.word-cloud-v2 span.active-word {
+.word-cloud-v2 span {
   opacity: 1 !important;
   text-decoration: underline;
   text-underline-offset: 4px;
 }
-.word-cloud-v2 span.dimmed-word {
+.word-cloud-v2 span {
   opacity: 0.2 !important;
   filter: grayscale(100%);
 }
@@ -2843,13 +2821,13 @@ onUnmounted(() => {
   transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
   z-index: 1;
 }
-.sliding-highlight.analytics {
+.sliding-highlight {
   transform: translateX(0%);
 }
-.sliding-highlight.manager {
+.sliding-highlight {
   transform: translateX(100%);
 }
-.sliding-highlight.questions {
+.sliding-highlight {
   transform: translateX(200%);
 }
 
