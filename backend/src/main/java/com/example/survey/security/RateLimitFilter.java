@@ -7,7 +7,6 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,16 +18,20 @@ import java.util.concurrent.TimeUnit;
 
 @Component
 @NullMarked
-@RequiredArgsConstructor
 public class RateLimitFilter extends OncePerRequestFilter {
     private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);
 
     private final RateLimitProperties rateLimitProperties;
+    private final Cache<String, Boolean> ipCooldowns;
 
-    private final Cache<String, Boolean> ipCooldowns = Caffeine.newBuilder()
-            .expireAfterWrite(rateLimitProperties.getWindowSeconds(), TimeUnit.SECONDS)
-            .maximumSize(rateLimitProperties.getMaxSize())
-            .build();
+    public RateLimitFilter(RateLimitProperties rateLimitProperties) {
+        this.rateLimitProperties = rateLimitProperties;
+
+        this.ipCooldowns = Caffeine.newBuilder()
+                .expireAfterWrite(rateLimitProperties.getWindowSeconds(), TimeUnit.SECONDS)
+                .maximumSize(rateLimitProperties.getMaxSize())
+                .build();
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -55,7 +58,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
             }
 
             // Put them in the cache.
-            // We just use 'Boolean.TRUE' as a dummy value because we only care about the Key (the IP address).
             // Caffeine will automatically delete this entire entry after the configured window.
             ipCooldowns.put(clientIp, Boolean.TRUE);
         }
