@@ -3,7 +3,9 @@ package com.example.survey.service;
 import com.example.survey.config.SurveyProperties;
 import com.example.survey.dto.CategorySubmissionDTO;
 import com.example.survey.repository.AnswerRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -18,16 +20,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
+@NullMarked
 public class SurveyService {
 
-    @Autowired
-    private AnswerRepository answerRepository;
-
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
-
-    @Autowired
-    private SurveyProperties surveyProperties;
+    private final AnswerRepository answerRepository;
+    private final JdbcTemplate jdbcTemplate;
+    private final SurveyProperties surveyProperties;
 
     private static final String INSERT_ANSWER_SQL = "INSERT INTO answers (user_id, menu_item_id, question_id, option_id, response) VALUES (?, ?, ?, ?, ?)";
 
@@ -69,7 +68,7 @@ public class SurveyService {
         return rows;
     }
 
-    private String sanitizeTextResponse(String textResponse) {
+    private @Nullable String sanitizeTextResponse(@Nullable String textResponse) {
         if(textResponse == null || textResponse.isEmpty()) {
             return textResponse;
         }
@@ -109,7 +108,7 @@ public class SurveyService {
             String userId,
             Long menuItemId,
             Long questionId,
-            Long selectedOptionId,
-            String textResponse
+            @Nullable Long selectedOptionId,
+            @Nullable String textResponse
     ) {}
 }
