@@ -4,36 +4,30 @@ import com.example.survey.model.MenuItem;
 import com.example.survey.repository.MenuItemRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NullMarked;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.stereotype.Component;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Collections;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 @Component
+@RequiredArgsConstructor
+@NullMarked
 public class MenuSeeder implements CommandLineRunner {
     private static final Logger log = LoggerFactory.getLogger(MenuSeeder.class);
+
     private final MenuItemRepository menuItemRepository;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    private ResourceLoader resourceLoader;
-
-    @Autowired
-    private SeederProperties seederProperties;
-
-    public MenuSeeder(MenuItemRepository menuItemRepository) {
-        this.menuItemRepository = menuItemRepository;
-    }
+    private final ObjectMapper objectMapper;
+    private final ResourceLoader resourceLoader;
+    private final SeederProperties seederProperties;
 
     @Override
     public void run(String... args) throws Exception {
@@ -51,8 +45,7 @@ public class MenuSeeder implements CommandLineRunner {
 
             List<MenuItem> fullMenu = new ArrayList<>();
             for(SeedMenuItem seedItem : seedItems) {
-                if(seedItem == null || seedItem.name() == null || seedItem.name().isBlank() ||
-                seedItem.category() == null || seedItem.category().isBlank()) {
+                if(seedItem.name().isBlank() || seedItem.category().isBlank()) {
                     continue;
                 }
                 fullMenu.add(createItem(seedItem.name().trim(), seedItem.category().trim()));
@@ -69,7 +62,7 @@ public class MenuSeeder implements CommandLineRunner {
         MenuItem item = new MenuItem();
         item.setName(name);
         item.setCategory(category);
-        
+
         String baseName = name.replaceFirst("^(?i)(Hot |Iced )", "");
 
         String generatedFileName = baseName.toLowerCase()
@@ -88,7 +81,7 @@ public class MenuSeeder implements CommandLineRunner {
         }
 
         try(InputStream inputStream = resource.getInputStream()) {
-            return objectMapper.readValue(inputStream, new TypeReference<List<SeedMenuItem>>() {});
+            return objectMapper.readValue(inputStream, new TypeReference<>() {});
         } catch(Exception e) {
             log.error("Failed to load seed menu items from {}", seederProperties.getMenuItemsPath(), e);
             return Collections.emptyList();

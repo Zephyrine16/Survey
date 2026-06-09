@@ -3,39 +3,33 @@ package com.example.survey.config;
 import com.example.survey.model.Option;
 import com.example.survey.model.Question;
 import com.example.survey.repository.OptionRepository;
+import com.example.survey.repository.QuestionRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.example.survey.repository.QuestionRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.stereotype.Component;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.jspecify.annotations.NullMarked;
+import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 
 @Component
+@RequiredArgsConstructor
+@NullMarked
 public class DataSeeder implements CommandLineRunner {
     private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
 
-    @Autowired
-    private QuestionRepository questionRepository;
-
-    @Autowired
-    private OptionRepository optionRepository;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
-    private ResourceLoader resourceLoader;
-
-    @Autowired
-    private SeederProperties seederProperties;
+    private final QuestionRepository questionRepository;
+    private final OptionRepository optionRepository;
+    private final ObjectMapper objectMapper;
+    private final ResourceLoader resourceLoader;
+    private final SeederProperties seederProperties;
 
     @Override
     public void run(String... args) throws Exception {
@@ -57,7 +51,7 @@ public class DataSeeder implements CommandLineRunner {
             }
 
             for(SeedQuestion seedQuestion : seedQuestions) {
-                if(seedQuestion == null || seedQuestion.text() == null || seedQuestion.text(). isBlank()) {
+                if(seedQuestion.text().isBlank()) {
                     continue;
                 }
 
@@ -66,13 +60,11 @@ public class DataSeeder implements CommandLineRunner {
                 question.setQuestionType(seedQuestion.questionType());
                 question = questionRepository.save(question);
 
-                if(seedQuestion.options() != null) {
-                    for(SeedOption option : seedQuestion.options()) {
-                        if(option == null || option.label() == null || option.label().isBlank()) {
-                            continue;
-                        }
-                        createOption(option.label().trim(), option.sub(), option.icon(), question);
+                for(SeedOption option : seedQuestion.options()) {
+                    if(option.label().isBlank()) {
+                        continue;
                     }
+                    createOption(option.label().trim(), option.sub(), option.icon(), question);
                 }
             }
 
@@ -96,7 +88,7 @@ public class DataSeeder implements CommandLineRunner {
         }
 
         try(InputStream inputStream = resource.getInputStream()) {
-            return objectMapper.readValue(inputStream, new TypeReference<List<SeedQuestion>>() {});
+            return objectMapper.readValue(inputStream, new TypeReference<>() {});
         } catch(Exception e) {
             log.error("Failed to load seed questions from {}", seederProperties.getQuestionsPath(), e);
             return Collections.emptyList();
