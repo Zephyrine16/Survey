@@ -20,13 +20,6 @@ public class MenuItem {
 
     private Double price;
 
-    @Column(name = "image_name") // Ensures the database column is named cleanly
+    @Column(name = "image_name")
     private String imageName;
-
-    public MenuItem(String name, String category, Double price, String imageName) {
-        this.name = name;
-        this.category = category;
-        this.price = price;
-        this.imageName = imageName;
-    }
 }
