@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
@@ -11,6 +13,8 @@ import org.springframework.validation.annotation.Validated;
 @Component
 @ConfigurationProperties(prefix = "survey")
 @Validated
+@Getter
+@Setter
 public class SurveyProperties {
 
     @NotNull
@@ -30,44 +34,4 @@ public class SurveyProperties {
 
     @NotBlank
     private String exportFilename;
-
-    public long getParticipantLimit() {
-        return participantLimit;
-    }
-
-    public void setParticipantLimit(long participantLimit) {
-        this.participantLimit = participantLimit;
-    }
-
-    public int getTextResponseMaxLength() {
-        return textResponseMaxLength;
-    }
-
-    public void setTextResponseMaxLength(int textResponseMaxLength) {
-        this.textResponseMaxLength = textResponseMaxLength;
-    }
-
-    public String getParticipantCookieName() {
-        return participantCookieName;
-    }
-
-    public void setParticipantCookieName(String participantCookieName) {
-        this.participantCookieName = participantCookieName;
-    }
-
-    public long getParticipantCookieMaxAgeDays() {
-        return participantCookieMaxAgeDays;
-    }
-
-    public void setParticipantCookieMaxAgeDays(long participantCookieMaxAgeDays) {
-        this.participantCookieMaxAgeDays = participantCookieMaxAgeDays;
-    }
-
-    public String getExportFilename() {
-        return exportFilename;
-    }
-
-    public void setExportFilename(String exportFilename) {
-        this.exportFilename = exportFilename;
-    }
 }
