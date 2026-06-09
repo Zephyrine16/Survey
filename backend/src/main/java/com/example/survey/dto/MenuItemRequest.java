@@ -15,7 +15,7 @@ public class MenuItemRequest {
     @Size(max = 100, message = "category is too long")
     private String category;
 
-    @DecimalMin(value = "0.0", inclusive = true, message = "price must be non-negative")
+    @DecimalMin(value = "0.0", message = "price must be non-negative")
     private Double price;
 
     @Size(max = 255, message = "imageName is too long")
