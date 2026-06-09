@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.Data;
 
-@Data // Generates everything automatically
+@Data
 @Entity
 @Table(name = "options")
 public class Option {
