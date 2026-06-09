@@ -7,13 +7,14 @@ import com.example.survey.dto.TextFeedbackDTO;
 import com.example.survey.repository.AnswerRepository;
 import com.example.survey.repository.QuestionRepository;
 import com.example.survey.repository.QuestionSummaryProjection;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.regex.Pattern;
 
 @Service
+@RequiredArgsConstructor
 public class AnalyticsService {
 
     private static final List<String> STOP_WORDS = Arrays.asList(
@@ -24,11 +25,10 @@ public class AnalyticsService {
     private static final Pattern POSITIVE_PATTERN = Pattern.compile(".*\\b(good|great|love|best|delicious|yummy|perfect|nice|amazing|sweet|comfort|favorite|warm|fresh|hot|filling)\\b.*");
     private static final Pattern NEGATIVE_PATTERN = Pattern.compile(".*\\b(bad|hate|awful|terrible|gross|expensive|worse|bland|nasty|disgusting|dry|salty|cold|hard|stale)\\b.*");
 
-    @Autowired
-    private AnswerRepository answerRepository;
+    private static final int MAX_KEYWORDS = 8;
 
-    @Autowired
-    private QuestionRepository questionRepository;
+    private final AnswerRepository answerRepository;
+    private final QuestionRepository questionRepository;
 
     public Map<Long, Object> getAnalyticsForMenuItem(Long menuItemId) {
         Map<Long, Object> dashboardData = initializeQuestionBuckets();
@@ -65,7 +65,7 @@ public class AnalyticsService {
         List<String> reviews = answerRepository.getTextReviewsForItem(menuItemId);
         applySentimentCounts(stats, reviews);
         applySentimentPercentages(stats);
-        stats.topKeywords = extractTopKeywords(reviews, 8);
+        stats.topKeywords = extractTopKeywords(reviews);
 
         return stats;
     }
@@ -113,7 +113,7 @@ public class AnalyticsService {
         stats.negativePct = Math.round(((double) stats.negativeCount / totalAnalyzed) * 1000.0) / 10.0;
     }
 
-    private List<String> extractTopKeywords(List<String> reviews, int limit) {
+    private List<String> extractTopKeywords(List<String> reviews) {
         Map<String, Integer> wordCounts = new HashMap<>();
         for (String review : reviews) {
             if (review == null) {
@@ -131,7 +131,7 @@ public class AnalyticsService {
         sortedWords.sort((a, b) -> b.getValue().compareTo(a.getValue()));
 
         List<String> topKeywords = new ArrayList<>();
-        for (int i = 0; i < Math.min(limit, sortedWords.size()); i++) {
+        for (int i = 0; i < Math.min(MAX_KEYWORDS, sortedWords.size()); i++) {
             topKeywords.add(sortedWords.get(i).getKey());
         }
         return topKeywords;
