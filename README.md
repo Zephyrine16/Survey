@@ -2,7 +2,7 @@
 
 A professional full-stack application designed for high-volume menu evaluation and data-driven insights. This project uses a modern decoupled architecture with a Vue.js frontend and a Java Spring Boot backend.
 
-**🔗 [Live Demo](https://survey-frontend-u6k3.onrender.com)**
+**🔗 [Live Demo](https://survey-xi-ten.vercel.app/)**
 
 ---
 
