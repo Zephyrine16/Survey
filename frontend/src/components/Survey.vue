@@ -313,10 +313,10 @@ const fetchQuestions = async () => {
       return aId - bId
     })
 
-    questions.value = sortedQuestions.map((q: any) => {
+    questions.value = sortedQuestions.map((q: any, index: number) => {
       if (q.type === 'TEXT') {
         return { ...q, type: 'textarea' }
-      } else if (q.id === 1) {
+      } else if (q.index === 0) {
         return { ...q, type: 'vertical-radio' }
       } else {
         return { ...q, type: 'grid-radio' }
