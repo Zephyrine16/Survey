@@ -10,8 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
+import org.springframework.core.io.ClassPathResource;
 import org.jspecify.annotations.NullMarked;
 import org.springframework.stereotype.Component;
 
@@ -28,7 +27,6 @@ public class DataSeeder implements CommandLineRunner {
     private final QuestionRepository questionRepository;
     private final OptionRepository optionRepository;
     private final ObjectMapper objectMapper;
-    private final ResourceLoader resourceLoader;
     private final SeederProperties seederProperties;
 
     @Override
@@ -46,12 +44,12 @@ public class DataSeeder implements CommandLineRunner {
 
             List<SeedQuestion> seedQuestions = loadSeedQuestions();
             if(seedQuestions.isEmpty()) {
-                log.warn("No seed questions found at {}", seederProperties.getQuestionsPath());
+                log.warn("No seed questions found! Check if seed/questions.json exists in resources.");
                 return;
             }
 
             for(SeedQuestion seedQuestion : seedQuestions) {
-                if(seedQuestion.text().isBlank()) {
+                if(seedQuestion.text() == null || seedQuestion.text().isBlank()) {
                     continue;
                 }
 
@@ -60,11 +58,13 @@ public class DataSeeder implements CommandLineRunner {
                 question.setQuestionType(seedQuestion.questionType());
                 question = questionRepository.save(question);
 
-                for(SeedOption option : seedQuestion.options()) {
-                    if(option.label().isBlank()) {
-                        continue;
+                if (seedQuestion.options() != null) {
+                    for(SeedOption option : seedQuestion.options()) {
+                        if(option.label() == null || option.label().isBlank()) {
+                            continue;
+                        }
+                        createOption(option.label().trim(), option.sub(), option.icon(), question);
                     }
-                    createOption(option.label().trim(), option.sub(), option.icon(), question);
                 }
             }
 
@@ -72,7 +72,7 @@ public class DataSeeder implements CommandLineRunner {
         }
     }
 
-    private void createOption(String label, String subDesc, String icon, Question question) {
+    private void createOption(String label, @org.jspecify.annotations.Nullable String subDesc, @org.jspecify.annotations.Nullable String icon, Question question) {
         Option option = new Option();
         option.setLabel(label);
         option.setSubDescription(subDesc);
@@ -82,7 +82,8 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private List<SeedQuestion> loadSeedQuestions() {
-        Resource resource = resourceLoader.getResource(seederProperties.getQuestionsPath());
+        ClassPathResource resource = new ClassPathResource("seed/questions.json");
+
         if(!resource.exists()) {
             return Collections.emptyList();
         }
@@ -90,20 +91,20 @@ public class DataSeeder implements CommandLineRunner {
         try(InputStream inputStream = resource.getInputStream()) {
             return objectMapper.readValue(inputStream, new TypeReference<>() {});
         } catch(Exception e) {
-            log.error("Failed to load seed questions from {}", seederProperties.getQuestionsPath(), e);
+            log.error("Failed to load seed questions", e);
             return Collections.emptyList();
         }
     }
 
     private record SeedQuestion(
-            String text,
+            @org.jspecify.annotations.Nullable String text,
             String questionType,
-            List<SeedOption> options
+            @org.jspecify.annotations.Nullable List<SeedOption> options
     ) {}
 
     private record SeedOption(
-            String label,
-            @com.fasterxml.jackson.annotation.JsonProperty("sub") String sub,
-            String icon
+            @org.jspecify.annotations.Nullable String label,
+            @com.fasterxml.jackson.annotation.JsonProperty("sub") @org.jspecify.annotations.Nullable String sub,
+            @org.jspecify.annotations.Nullable String icon
     ) {}
 }
