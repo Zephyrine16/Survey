@@ -316,7 +316,7 @@ const fetchQuestions = async () => {
     questions.value = sortedQuestions.map((q: any, index: number) => {
       if (q.type === 'TEXT') {
         return { ...q, type: 'textarea' }
-      } else if (q.index === 0) {
+      } else if (index === 0) {
         return { ...q, type: 'vertical-radio' }
       } else {
         return { ...q, type: 'grid-radio' }
