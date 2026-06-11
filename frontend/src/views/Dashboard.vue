@@ -2821,13 +2821,13 @@ onUnmounted(() => {
   transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
   z-index: 1;
 }
-.sliding-highlight {
+.sliding-highlight.analytics {
   transform: translateX(0%);
 }
-.sliding-highlight {
+.sliding-highlight.manager {
   transform: translateX(100%);
 }
-.sliding-highlight {
+.sliding-highlight.questions {
   transform: translateX(200%);
 }
 
