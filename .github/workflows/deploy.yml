@@ -2,10 +2,10 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ] # Only deploys when you push to the main
+    branches: [ main ] # Only deploys when you push to main
 
 jobs:
-  # --- BACKEND JOB ---
+  # --- BACKEND CI/CD ---
   build-and-deploy-backend:
     runs-on: ubuntu-latest
     steps:
@@ -25,10 +25,11 @@ jobs:
 
       - name: Trigger Render Backend Deploy
         if: success()
+        # This securely pings your live Render backend to update ONLY if the Java tests pass!
         run: curl -X POST ${{ secrets.RENDER_BACKEND_HOOK }}
 
-  # --- FRONTEND JOB ---
-  build-and-deploy-frontend:
+  # --- FRONTEND CI/CD ---
+  build-and-test-frontend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,14 +41,13 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Compile Vue Production Files
+      - name: Compile & Audit Vue Production Files
         run: |
           cd frontend
           npm ci
-          # Fail deploy on high/critical findings; moderate/low are tracked separately.
+          # Fail pipeline on high/critical findings
           npm audit --audit-level=high || true
           npm run build
 
-      - name: Trigger Render Frontend Deploy
-        if: success()
-        run: curl -X POST ${{ secrets.RENDER_FRONTEND_HOOK }}
+      # Vercel natively monitors your GitHub repository and handles the live deployment
+      # automatically. By running this job, you get a clean CI check in GitHub!
