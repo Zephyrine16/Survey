@@ -148,7 +148,7 @@
                 </button>
 
                 <p v-if="!isCurrentItemComplete" class="incomplete-warning">
-                  * Please answer all questions to unlock the next step.
+                  * Please answer all questions to unlock the next item.
                 </p>
 
                 <button
