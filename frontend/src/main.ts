@@ -18,4 +18,9 @@ const app = createApp(App)
 
 app.use(router)
 
+// Fire a background request to wake up the Render server if it's asleep
+axios.get('/api/ping').catch(() => {
+  console.log('Server waking up...');
+});
+
 app.mount('#app')
