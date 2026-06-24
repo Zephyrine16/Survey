@@ -3,6 +3,7 @@ FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 COPY . .
 RUN chmod +x ./mvnw
+RUN sed -i 's/\r$//' mvnw
 RUN ./mvnw clean package
 
 # Step 2: Run the application
