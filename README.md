@@ -11,7 +11,7 @@ A professional full-stack application designed for high-volume menu evaluation a
 - **Dynamic Data Collection:** Custom-built survey engine with 84 curated items.
 - **Admin Analytics:** Real-time dashboard featuring data visualization of user sentiment.
 - **Enterprise Security:** Stateless JWT-based authentication for secure admin access.
-- **Cloud Native:** Fully containerized logic deployed on Render with PostgreSQL persistence.
+- **Cloud Native:** Fully containerized backend deployed on Render, frontend hosted on Vercel, with Neon.tech Serverless PostgreSQL persistence.
 
 ---
 
@@ -21,9 +21,9 @@ A professional full-stack application designed for high-volume menu evaluation a
 | :--- | :--- |
 | **Frontend** | Vue 3 (Composition API), Vite, Axios |
 | **Backend** | Java 21, Spring Boot, Spring Security |
-| **Database** | PostgreSQL |
+| **Database** | Serverless PostgreSQL (Neon.tech) |
 | **Auth** | JWT (JSON Web Tokens) |
-| **Hosting** | Render (CI/CD Pipeline) |
+| **Hosting** | Vercel (Frontend) & Render (Backend) |
 
 ---
 
@@ -39,247 +39,57 @@ This is a **Monorepo** containing both the client and server code:
 
 ---
 
-## 🚀 Getting Started (Local Development Setup)
+## 🚀 Getting Started (Dockerized Setup)
 
-Welcome to the project! If you are starting from scratch and don't have a local development environment set up for Java or Vue.js, follow these step-by-step instructions to get the application running on your machine.
+This project is fully containerized using **Docker** and **Docker Compose**, making it incredibly easy to spin up the entire stack locally without installing Java, Node.js, or PostgreSQL on your host machine.
 
-### 1️⃣ Prerequisites: The Tools You Need
-Before downloading the code, ensure you have the following installed on your computer:
+### 1️⃣ Prerequisites
 
-#### 💻 IDE (Code Editor)
+You only need one tool installed on your computer:
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) (includes Docker Compose)
 
-Choose the right development environment for each part of the project:
+### 2️⃣ Configuration Setup
 
-**For Backend (Recommended):**  
-[IntelliJ IDEA Community Edition](https://www.jetbrains.com/idea/download/) – Highly recommended for Spring Boot development
+Before spinning up the containers, you need to set up your environment variables. 
 
-**For Frontend:**  
-[Visual Studio Code (VS Code)](https://code.visualstudio.com/) - Lightweight and powerful for Vue.js
+1. Copy the example `.env` file in the backend directory:
+   ```bash
+   cp backend/.env.example backend/.env
+   ```
+   *(Update the values in `backend/.env` if necessary. The default `docker-compose.yml` configures the database connection for you automatically.)*
 
-> **💡 Tip:** You can also use VS Code for the backend if you prefer a single editor for both parts of the project.
+2. Copy the example `.env` file in the frontend directory:
+   ```bash
+   cp frontend/.env.example frontend/.env
+   ```
+   *(Update any necessary Cloudinary or analytics variables in `frontend/.env`.)*
 
----
+### 3️⃣ Run the Application
 
-#### ☕ Java Development Kit (JDK)
-
-**Version 21 or higher is required**
-
-[Download Eclipse Temurin JDK](https://adoptium.net/)
-
----
-
-#### 🟢 Node.js & npm
-
-Required to run the Vue.js frontend. Download the **LTS** (Long-Term Support) version.
-
-[Download Node.js](https://nodejs.org/)
-
----
-
-#### 🐘 PostgreSQL
-
-The relational database used for this project.
-
-[Download PostgreSQL](https://www.postgresql.org/download/)
-
-> **💡 Important:** Remember the username and password you set during installation!
-
----
-
-### 2️⃣ Database Setup
-
-Before running the application, we need to give it a place to store data.
-
-> **⚠️ Note:** The backend will instantly crash on startup if PostgreSQL is not installed and running, as it needs to build a connection pool.
-
----
-
-#### 🔨 Create Database
-
-1. Open your PostgreSQL tool (pgAdmin or DBeaver)
-2. Create a new database named `postgres` (or your preferred database name)
-
----
-
-#### ✨ Auto-Generated Schema
-
-You do **not** need to create the tables manually.
-
-Spring Boot will automatically:
-- Generate the schema
-- Seed the initial data
-
-This happens when the server starts for the first time.
-
----
-
-### 3️⃣ Backend Setup (Spring Boot)
-
-The backend serves the API and connects to the database.
-
----
-
-#### 📦 Clone the Repository
-
-First, clone the repository and navigate to the backend folder:
+Open your terminal in the root directory of the project (where `docker-compose.yml` is located) and run:
 
 ```bash
-git clone <your-repository-url>
-cd <your-project-folder>/backend
+docker-compose up --build -d
 ```
 
----
+This single command will:
+1. Pull the necessary PostgreSQL image and start the database.
+2. Build and start the Spring Boot backend container.
+3. Build and start the Vue.js frontend container.
 
-#### 🔧 Configure Database Connection
+### 4️⃣ Access the Application
 
-Navigate to your application properties file and update the database credentials:
+Once the containers are up and running, you can access the application at:
 
-**Location:** `src/main/resources/application.properties` (or `.yml`)
+- **Frontend:** [http://localhost](http://localhost) (Served via port 80)
+- **Backend API:** [http://localhost:8080](http://localhost:8080)
 
-```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/postgres
-spring.datasource.username=YOUR_POSTGRES_USERNAME
-spring.datasource.password=YOUR_POSTGRES_PASSWORD
-```
+### 🛑 Stopping the Application
 
-> **💡 Tip:** Make sure these credentials match what you set up in PostgreSQL earlier.
-
-Set these required backend environment variables before startup:
+To gracefully stop and remove the containers, run:
 
 ```bash
-export DATABASE_URL='jdbc:postgresql://localhost:5432/postgres'
-export DB_USERNAME='your_postgres_username'
-export DB_PASSWORD='your_postgres_password'
-export DB_SSL_MODE='disable'
-export ADMIN_USER=your_admin_username
-export ADMIN_PASSWORD_HASH='$2a$10$replace_with_bcrypt_hash'
-export ADMIN_LOGIN_MAX_FAILED_ATTEMPTS='5'
-export ADMIN_LOGIN_LOCKOUT_MINUTES='15'
-export ADMIN_LOGIN_CACHE_MAX_SIZE='1000'
-export JWT_SECRET='replace_with_a_long_random_secret'
-export JWT_EXPIRATION_MS='28800000'
-export CORS_ALLOWED_ORIGINS='http://localhost:5173'
-export SURVEY_PARTICIPANT_LIMIT='30'
-export SURVEY_TEXT_RESPONSE_MAX_LENGTH='250'
-export SURVEY_PARTICIPANT_COOKIE_NAME='participant_id'
-export SURVEY_PARTICIPANT_COOKIE_MAX_AGE_DAYS='30'
-export SURVEY_EXPORT_FILENAME='CafeRater_Analytics.csv'
-export RATE_LIMIT_ENABLED='true'
-export RATE_LIMIT_PATH='/submit-category'
-export RATE_LIMIT_WINDOW_SECONDS='15'
-export RATE_LIMIT_MAX_SIZE='10000'
-export RATE_LIMIT_MESSAGE='Please wait a few seconds before submitting again.'
-export SEEDERS_ENABLED='true'
-export SEEDERS_QUESTIONS_PATH='classpath:seed/questions.json'
-export SEEDERS_MENU_ITEMS_PATH='classpath:seed/menu-items.json'
+docker-compose down
 ```
 
-> **Migration note:** older deployments that used `ADMIN_PASS` must switch to `ADMIN_PASSWORD_HASH` (bcrypt hash only).
-You can generate a bcrypt hash for your admin password with:
-
-```bash
-python - <<'PY'
-import bcrypt
-print(bcrypt.hashpw(b"your_admin_password", bcrypt.gensalt()).decode())
-PY
-```
-
-
----
-
-#### 🚀 Run the Server
-
-You have three options to start your Spring Boot application:
-
-**Option 1: IntelliJ IDEA (Recommended)**
-
-1. Open the `backend` folder in IntelliJ
-2. Wait for Maven to download all dependencies
-3. Locate `SurveyApplication.java`
-4. Click the green **▶️ Run** button
-
-**Option 2: VS Code**
-
-1. Open the `backend` folder in VS Code
-2. Install the **Extension Pack for Java** and **Spring Boot Extension Pack** from the extension tab
-3. Once installed, navigate to the `SurveyApplication.java` file and click the small `Run` inline link that appears above the `main` method, or use the "Spring Boot Dashboard" in the sidebar
-
-**Option 3: Terminal/Command Line**
-
-**Windows:**
-```bash
-mvnw.cmd spring-boot:run
-```
-
-**Mac/Linux:**
-```bash
-./mvnw spring-boot:run
-```
-
----
-
-✅ **Your backend should now be running!** Check the console for the port (usually `http://localhost:8080`)
-
-### 4️⃣ Frontend Setup (Vue.js)
-The frontend is the user interface you interact with in the browser.
-
-#### 📋 Prerequisites
-
-> **⚠️ Important:** Keep your backend server running! Open a **new** terminal window for the frontend setup.
-
----
-
-#### 📂 Navigate to Frontend
-
-```bash
-cd <your-project-folder>/frontend
-```
----
-
-#### 📥 Install Dependencies
-
-Install all required Node modules:
-
-```bash
-npm install
-```
-⏱️ *This may take a minute or two...*
-
----
-
-#### ▶️ Start Development Server
-
-Launch the Vue development server:
-
-```bash
-npm run dev
-```
-
-Set frontend environment variables in `frontend/.env`:
-
-```bash
-VITE_API_BASE_URL=http://localhost:8080
-VITE_CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-VITE_CLOUDINARY_UPLOAD_PRESET=your_upload_preset
-VITE_CLOUDINARY_FOLDER=items
-VITE_SURVEY_ITEM_LIMIT=15
-VITE_SURVEY_TEXT_MAX_LENGTH=250
-VITE_SURVEY_BASELINE_TARGET=30
-VITE_REPORT_FILENAME=CafeRater_Analytics.csv
-```
-
----
-
-#### 🌐 Access the Application
-
-Once the server starts, you'll see a local URL in the terminal (usually `http://localhost:5173`)
-
-**To open the app:**
-- **Windows/Linux:** `Ctrl` + `Click` on the URL
-- **Mac:** `Cmd` + `Click` on the URL
-
-Or copy the URL and paste it into your browser!
-
----
-
-✅ **Success!** Your frontend should now be live and connected to the backend. Happy coding! 🎉
+*(Note: Your database data is persisted in a Docker volume, so you won't lose your data when you bring the containers down.)*
