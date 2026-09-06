@@ -39,6 +39,11 @@ public class MenuSeeder implements CommandLineRunner {
             return;
         }
 
+        // Ensure the tracking table exists before we query it.
+        // Using CREATE TABLE IF NOT EXISTS makes this safe to run every startup,
+        // regardless of whether the Flyway migration has been applied yet.
+        ensureMetadataTable();
+
         // Only seed once — if a seed_metadata row already exists for "menu_items"
         // the admin may have intentionally deleted items; we must not re-add them.
         Integer alreadySeeded = jdbcTemplate.queryForObject(
@@ -46,6 +51,16 @@ public class MenuSeeder implements CommandLineRunner {
                 Integer.class, SEED_KEY);
         if (alreadySeeded != null && alreadySeeded > 0) {
             log.info("Menu items already seeded previously. Skipping.");
+            return;
+        }
+
+        // If items already exist in DB (e.g. seeded before this logic was added),
+        // record that fact and skip — don't duplicate them.
+        if (menuItemRepository.count() > 0) {
+            log.info("Menu items already present in database. Recording seed marker and skipping.");
+            jdbcTemplate.update(
+                    "INSERT INTO seed_metadata (seed_key) VALUES (?) ON CONFLICT (seed_key) DO NOTHING",
+                    SEED_KEY);
             return;
         }
 
@@ -72,6 +87,15 @@ public class MenuSeeder implements CommandLineRunner {
         jdbcTemplate.update(
                 "INSERT INTO seed_metadata (seed_key) VALUES (?) ON CONFLICT (seed_key) DO NOTHING",
                 SEED_KEY);
+    }
+
+    private void ensureMetadataTable() {
+        jdbcTemplate.execute(
+                "CREATE TABLE IF NOT EXISTS seed_metadata (" +
+                "    seed_key  VARCHAR(100) PRIMARY KEY," +
+                "    seeded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP" +
+                ")"
+        );
     }
 
     private MenuItem createItem(String name, String category) {
