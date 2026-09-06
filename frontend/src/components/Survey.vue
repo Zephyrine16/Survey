@@ -1321,60 +1321,60 @@ onUnmounted(() => {
   border-color: #e2e8f0;
   color: #475569;
 }
-.pill-meal {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #b91c1c;
-}
-.pill-bread {
-  background: #fdf5e6;
-  border-color: #ebd5b3;
-  color: #8b5a2b;
+.pill-appetizer {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
 }
 .pill-pasta {
   background: #fefce8;
-  border-color: #fde047;
+  border-color: #fde68a;
   color: #854d0e;
 }
-.pill-waffle {
-  background: #fff7ed;
-  border-color: #fed7aa;
-  color: #c2410c;
+.pill-sandwich {
+  background: #fdf5e6;
+  border-color: #ebd5b3;
+  color: #7c2d12;
 }
-.pill-coffee {
+.pill-wings {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+.pill-ricemeal {
   background: #fffbeb;
   border-color: #fde68a;
-  color: #b45309;
+  color: #92400e;
+}
+.pill-classics {
+  background: #f5f3ff;
+  border-color: #ddd6fe;
+  color: #5b21b6;
+}
+.pill-iceblended {
+  background: #ecfeff;
+  border-color: #a5f3fc;
+  color: #155e75;
+}
+.pill-specialty {
+  background: #fdf2f8;
+  border-color: #fbcfe8;
+  color: #9d174d;
 }
 .pill-noncoffee {
   background: #f0f9ff;
   border-color: #bae6fd;
-  color: #0284c7;
+  color: #0c4a6e;
 }
-.pill-frappe {
-  background: #f5f3ff;
-  border-color: #ddd6fe;
-  color: #7c3aed;
-}
-.pill-float {
+.pill-refresher {
   background: #ecfdf5;
   border-color: #a7f3d0;
-  color: #059669;
+  color: #065f46;
 }
-.pill-soda {
-  background: #ecfeff;
-  border-color: #a5f3fc;
-  color: #0891b2;
-}
-.pill-milktea {
-  background: #fdf4ff;
-  border-color: #f5d0fe;
-  color: #c026d3;
-}
-.pill-fruittea {
-  background: #fff1f2;
-  border-color: #fecdd3;
-  color: #e11d48;
+.pill-matcha {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #14532d;
 }
 
 .disclaimer-box {
