@@ -10,6 +10,8 @@ import java.util.List;
 public class SurveySubmissionRequest {
 
     private String phoneNumber;
+    private String ageGroup;
+    private String diningFrequency;
 
     @NotNull
     @Size(min = 1, message = "Submission must contain at least one answer")
