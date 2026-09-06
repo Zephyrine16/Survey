@@ -45,8 +45,8 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/menu-items", "/questions/**", "/submit-survey", "/submit-category", "/api/admin/login", "/api/stats/survey-status").permitAll()
-                        .requestMatchers("/analytics/**", "/api/stats/**", "/export", "/api/admin/clear-data").authenticated()
+                        .requestMatchers("/menu-items", "/questions/**", "/submit-survey", "/submit-category", "/api/admin/login", "/api/stats/survey-status", "/uploads/**").permitAll()
+                        .requestMatchers("/analytics/**", "/api/stats/**", "/export", "/api/admin/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
@@ -73,7 +73,8 @@ public class SecurityConfig {
                 "Accept",
                 "Origin",
                 "Access-Control-Request-Method",
-                "Access-Control-Request-Headers"));
+                "Access-Control-Request-Headers",
+                "X-Skip-Auth-Redirect"));
         configuration.setExposedHeaders(List.of("Content-Disposition"));
         configuration.setAllowCredentials(true);
 
