@@ -31,6 +31,9 @@ class SurveyServiceTest {
     @Mock
     private SurveyProperties surveyProperties;
 
+    @Mock
+    private com.example.survey.repository.QuestionRepository questionRepository;
+
     @InjectMocks
     private SurveyService surveyService;
 

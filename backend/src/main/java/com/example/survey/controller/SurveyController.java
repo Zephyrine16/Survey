@@ -63,6 +63,13 @@ public class SurveyController {
                 return limitReachedResponse();
             }
 
+            if (submissionRequest.getAgeGroup() != null && !submissionRequest.getAgeGroup().isBlank()) {
+                surveyService.saveDemographicAnswer(participantId, "Age Group", submissionRequest.getAgeGroup());
+            }
+            if (submissionRequest.getDiningFrequency() != null && !submissionRequest.getDiningFrequency().isBlank()) {
+                surveyService.saveDemographicAnswer(participantId, "How often do you dine at cafés or restaurants?", submissionRequest.getDiningFrequency());
+            }
+
             return successMessage();
 
         } catch (Exception e) {

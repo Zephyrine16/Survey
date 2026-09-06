@@ -2,8 +2,11 @@ package com.example.survey.service;
 
 import com.example.survey.config.SurveyProperties;
 import com.example.survey.dto.CategorySubmissionDTO;
+import com.example.survey.model.Question;
 import com.example.survey.repository.AnswerRepository;
+import com.example.survey.repository.QuestionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
@@ -19,12 +22,14 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @NullMarked
 public class SurveyService {
 
     private final AnswerRepository answerRepository;
+    private final QuestionRepository questionRepository;
     private final JdbcTemplate jdbcTemplate;
     private final SurveyProperties surveyProperties;
 
@@ -102,6 +107,29 @@ public class SurveyService {
                 return rows.size();
             }
         });
+    }
+
+    public void saveDemographicAnswer(@Nullable String userId, @Nullable String questionText, @Nullable String responseText) {
+        if (userId == null || questionText == null || responseText == null || responseText.isBlank()) {
+            return;
+        }
+        try {
+            Long questionId = questionRepository.findAll().stream()
+                    .filter(q -> q.getText() != null && q.getText().trim().equalsIgnoreCase(questionText.trim()))
+                    .map(Question::getId)
+                    .findFirst()
+                    .orElseGet(() -> {
+                        Question newQ = new Question();
+                        newQ.setText(questionText.trim());
+                        newQ.setQuestionType("RADIO");
+                        return questionRepository.save(newQ).getId();
+                    });
+
+            String insertDemographicSql = "INSERT INTO answers (user_id, menu_item_id, question_id, option_id, response) VALUES (?, NULL, ?, NULL, ?)";
+            jdbcTemplate.update(insertDemographicSql, userId, questionId, sanitizeTextResponse(responseText));
+        } catch (Exception e) {
+            log.warn("Failed to save demographic answer for user {}: {}", userId, e.getMessage());
+        }
     }
 
     private record AnswerInsertRow(
