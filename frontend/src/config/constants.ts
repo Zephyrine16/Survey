@@ -1,9 +1,9 @@
 const requireEnv = (value: string | undefined, name: string, fallback?: string) => {
   const trimmed = (value ?? '').trim()
-  if(trimmed) {
+  if (trimmed) {
     return trimmed
   }
-  if(fallback !== undefined) {
+  if (fallback !== undefined) {
     return fallback
   }
   throw new Error(`${name} must be set.`)
@@ -21,17 +21,11 @@ const parsePositiveInt = (value: string | undefined, name: string, fallback?: nu
   return parsed
 }
 
-const DEFAULT_CLOUDINARY_FOLDER = 'items'
 const DEFAULT_SURVEY_ITEM_LIMIT = 15
 const DEFAULT_SURVEY_TEXT_MAX_LENGTH = 250
 const DEFAULT_SURVEY_BASELINE_TARGET = 30
 const DEFAULT_REPORT_FILENAME = 'CafeRater_Analytics.csv'
 
-export const CLOUDINARY_FOLDER = requireEnv(
-  import.meta.env.VITE_CLOUDINARY_FOLDER,
-  'VITE_CLOUDINARY_FOLDER',
-  DEFAULT_CLOUDINARY_FOLDER,
-)
 export const SURVEY_ITEM_LIMIT = parsePositiveInt(
   import.meta.env.VITE_SURVEY_ITEM_LIMIT,
   'VITE_SURVEY_ITEM_LIMIT',
@@ -53,16 +47,25 @@ export const REPORT_FILENAME = requireEnv(
   DEFAULT_REPORT_FILENAME,
 )
 
-export const FOOD_SUBCATEGORIES = ['Meal', 'Bread', 'Pasta', 'Waffle']
-export const DRINK_SUBCATEGORIES = [
-  'Coffee',
-  'Non-coffee',
-  'Frappe Series',
-  'Float',
-  'Milktea',
-  'Sparkling Soda',
-  'Fruit Tea',
+export const FOOD_SUBCATEGORIES = [
+  'APPETIZER',
+  'PASTA',
+  'SANDWICH & WRAPS',
+  'CHICKEN WINGS',
+  'RICE MEAL',
 ]
+export const DRINK_SUBCATEGORIES = [
+  'CLASSICS',
+  'ICE-BLENDED',
+  'SPECIALTY',
+  'NON-COFFEE',
+  'REFRESHER',
+  'CEREMONIAL MATCHA',
+]
+
+// Keep aliases for clarity in call-sites that prefer MEAL/BEVERAGE naming
+export const MEAL_SUBCATEGORIES = FOOD_SUBCATEGORIES
+export const BEVERAGE_SUBCATEGORIES = DRINK_SUBCATEGORIES
 
 export const QUICK_EMOJIS = [
   '🔘',
@@ -86,31 +89,31 @@ export const QUICK_EMOJIS = [
 ]
 
 export const CATEGORY_PILL_CLASSES: Record<string, string> = {
-  meal: 'pill-meal',
-  bread: 'pill-bread',
+  appetizer: 'pill-appetizer',
   pasta: 'pill-pasta',
-  waffle: 'pill-waffle',
-  coffee: 'pill-coffee',
+  'sandwich & wraps': 'pill-sandwich',
+  'chicken wings': 'pill-wings',
+  'rice meal': 'pill-ricemeal',
+  classics: 'pill-classics',
+  'ice-blended': 'pill-iceblended',
+  specialty: 'pill-specialty',
   'non-coffee': 'pill-noncoffee',
-  'frappe series': 'pill-frappe',
-  float: 'pill-float',
-  'sparkling soda': 'pill-soda',
-  milktea: 'pill-milktea',
-  'fruit tea': 'pill-fruittea',
+  refresher: 'pill-refresher',
+  'ceremonial matcha': 'pill-matcha',
 }
 
 export const CATEGORY_THEME_STYLES: Record<string, Record<string, string>> = {
-  Meal: { '--c-main': '#ef4444', '--c-light': '#fef2f2', '--c-text': '#b91c1c' },
-  Bread: { '--c-main': '#d97706', '--c-light': '#fdf5e6', '--c-text': '#8b5a2b' },
-  Pasta: { '--c-main': '#eab308', '--c-light': '#fefce8', '--c-text': '#854d0e' },
-  Waffle: { '--c-main': '#f97316', '--c-light': '#fff7ed', '--c-text': '#c2410c' },
-  Coffee: { '--c-main': '#f59e0b', '--c-light': '#fffbeb', '--c-text': '#b45309' },
-  'Non-coffee': { '--c-main': '#0ea5e9', '--c-light': '#f0f9ff', '--c-text': '#0284c7' },
-  'Frappe Series': { '--c-main': '#8b5cf6', '--c-light': '#f5f3ff', '--c-text': '#7c3aed' },
-  Float: { '--c-main': '#10b981', '--c-light': '#ecfdf5', '--c-text': '#059669' },
-  'Sparkling Soda': { '--c-main': '#06b6d4', '--c-light': '#ecfeff', '--c-text': '#0891b2' },
-  Milktea: { '--c-main': '#d946ef', '--c-light': '#fdf4ff', '--c-text': '#c026d3' },
-  'Fruit Tea': { '--c-main': '#ec4899', '--c-light': '#fdf2f8', '--c-text': '#be185d' },
+  APPETIZER: { '--c-main': '#f97316', '--c-light': '#fff7ed', '--c-text': '#9a3412' },
+  PASTA: { '--c-main': '#eab308', '--c-light': '#fefce8', '--c-text': '#854d0e' },
+  'SANDWICH & WRAPS': { '--c-main': '#d97706', '--c-light': '#fdf5e6', '--c-text': '#7c2d12' },
+  'CHICKEN WINGS': { '--c-main': '#ef4444', '--c-light': '#fef2f2', '--c-text': '#991b1b' },
+  'RICE MEAL': { '--c-main': '#f59e0b', '--c-light': '#fffbeb', '--c-text': '#92400e' },
+  CLASSICS: { '--c-main': '#8b5cf6', '--c-light': '#f5f3ff', '--c-text': '#5b21b6' },
+  'ICE-BLENDED': { '--c-main': '#06b6d4', '--c-light': '#ecfeff', '--c-text': '#155e75' },
+  SPECIALTY: { '--c-main': '#ec4899', '--c-light': '#fdf2f8', '--c-text': '#9d174d' },
+  'NON-COFFEE': { '--c-main': '#0ea5e9', '--c-light': '#f0f9ff', '--c-text': '#0c4a6e' },
+  REFRESHER: { '--c-main': '#10b981', '--c-light': '#ecfdf5', '--c-text': '#065f46' },
+  'CEREMONIAL MATCHA': { '--c-main': '#22c55e', '--c-light': '#f0fdf4', '--c-text': '#14532d' },
 }
 
 export const DEFAULT_CATEGORY_STYLE = {

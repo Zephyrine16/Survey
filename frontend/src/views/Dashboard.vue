@@ -133,14 +133,17 @@
             <div class="category-toggle">
               <div
                 class="sliding-bg"
-                :class="activeCategory === 'Drink' ? 'slide-right' : 'slide-left'"
+                :class="activeCategory === 'Beverages' ? 'slide-right' : 'slide-left'"
               ></div>
 
-              <button :class="{ active: activeCategory === 'Food' }" @click="setCategory('Food')">
-                🍴 Food
+              <button :class="{ active: activeCategory === 'Meals' }" @click="setCategory('Meals')">
+                🍽️ Meals
               </button>
-              <button :class="{ active: activeCategory === 'Drink' }" @click="setCategory('Drink')">
-                🥤 Drink
+              <button
+                :class="{ active: activeCategory === 'Beverages' }"
+                @click="setCategory('Beverages')"
+              >
+                🥤 Beverages
               </button>
             </div>
 
@@ -430,24 +433,60 @@
       </div>
 
       <div v-if="activeAdminTab === 'manager'" class="manager-layout fade-in">
-        <div
-          class="manager-header-row"
-          style="display: flex; justify-content: space-between; align-items: center"
-        >
-          <h2>Menu Item Database</h2>
+        <div class="manager-header-row item-manager-header">
           <div>
+            <h2>Menu Item Database</h2>
+            <p class="manager-description">Keep the live survey menu accurate and easy to rate.</p>
+          </div>
+          <div class="manager-header-actions">
             <button
-              class="nav-btn orange-solid"
-              @click="openNewItemModal"
-              style="white-space: nowrap; padding: 10px 20px"
+              class="nav-btn danger-outline"
+              :disabled="menuItems.length === 0 || isDeletingAll"
+              @click="showDeleteAllModal = true"
             >
-              + Add New Item
+              {{ isDeletingAll ? 'Deleting...' : 'Delete All' }}
+            </button>
+            <button class="nav-btn orange-solid add-item-btn" @click="openNewItemModal">
+              <span aria-hidden="true">+</span> Add New Item
             </button>
           </div>
         </div>
 
+        <div class="manager-toolbar" role="search">
+          <label class="search-field">
+            <span aria-hidden="true">⌕</span>
+            <span class="sr-only">Search menu items</span>
+            <input
+              v-model="itemSearch"
+              type="search"
+              placeholder="Search by item name or image file"
+            />
+            <button
+              v-if="itemSearch"
+              type="button"
+              class="clear-search"
+              aria-label="Clear search"
+              @click="itemSearch = ''"
+            >
+              ×
+            </button>
+          </label>
+          <label class="manager-filter">
+            <span>Category</span>
+            <select v-model="itemCategoryFilter" aria-label="Filter menu items by category">
+              <option value="All">All categories</option>
+              <option v-for="category in allSubcategories" :key="category" :value="category">
+                {{ category }}
+              </option>
+            </select>
+          </label>
+          <span class="result-count"
+            >{{ filteredManagerItems.length }} of {{ menuItems.length }} items</span
+          >
+        </div>
+
         <div class="table-container">
-          <table class="data-table">
+          <table v-if="filteredManagerItems.length > 0" class="data-table">
             <thead>
               <tr>
                 <th>Image</th>
@@ -458,10 +497,12 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in menuItems" :key="item.id">
+              <tr v-for="item in filteredManagerItems" :key="item.id">
                 <td>
                   <div
                     class="table-thumb"
+                    role="img"
+                    :aria-label="`${item.name} image`"
                     :style="
                       item.imageName ? { backgroundImage: `url('${getImagePath(item)}')` } : {}
                     "
@@ -484,12 +525,31 @@
                 </td>
                 <td class="code-font">{{ item.imageName || 'No image attached' }}</td>
                 <td class="actions-col">
-                  <button class="action-btn edit-btn" @click="openEditModal(item)">✏️ Edit</button>
-                  <button class="action-btn del-btn" @click="confirmDeleteItem(item.id)">🗑️</button>
+                  <button class="action-btn edit-btn" @click="openEditModal(item)">Edit</button>
+                  <button class="action-btn del-btn" @click="confirmDeleteItem(item)">
+                    Delete
+                  </button>
                 </td>
               </tr>
             </tbody>
           </table>
+          <div v-else class="manager-empty">
+            <div class="empty-mark" aria-hidden="true">⌕</div>
+            <h3>No menu items found</h3>
+            <p>
+              {{
+                itemSearch
+                  ? `No items match “${itemSearch}”.`
+                  : 'Add your first menu item to make it available in the survey.'
+              }}
+            </p>
+            <button v-if="itemSearch" class="action-btn edit-btn" @click="itemSearch = ''">
+              Clear search
+            </button>
+            <button v-else class="nav-btn orange-solid" @click="openNewItemModal">
+              Add your first item
+            </button>
+          </div>
         </div>
       </div>
 
@@ -600,15 +660,38 @@
       </Teleport>
 
       <Teleport to="body">
-        <div v-if="showItemModal" class="modal-overlay">
-          <div class="modal-card form-card">
-            <h2>{{ editingItem.id ? 'Edit Menu Item' : 'Create New Item' }}</h2>
-            <p class="section-subtext mb-4">Updates will immediately reflect on the live survey.</p>
+        <div v-if="showItemModal" class="modal-overlay" @click.self="closeItemModal">
+          <div
+            class="modal-card form-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="item-modal-title"
+          >
+            <div class="modal-heading-row">
+              <div>
+                <span class="modal-kicker">{{ editingItem.id ? 'EDIT ITEM' : 'NEW ITEM' }}</span>
+                <h2 id="item-modal-title">
+                  {{ editingItem.id ? 'Edit Menu Item' : 'Create New Item' }}
+                </h2>
+              </div>
+              <button
+                type="button"
+                class="modal-close"
+                aria-label="Close item editor"
+                @click="closeItemModal"
+              >
+                ×
+              </button>
+            </div>
+            <p class="form-intro">Updates will immediately reflect on the live survey.</p>
 
             <form @submit.prevent="saveMenuItem" class="edit-form">
               <div class="form-group">
-                <label>Item Name</label>
+                <label for="menu-item-name"
+                  >Item Name <span class="required-mark">Required</span></label
+                >
                 <input
+                  id="menu-item-name"
                   type="text"
                   v-model="editingItem.name"
                   required
@@ -618,52 +701,93 @@
               </div>
 
               <div class="form-group">
-                <label>Category</label>
-                <select v-model="editingItem.category" required class="form-input">
-                  <optgroup label="🍴 Food Options">
-                    <option value="Meal">Meal</option>
-                    <option value="Bread">Bread</option>
-                    <option value="Pasta">Pasta</option>
-                    <option value="Waffle">Waffle</option>
+                <label for="menu-item-category"
+                  >Category <span class="required-mark">Required</span></label
+                >
+                <select
+                  id="menu-item-category"
+                  v-model="editingItem.category"
+                  required
+                  class="form-input"
+                >
+                  <optgroup label="🍽️ Meals">
+                    <option value="APPETIZER">APPETIZER</option>
+                    <option value="PASTA">PASTA</option>
+                    <option value="SANDWICH & WRAPS">SANDWICH & WRAPS</option>
+                    <option value="CHICKEN WINGS">CHICKEN WINGS</option>
+                    <option value="RICE MEAL">RICE MEAL</option>
                   </optgroup>
-                  <optgroup label="🥤 Drink Options">
-                    <option value="Coffee">Coffee</option>
-                    <option value="Non-coffee">Non-coffee</option>
-                    <option value="Frappe Series">Frappe Series</option>
-                    <option value="Float">Float</option>
-                    <option value="Milktea">Milktea</option>
-                    <option value="Sparkling Soda">Sparkling Soda</option>
-                    <option value="Fruit Tea">Fruit Tea</option>
+                  <optgroup label="🥤 Beverages">
+                    <option value="CLASSICS">CLASSICS</option>
+                    <option value="ICE-BLENDED">ICE-BLENDED</option>
+                    <option value="SPECIALTY">SPECIALTY</option>
+                    <option value="NON-COFFEE">NON-COFFEE</option>
+                    <option value="REFRESHER">REFRESHER</option>
+                    <option value="CEREMONIAL MATCHA">CEREMONIAL MATCHA</option>
                   </optgroup>
                 </select>
               </div>
 
               <div class="form-group">
-                <label>Cloudinary Image</label>
+                <label>Item image <span class="optional-mark">Optional</span></label>
+                <input
+                  ref="imageFileInput"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/jpg"
+                  class="sr-only"
+                  tabindex="-1"
+                  @change="onImageFileChange"
+                />
                 <div class="image-upload-box">
                   <div
-                    v-if="editingItem.imageName"
+                    v-if="imagePreviewUrl"
                     class="preview-thumb"
-                    :style="{
-                      backgroundImage: `url('${getImagePath({ imageName: editingItem.imageName })}')`,
-                    }"
+                    :style="{ backgroundImage: `url('${imagePreviewUrl}')` }"
                   ></div>
                   <div v-else class="preview-empty">🖼️</div>
                   <div class="upload-controls">
-                    <p class="code-font mb-2">{{ editingItem.imageName || 'No image selected' }}</p>
-                    <button type="button" class="f-btn pos-btn" @click="openCloudinaryWidget">
-                      ☁️ Upload / Change Photo
-                    </button>
+                    <p class="code-font mb-2">
+                      {{ editingItem.imageName ? editingItem.imageName : 'No image selected' }}
+                    </p>
+                    <p v-if="imageError" class="error-text" style="margin: 0 0 8px 0">
+                      {{ imageError }}
+                    </p>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap">
+                      <button
+                        type="button"
+                        class="f-btn pos-btn upload-btn"
+                        :disabled="isUploadingImage"
+                        @click="triggerImagePicker"
+                      >
+                        {{ isUploadingImage ? 'Uploading...' : 'Choose from device' }}
+                      </button>
+                      <button
+                        v-if="editingItem.imageName || imagePreviewUrl"
+                        type="button"
+                        class="f-btn"
+                        :disabled="isUploadingImage"
+                        @click="clearImage"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <p class="section-subtext" style="margin: 8px 0 0 0">
+                      PNG, JPG or WEBP up to 5MB
+                    </p>
                   </div>
                 </div>
               </div>
 
               <div class="modal-actions mt-4">
-                <button type="button" class="nav-btn secondary" @click="showItemModal = false">
+                <button type="button" class="nav-btn secondary" @click="closeItemModal">
                   Cancel
                 </button>
-                <button type="submit" class="nav-btn orange-solid" :disabled="isSavingItem">
-                  {{ isSavingItem ? 'Saving...' : '💾 Save Item' }}
+                <button
+                  type="submit"
+                  class="nav-btn orange-solid"
+                  :disabled="isSavingItem || isUploadingImage"
+                >
+                  {{ isSavingItem ? 'Saving...' : isUploadingImage ? 'Uploading image...' : '💾 Save Item' }}
                 </button>
               </div>
             </form>
@@ -814,22 +938,78 @@
       </Teleport>
 
       <Teleport to="body">
-        <div v-if="showDeleteItemModal" class="modal-overlay">
-          <div class="modal-card danger-card" style="text-align: center; max-width: 400px">
+        <div
+          v-if="showDeleteItemModal"
+          class="modal-overlay"
+          @click.self="showDeleteItemModal = false"
+        >
+          <div
+            class="modal-card danger-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-item-title"
+            style="text-align: center; max-width: 400px"
+          >
             <div class="modal-icon text-red" style="font-size: 3rem; margin-bottom: 15px">🚨</div>
-            <h2 style="color: #0f172a">Delete Menu Item?</h2>
+            <h2 id="delete-item-title" style="color: #0f172a">
+              Delete “{{ itemPendingDelete?.name }}”?
+            </h2>
             <p class="section-subtext mb-4">
-              Are you sure? This will permanently remove the item from your database and the live
-              survey!
+              This removes the item from the live survey. Existing responses are kept, but will no
+              longer be linked to this menu item.
             </p>
 
             <div class="modal-actions" style="justify-content: center; margin-top: 25px">
               <button class="nav-btn secondary" @click="showDeleteItemModal = false">Cancel</button>
-              <button class="nav-btn danger-solid" @click="executeDeleteItem">Yes, Delete</button>
+              <button
+                class="nav-btn danger-solid"
+                :disabled="isDeletingItem"
+                @click="executeDeleteItem"
+              >
+                {{ isDeletingItem ? 'Deleting...' : 'Delete item' }}
+              </button>
             </div>
           </div>
         </div>
       </Teleport>
+
+      <Teleport to="body">
+        <div
+          v-if="showDeleteAllModal"
+          class="modal-overlay"
+          @click.self="showDeleteAllModal = false"
+        >
+          <div
+            class="modal-card danger-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-all-title"
+            style="text-align: center; max-width: 460px"
+          >
+            <div class="modal-icon text-red" style="font-size: 3rem; margin-bottom: 15px">🚨</div>
+            <h2 id="delete-all-title" style="color: #0f172a">Delete all menu items?</h2>
+            <p class="section-subtext mb-4">
+              This will permanently remove <strong>{{ menuItems.length }} item{{ menuItems.length === 1 ? '' : 's' }}</strong>
+              from the menu manager and the live survey. Existing responses are kept but will no longer be linked to these items. This cannot be undone.
+            </p>
+            <div class="modal-actions" style="justify-content: center; margin-top: 25px">
+              <button class="nav-btn secondary" @click="showDeleteAllModal = false">Cancel</button>
+              <button
+                class="nav-btn danger-solid"
+                :disabled="isDeletingAll"
+                @click="executeDeleteAllItems"
+              >
+                {{ isDeletingAll ? 'Deleting...' : `Delete all (${menuItems.length})` }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
+
+      <div v-if="toastMessage" class="admin-toast" :class="`toast-${toastType}`" role="status">
+        <span aria-hidden="true">{{ toastType === 'success' ? '✓' : '!' }}</span
+        >{{ toastMessage }}
+      </div>
 
       <Teleport to="body">
         <div v-if="showDeleteOptionModal" class="modal-overlay">
@@ -860,7 +1040,6 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import axios from 'axios'
 import {
-  CLOUDINARY_FOLDER,
   DRINK_SUBCATEGORIES,
   FOOD_SUBCATEGORIES,
   QUICK_EMOJIS,
@@ -924,7 +1103,7 @@ const menuItems = ref<any[]>([])
 const analyticsData = ref<Record<string, any>>({})
 const isLoading = ref(true)
 
-const activeCategory = ref('Food')
+const activeCategory = ref('Meals')
 const activeSubcategory = ref('All')
 const selectedItemId = ref<number | null>(null)
 
@@ -938,19 +1117,37 @@ const isDrink = isDrinkCategory
 const getPillClass = getCategoryPillClass
 
 const currentSubcategories = computed(() => {
-  return activeCategory.value === 'Food' ? foodSubcategories : drinkSubcategories
+  return activeCategory.value === 'Meals' ? foodSubcategories : drinkSubcategories
 })
+
+const allSubcategories = [...foodSubcategories, ...drinkSubcategories]
+const itemSearch = ref('')
+const itemCategoryFilter = ref('All')
+const toastMessage = ref('')
+const toastType = ref<'success' | 'error'>('success')
+let toastTimer: ReturnType<typeof setTimeout> | null = null
 
 const filteredMenuItems = computed(() => {
   return menuItems.value.filter((item) => {
     const matchesTopLevel =
-      activeCategory.value === 'Food' ? isFood(item.category) : isDrink(item.category)
+      activeCategory.value === 'Meals' ? isFood(item.category) : isDrink(item.category)
     if (!matchesTopLevel) return false
-    return activeSubcategory.value === 'All' || item.category === activeSubcategory.value;
+    return activeSubcategory.value === 'All' || item.category === activeSubcategory.value
   })
 })
 
 const menuItem = computed(() => menuItems.value.find((i) => i.id === selectedItemId.value) || null)
+
+const filteredManagerItems = computed(() => {
+  const query = itemSearch.value.trim().toLowerCase()
+  return menuItems.value.filter((item) => {
+    const matchesCategory =
+      itemCategoryFilter.value === 'All' || item.category === itemCategoryFilter.value
+    const matchesSearch =
+      !query || `${item.name} ${item.imageName || ''}`.toLowerCase().includes(query)
+    return matchesCategory && matchesSearch
+  })
+})
 
 const fetchMenuItems = async () => {
   try {
@@ -1014,9 +1211,9 @@ const radioQuestions = computed(() => {
   )
 
   rQuestions.forEach((q) => {
-    const analyticsKey  = String(q.id)
+    const analyticsKey = String(q.id)
     let ans = analyticsData.value[analyticsKey]
-    if(ans) {
+    if (ans) {
       if (!Array.isArray(ans)) {
         ans = Object.keys(ans).map((key) => ({ optionLabel: key, voteCount: ans[key] }))
       }
@@ -1026,7 +1223,7 @@ const radioQuestions = computed(() => {
   })
 
   return result
-});
+})
 
 // 🛡️ BULLETPROOF TEXT QUESTIONS (Dictionary Version)
 const textQuestions = computed(() => {
@@ -1230,54 +1427,126 @@ const showAddOptionModal = ref(false)
 const isSavingOption = ref(false)
 const showDeleteQuestionModal = ref(false)
 const showDeleteItemModal = ref(false)
+const showDeleteAllModal = ref(false)
+const isDeletingItem = ref(false)
+const isDeletingAll = ref(false)
 const questionToDelete = ref<number | null>(null)
 const itemToDelete = ref<number | null>(null)
+const itemEditSnapshot = ref('')
 
 const editingItem = ref({
   id: null as number | null,
   name: '',
-  category: 'Food',
+  category: 'APPETIZER',
   imageName: '',
 })
 
+const imageFileInput = ref<HTMLInputElement | null>(null)
+const isUploadingImage = ref(false)
+const imageError = ref('')
+const localPreviewUrl = ref<string | null>(null)
+
+const imagePreviewUrl = computed(() => {
+  if (localPreviewUrl.value) return localPreviewUrl.value
+  if (editingItem.value.imageName) return getImagePath({ imageName: editingItem.value.imageName })
+  return ''
+})
+
+const triggerImagePicker = () => {
+  imageError.value = ''
+  imageFileInput.value?.click()
+}
+
+const clearImage = () => {
+  editingItem.value.imageName = ''
+  imageError.value = ''
+  if (localPreviewUrl.value) {
+    URL.revokeObjectURL(localPreviewUrl.value)
+    localPreviewUrl.value = null
+  }
+  if (imageFileInput.value) imageFileInput.value.value = ''
+}
+
+const onImageFileChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  imageError.value = ''
+  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg']
+  if (!allowed.includes(file.type)) {
+    imageError.value = 'Use PNG, JPG or WEBP.'
+    input.value = ''
+    return
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    imageError.value = 'File too large (max 5MB).'
+    input.value = ''
+    return
+  }
+
+  if (localPreviewUrl.value) URL.revokeObjectURL(localPreviewUrl.value)
+  localPreviewUrl.value = URL.createObjectURL(file)
+
+  isUploadingImage.value = true
+  try {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await axios.post('/api/admin/menu-items/upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    editingItem.value.imageName = res.data.imageName || res.data.url || ''
+    // keep preview, but now backed by persisted file; clear object URL will be replaced by getImagePath after next edit
+  } catch (e: any) {
+    imageError.value = e?.response?.data?.error || 'Upload failed. Try again.'
+    if (localPreviewUrl.value) {
+      URL.revokeObjectURL(localPreviewUrl.value)
+      localPreviewUrl.value = null
+    }
+  } finally {
+    isUploadingImage.value = false
+    input.value = ''
+  }
+}
+
 const openNewItemModal = () => {
-  editingItem.value = { id: null, name: '', category: 'Food', imageName: '' }
+  clearImage()
+  editingItem.value = { id: null, name: '', category: 'APPETIZER', imageName: '' }
+  itemEditSnapshot.value = JSON.stringify(editingItem.value)
   showItemModal.value = true
 }
 
 const openEditModal = (item: any) => {
+  clearImage()
   editingItem.value = { ...item }
+  itemEditSnapshot.value = JSON.stringify(editingItem.value)
   showItemModal.value = true
 }
 
-const openCloudinaryWidget = () => {
-  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
-  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
-  if (!cloudName || !uploadPreset) {
-    alert('Cloudinary environment variables are missing.')
+const itemPendingDelete = computed(
+  () => menuItems.value.find((item) => item.id === itemToDelete.value) || null,
+)
+
+const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+  toastMessage.value = message
+  toastType.value = type
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => {
+    toastMessage.value = ''
+  }, 3500)
+}
+
+const closeItemModal = () => {
+  const hasUnsavedChanges = JSON.stringify(editingItem.value) !== itemEditSnapshot.value
+  if (hasUnsavedChanges && !window.confirm('Discard your unsaved changes?')) {
     return
   }
-  const widget = window.cloudinary.createUploadWidget(
-    {
-      cloudName,
-      uploadPreset,
-      folder: CLOUDINARY_FOLDER,
-      multiple: false,
-      clientAllowedFormats: ['webp', 'png', 'jpeg', 'jpg'],
-    },
-    (error: any, result: any) => {
-      if (!error && result && result.event === 'success') {
-        const publicId = result.info.public_id as string
-        const folderPrefix = CLOUDINARY_FOLDER.replace(/\/+$/, '')
-        if(folderPrefix && publicId.startsWith(`${folderPrefix}/`)) {
-          editingItem.value.imageName = publicId.slice(folderPrefix.length + 1)
-      } else {
-        editingItem.value.imageName = publicId
-        }
-      }
-    },
-  )
-  widget.open()
+  if (localPreviewUrl.value) {
+    URL.revokeObjectURL(localPreviewUrl.value)
+    localPreviewUrl.value = null
+  }
+  imageError.value = ''
+  showItemModal.value = false
 }
 
 const saveMenuItem = async () => {
@@ -1290,10 +1559,15 @@ const saveMenuItem = async () => {
     }
 
     await fetchMenuItems()
+    if (localPreviewUrl.value) {
+      URL.revokeObjectURL(localPreviewUrl.value)
+      localPreviewUrl.value = null
+    }
     showItemModal.value = false
+    showToast(editingItem.value.id ? 'Menu item updated.' : 'Menu item added.')
   } catch (error) {
     console.error('Failed to save item:', error)
-    alert('Error saving item. Check console.')
+    showToast('Could not save the item. Please try again.', 'error')
   } finally {
     isSavingItem.value = false
   }
@@ -1338,25 +1612,61 @@ const saveQuestion = async () => {
   }
 }
 
-const confirmDeleteItem = (id: number) => {
-  itemToDelete.value = id // Remember which item we are deleting
-  showDeleteItemModal.value = true // Open the custom modal
+const confirmDeleteItem = (item: any) => {
+  itemToDelete.value = item.id
+  showDeleteItemModal.value = true
 }
 
 const executeDeleteItem = async () => {
   if (!itemToDelete.value) return
 
+  isDeletingItem.value = true
   try {
+    const deletedName = itemPendingDelete.value?.name || 'Menu item'
     await axios.delete(`/api/admin/menu-items/${itemToDelete.value}`)
-    // 👇 Note: Ensure this matches the function name you use to load your table data!
-    // It might be called fetchItems(), loadMenu(), etc.
     await fetchMenuItems()
 
-    showDeleteItemModal.value = false // Close modal
-    itemToDelete.value = null // Clear memory
+    showDeleteItemModal.value = false
+    itemToDelete.value = null
+    showToast(`${deletedName} deleted.`)
   } catch (error) {
     console.error('Failed to delete menu item:', error)
-    alert('Could not delete menu item.')
+    showToast('Could not delete the menu item. Please try again.', 'error')
+  } finally {
+    isDeletingItem.value = false
+  }
+}
+
+const executeDeleteAllItems = async () => {
+  if (menuItems.value.length === 0) return
+  isDeletingAll.value = true
+  try {
+    await axios.delete('/api/admin/menu-items', {
+      headers: {
+        Authorization: axios.defaults.headers.common['Authorization'] as string,
+      },
+      // custom flag consumed by the response interceptor to skip the auth redirect
+      skipAuthRedirect: true,
+    } as any)
+    await fetchMenuItems()
+    showDeleteAllModal.value = false
+    itemToDelete.value = null
+    selectedItemId.value = null
+    analyticsData.value = {}
+    showToast(`Deleted all menu items.`)
+  } catch (error: any) {
+    console.error('Failed to delete all menu items:', error, error?.response?.data)
+    const status = error?.response?.status
+    const msg = error?.response?.data?.error || error?.response?.data?.message || (typeof error?.response?.data === 'string' ? error?.response?.data : null)
+    if (status === 401 || status === 403) {
+      showToast('Session expired. Please log in again.', 'error')
+    } else if (msg) {
+      showToast(msg, 'error')
+    } else {
+      showToast(`Delete failed (${status ?? 'network error'}). Check console for details.`, 'error')
+    }
+  } finally {
+    isDeletingAll.value = false
   }
 }
 
@@ -1383,7 +1693,7 @@ const quickEmojis = QUICK_EMOJIS
 
 const optionForm = ref({
   questionId: null as number | null,
-  label:'',
+  label: '',
   icon: '',
 })
 
@@ -1438,7 +1748,14 @@ onMounted(() => {
   securityInterceptor = axios.interceptors.response.use(
     (response) => response,
     (error) => {
-      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      const url = (error.config?.url as string) || ''
+      const isDeleteAll =
+        url === '/api/admin/menu-items' && (error.config?.method as string)?.toLowerCase() === 'delete'
+      const skipRedirect =
+        (error.config as any)?.skipAuthRedirect === true ||
+        error.config?.headers?.['X-Skip-Auth-Redirect'] === 'true' ||
+        isDeleteAll
+      if (!skipRedirect && error.response && (error.response.status === 401 || error.response.status === 403)) {
         console.warn('Session expired! Returning to login screen...')
         adminToken.value = null
 
@@ -1453,6 +1770,10 @@ onMounted(() => {
 onUnmounted(() => {
   if (securityInterceptor != null) {
     axios.interceptors.response.eject(securityInterceptor)
+  }
+  if (localPreviewUrl.value) {
+    URL.revokeObjectURL(localPreviewUrl.value)
+    localPreviewUrl.value = null
   }
 })
 </script>
@@ -1833,35 +2154,22 @@ onUnmounted(() => {
   border-color: #e2e8f0;
   color: #475569;
 }
-.pill-meal {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #b91c1c;
+.pill-appetizer {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
 }
-.pill-meal:hover {
-  background: #fee2e2;
+.pill-appetizer:hover {
+  background: #ffedd5;
 }
-.pill-meal.active {
-  background: #fca5a5;
-  color: #7f1d1d;
-  border-color: #f87171;
-}
-.pill-bread {
-  background: #fdf5e6;
-  border-color: #ebd5b3;
-  color: #8b5a2b;
-}
-.pill-bread:hover {
-  background: #faebd7;
-}
-.pill-bread.active {
-  background: #deb887;
-  color: #5c3317;
-  border-color: #cdaa7d;
+.pill-appetizer.active {
+  background: #fdba74;
+  color: #7c2d12;
+  border-color: #f97316;
 }
 .pill-pasta {
   background: #fefce8;
-  border-color: #fde047;
+  border-color: #fde68a;
   color: #854d0e;
 }
 .pill-pasta:hover {
@@ -1872,36 +2180,88 @@ onUnmounted(() => {
   color: #422006;
   border-color: #eab308;
 }
-.pill-waffle {
-  background: #fff7ed;
-  border-color: #fed7aa;
-  color: #c2410c;
+.pill-sandwich {
+  background: #fdf5e6;
+  border-color: #ebd5b3;
+  color: #7c2d12;
 }
-.pill-waffle:hover {
-  background: #ffedd5;
+.pill-sandwich:hover {
+  background: #faebd7;
 }
-.pill-waffle.active {
-  background: #fdba74;
-  color: #9a3412;
-  border-color: #f97316;
+.pill-sandwich.active {
+  background: #deb887;
+  color: #5c3317;
+  border-color: #cdaa7d;
 }
-.pill-coffee {
+.pill-wings {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+.pill-wings:hover {
+  background: #fee2e2;
+}
+.pill-wings.active {
+  background: #fca5a5;
+  color: #7f1d1d;
+  border-color: #f87171;
+}
+.pill-ricemeal {
   background: #fffbeb;
   border-color: #fde68a;
-  color: #b45309;
+  color: #92400e;
 }
-.pill-coffee:hover {
+.pill-ricemeal:hover {
   background: #fef3c7;
 }
-.pill-coffee.active {
+.pill-ricemeal.active {
   background: #fcd34d;
   color: #78350f;
   border-color: #f59e0b;
 }
+.pill-classics {
+  background: #f5f3ff;
+  border-color: #ddd6fe;
+  color: #5b21b6;
+}
+.pill-classics:hover {
+  background: #ede9fe;
+}
+.pill-classics.active {
+  background: #c4b5fd;
+  color: #5b21b6;
+  border-color: #8b5cf6;
+}
+.pill-iceblended {
+  background: #ecfeff;
+  border-color: #a5f3fc;
+  color: #155e75;
+}
+.pill-iceblended:hover {
+  background: #cffafe;
+}
+.pill-iceblended.active {
+  background: #67e8f9;
+  color: #164e63;
+  border-color: #06b6d4;
+}
+.pill-specialty {
+  background: #fdf2f8;
+  border-color: #fbcfe8;
+  color: #9d174d;
+}
+.pill-specialty:hover {
+  background: #fce7f3;
+}
+.pill-specialty.active {
+  background: #f9a8d4;
+  color: #831843;
+  border-color: #f472b6;
+}
 .pill-noncoffee {
   background: #f0f9ff;
   border-color: #bae6fd;
-  color: #0284c7;
+  color: #0c4a6e;
 }
 .pill-noncoffee:hover {
   background: #e0f2fe;
@@ -1911,70 +2271,31 @@ onUnmounted(() => {
   color: #0369a1;
   border-color: #0ea5e9;
 }
-.pill-frappe {
-  background: #f5f3ff;
-  border-color: #ddd6fe;
-  color: #7c3aed;
-}
-.pill-frappe:hover {
-  background: #ede9fe;
-}
-.pill-frappe.active {
-  background: #c4b5fd;
-  color: #5b21b6;
-  border-color: #8b5cf6;
-}
-.pill-float {
+.pill-refresher {
   background: #ecfdf5;
   border-color: #a7f3d0;
-  color: #059669;
+  color: #065f46;
 }
-.pill-float:hover {
+.pill-refresher:hover {
   background: #d1fae5;
 }
-.pill-float.active {
+.pill-refresher.active {
   background: #6ee7b7;
   color: #064e3b;
   border-color: #10b981;
 }
-.pill-soda {
-  background: #ecfeff;
-  border-color: #a5f3fc;
-  color: #0891b2;
+.pill-matcha {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #14532d;
 }
-.pill-soda:hover {
-  background: #cffafe;
+.pill-matcha:hover {
+  background: #dcfce7;
 }
-.pill-soda.active {
-  background: #67e8f9;
-  color: #164e63;
-  border-color: #06b6d4;
-}
-.pill-milktea {
-  background: #fdf4ff;
-  border-color: #f5d0fe;
-  color: #c026d3;
-}
-.pill-milktea:hover {
-  background: #fae8ff;
-}
-.pill-milktea.active {
-  background: #f0abfc;
-  color: #86198f;
-  border-color: #d946ef;
-}
-.pill-fruittea {
-  background: #fdf2f8;
-  border-color: #fbcfe8;
-  color: #be185d;
-}
-.pill-fruittea:hover {
-  background: #fce7f3;
-}
-.pill-fruittea.active {
-  background: #f9a8d4;
-  color: #831843;
-  border-color: #f472b6;
+.pill-matcha.active {
+  background: #86efac;
+  color: #14532d;
+  border-color: #22c55e;
 }
 
 .item-tabs-container {
@@ -2851,6 +3172,156 @@ onUnmounted(() => {
   font-size: 1.4rem;
   color: #0f172a;
 }
+.item-manager-header {
+  padding: 28px 30px;
+}
+.manager-description {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+.add-item-btn {
+  min-height: 44px;
+  white-space: nowrap;
+}
+.add-item-btn span {
+  font-size: 1.25rem;
+  line-height: 0;
+  vertical-align: -1px;
+  margin-right: 5px;
+}
+.manager-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.danger-outline {
+  background: #fff;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+.danger-outline:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+.danger-outline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.danger-solid {
+  background: #dc2626;
+  color: #fff;
+  border: 1px solid #dc2626;
+}
+.danger-solid:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+.danger-solid:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.manager-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 30px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
+}
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  max-width: 520px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  color: #94a3b8;
+  background: #f8fafc;
+}
+.search-field:focus-within {
+  border-color: #f97316;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+}
+.search-field input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #0f172a;
+  font: inherit;
+}
+.clear-search,
+.modal-close {
+  border: 0;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+}
+.clear-search {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+.clear-search:hover,
+.modal-close:hover {
+  color: #0f172a;
+}
+.manager-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.manager-filter select {
+  min-height: 44px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  padding: 0 30px 0 12px;
+  color: #334155;
+  background: #fff;
+  font: inherit;
+}
+.result-count {
+  margin-left: auto;
+  color: #94a3b8;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.manager-empty {
+  padding: 70px 20px;
+  text-align: center;
+  color: #64748b;
+}
+.empty-mark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: #fff7ed;
+  color: #f97316;
+  font-size: 1.7rem;
+}
+.manager-empty h3 {
+  margin: 0 0 5px;
+  color: #0f172a;
+  font-size: 1.1rem;
+}
+.manager-empty p {
+  margin: 0 auto 18px;
+  max-width: 44ch;
+  font-size: 0.9rem;
+}
 .orange-solid {
   background: #f97316;
   color: white;
@@ -2912,7 +3383,8 @@ onUnmounted(() => {
 .action-btn {
   background: white;
   border: 1px solid #cbd5e1;
-  padding: 6px 12px;
+  min-height: 38px;
+  padding: 7px 13px;
   border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 600;
@@ -2934,11 +3406,182 @@ onUnmounted(() => {
   color: white;
   border-color: #ef4444;
 }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 
 /* Form Modal Styles */
 .form-card {
-  max-width: 550px;
+  max-width: 560px;
   text-align: left;
+}
+.modal-heading-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+.modal-kicker {
+  display: block;
+  margin-bottom: 6px;
+  color: #f97316;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+.modal-close {
+  padding: 0 2px;
+  font-size: 1.7rem;
+  line-height: 1;
+}
+.form-intro {
+  margin: -5px 0 24px !important;
+  font-size: 0.9rem !important;
+}
+.required-mark,
+.optional-mark {
+  margin-left: 5px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+.required-mark {
+  color: #f97316;
+}
+.optional-mark {
+  color: #94a3b8;
+}
+.upload-btn {
+  min-height: 40px;
+}
+.admin-toast {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(380px, calc(100vw - 40px));
+  padding: 13px 17px;
+  border-radius: 10px;
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
+  animation: toastIn 0.2s ease-out;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.toast-success {
+  background: #15803d;
+}
+.toast-error {
+  background: #b91c1c;
+}
+.admin-toast > span {
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+}
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 720px) {
+  .item-manager-header,
+  .manager-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .item-manager-header {
+    gap: 18px;
+  }
+  .manager-header-actions {
+    flex-direction: column;
+  }
+  .manager-header-actions .nav-btn {
+    width: 100%;
+  }
+  .add-item-btn {
+    width: 100%;
+  }
+  .manager-toolbar {
+    padding: 16px 20px;
+  }
+  .search-field {
+    max-width: none;
+  }
+  .manager-filter {
+    justify-content: space-between;
+  }
+  .manager-filter select {
+    flex: 1;
+  }
+  .result-count {
+    margin-left: 0;
+  }
+  .data-table thead {
+    display: none;
+  }
+  .data-table,
+  .data-table tbody,
+  .data-table tr,
+  .data-table td {
+    display: block;
+    width: 100%;
+  }
+  .data-table tr {
+    position: relative;
+    padding: 18px 20px 18px 86px;
+    min-height: 94px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .data-table td {
+    padding: 2px 0;
+    border: 0;
+  }
+  .data-table td:first-child {
+    position: absolute;
+    left: 20px;
+    top: 20px;
+    width: auto;
+  }
+  .data-table td:nth-child(3) {
+    margin-top: 5px;
+  }
+  .data-table td:nth-child(4) {
+    display: none;
+  }
+  .data-table .actions-col {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    text-align: left;
+  }
+  .data-table .action-btn {
+    margin-left: 0;
+    flex: 0 0 auto;
+  }
+  .admin-toast {
+    right: 20px;
+    bottom: 20px;
+  }
 }
 .edit-form {
   display: flex;

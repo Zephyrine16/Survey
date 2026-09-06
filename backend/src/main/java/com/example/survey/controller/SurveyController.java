@@ -237,15 +237,6 @@ public class SurveyController {
         return ResponseEntity.ok(savedItem);
     }
 
-    @DeleteMapping("/api/admin/menu-items/{id}")
-    public ResponseEntity<Void> deleteMenuItem(@PathVariable Long id) {
-        if (!menuItemRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-
-        menuItemRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
-    }
 
     // ==========================================
     // 6. ADMIN TOOLS: QUESTION & OPTION MANAGEMENT

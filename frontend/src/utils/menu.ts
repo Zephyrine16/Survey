@@ -1,7 +1,6 @@
 import {
   CATEGORY_PILL_CLASSES,
   CATEGORY_THEME_STYLES,
-  CLOUDINARY_FOLDER,
   DEFAULT_CATEGORY_STYLE,
   DRINK_SUBCATEGORIES,
   FOOD_SUBCATEGORIES,
@@ -18,6 +17,10 @@ export const isFoodCategory = (category?: string) =>
 export const isDrinkCategory = (category?: string) =>
   DRINK_CATEGORY_SET.has(normalizeCategory(category))
 
+// Aliases that match the business language (Meals / Beverages)
+export const isMealCategory = isFoodCategory
+export const isBeverageCategory = isDrinkCategory
+
 export const getCategoryPillClass = (category?: string) =>
   CATEGORY_PILL_CLASSES[normalizeCategory(category)] || 'pill-default'
 
@@ -30,23 +33,20 @@ export const getCategoryStyles = (category?: string) => {
 export const getImagePath = (item?: { imageName?: string | null }) => {
   const imageName = item?.imageName?.trim()
   if (!imageName) return ''
-  if (/^https?:\/\//i.test(imageName)) {
+  if (/^(https?:\/\/|data:|blob:)/i.test(imageName)) {
     return imageName
   }
-
-  const cloudName = (import.meta.env.VITE_CLOUDINARY_CLOUD_NAME ?? '').trim()
-  const trimmedImageName = imageName.replace(/^\/+/, '')
-  const imagePath = trimmedImageName.includes('/')
-    ? trimmedImageName
-    : `${CLOUDINARY_FOLDER}/${trimmedImageName}`
-  const safeImagePath = imagePath
-    .split('/')
-    .map((segment) => encodeURIComponent(segment))
-    .join('/')
-
-  if (!cloudName) {
-    return `/${safeImagePath}`
+  if (imageName.startsWith('/')) {
+    const base = (import.meta.env.VITE_API_BASE_URL ?? '').toString().replace(/\/$/, '')
+    if (/^\/uploads\//i.test(imageName) && base) {
+      return `${base}${imageName}`
+    }
+    return imageName
   }
-
-  return `https://res.cloudinary.com/${cloudName}/image/upload/${safeImagePath}`
+  const base = (import.meta.env.VITE_API_BASE_URL ?? '').toString().replace(/\/$/, '')
+  const encoded = encodeURIComponent(imageName)
+  if (base) {
+    return `${base}/uploads/${encoded}`
+  }
+  return `/uploads/${encoded}`
 }

@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
@@ -23,11 +24,13 @@ import java.util.List;
 @NullMarked
 public class MenuSeeder implements CommandLineRunner {
     private static final Logger log = LoggerFactory.getLogger(MenuSeeder.class);
+    private static final String SEED_KEY = "menu_items";
 
     private final MenuItemRepository menuItemRepository;
     private final ObjectMapper objectMapper;
     private final ResourceLoader resourceLoader;
     private final SeederProperties seederProperties;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     public void run(String... args) throws Exception {
@@ -36,26 +39,39 @@ public class MenuSeeder implements CommandLineRunner {
             return;
         }
 
-        if(menuItemRepository.count() == 0) {
-            List<SeedMenuItem> seedItems = loadSeedMenuItems();
-            if(seedItems.isEmpty()) {
-                log.warn("No seed menu items found at {}", seederProperties.getMenuItemsPath());
-                return;
-            }
-
-            List<MenuItem> fullMenu = new ArrayList<>();
-            for(SeedMenuItem seedItem : seedItems) {
-                if(seedItem.name().isBlank() || seedItem.category().isBlank()) {
-                    continue;
-                }
-                fullMenu.add(createItem(seedItem.name().trim(), seedItem.category().trim()));
-            }
-
-            if(!fullMenu.isEmpty()) {
-                menuItemRepository.saveAll(fullMenu);
-                log.info("Successfully added {} menu items to the database.", fullMenu.size());
-            }
+        // Only seed once — if a seed_metadata row already exists for "menu_items"
+        // the admin may have intentionally deleted items; we must not re-add them.
+        Integer alreadySeeded = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM seed_metadata WHERE seed_key = ?",
+                Integer.class, SEED_KEY);
+        if (alreadySeeded != null && alreadySeeded > 0) {
+            log.info("Menu items already seeded previously. Skipping.");
+            return;
         }
+
+        List<SeedMenuItem> seedItems = loadSeedMenuItems();
+        if(seedItems.isEmpty()) {
+            log.warn("No seed menu items found at {}", seederProperties.getMenuItemsPath());
+            return;
+        }
+
+        List<MenuItem> fullMenu = new ArrayList<>();
+        for(SeedMenuItem seedItem : seedItems) {
+            if(seedItem.name().isBlank() || seedItem.category().isBlank()) {
+                continue;
+            }
+            fullMenu.add(createItem(seedItem.name().trim(), seedItem.category().trim()));
+        }
+
+        if(!fullMenu.isEmpty()) {
+            menuItemRepository.saveAll(fullMenu);
+            log.info("Successfully added {} menu items to the database.", fullMenu.size());
+        }
+
+        // Mark seeding as done so it never repeats
+        jdbcTemplate.update(
+                "INSERT INTO seed_metadata (seed_key) VALUES (?) ON CONFLICT (seed_key) DO NOTHING",
+                SEED_KEY);
     }
 
     private MenuItem createItem(String name, String category) {
