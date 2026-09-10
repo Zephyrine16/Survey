@@ -93,7 +93,8 @@ class AnalyticsServiceTest {
         DemographicAnalyticsDTO demographics = analyticsService.getDemographics();
 
         assertNotNull(demographics);
-        assertEquals(25L, demographics.getTotalParticipants());
+        assertEquals(18L, demographics.getTotalParticipants());
+        assertEquals(25L, demographics.getGlobalParticipants());
         assertEquals(12L, demographics.getAgeGroupCounts().get("21–23"));
         assertEquals(10L, demographics.getDiningFrequencyCounts().get("Once a week"));
     }

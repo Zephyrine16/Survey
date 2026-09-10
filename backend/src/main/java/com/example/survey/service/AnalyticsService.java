@@ -285,17 +285,37 @@ public class AnalyticsService {
             String response = row[1] == null ? "" : row[1].toString();
             Long count = asLong(row[2]);
 
+            if (response.isBlank()) {
+                continue;
+            }
+
+            // Unescape HTML entities (e.g. "&#8211;" or "&ndash;") so counts merge properly
+            String cleanResponse = org.springframework.web.util.HtmlUtils.htmlUnescape(response).trim();
+
             if (qText.contains("age")) {
-                ageGroupCounts.put(response, count);
+                ageGroupCounts.merge(cleanResponse, count, Long::sum);
             } else if (qText.contains("dine") || qText.contains("frequency") || qText.contains("often")) {
-                diningFreqCounts.put(response, count);
+                diningFreqCounts.merge(cleanResponse, count, Long::sum);
             }
         }
 
-        Long totalParticipants = answerRepository.countTotalParticipants();
+        // Derive totalParticipants from the demographic answers themselves.
+        // Using the age-group count (or dining-freq count as fallback) gives the true
+        // number of respondents who completed Section 1, so that the percentage bars
+        // in the dashboard always add up to 100 % and are not diluted by participants
+        // who only submitted menu-item answers without filling in demographics.
+        long ageGroupTotal = ageGroupCounts.values().stream().mapToLong(Long::longValue).sum();
+        long diningFreqTotal = diningFreqCounts.values().stream().mapToLong(Long::longValue).sum();
+        long demographicParticipants = Math.max(ageGroupTotal, diningFreqTotal);
+
+        // Fall back to the global distinct-user count only when no demographic
+        // answers exist at all (e.g. fresh database with no submissions yet).
+        long globalParticipants = Optional.ofNullable(answerRepository.countTotalParticipants()).orElse(0L);
+        long totalParticipants = demographicParticipants > 0 ? demographicParticipants : globalParticipants;
 
         return DemographicAnalyticsDTO.builder()
-                .totalParticipants(totalParticipants != null ? totalParticipants : 0L)
+                .globalParticipants(globalParticipants)
+                .totalParticipants(totalParticipants)
                 .ageGroupCounts(ageGroupCounts)
                 .diningFrequencyCounts(diningFreqCounts)
                 .build();

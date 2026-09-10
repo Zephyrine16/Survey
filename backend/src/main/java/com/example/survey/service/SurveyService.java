@@ -78,7 +78,11 @@ public class SurveyService {
             return textResponse;
         }
 
-        String cleanText = HtmlUtils.htmlEscape(textResponse);
+        // Use UTF-8 so that Unicode characters like the en-dash in age-group labels
+        // ("18–20", "21–23", …) are preserved as-is. The default ISO-8859-1 encoding
+        // would escape U+2013 (–) to "&#8211;", making DB keys mismatch the lookup
+        // strings in the analytics dashboard and causing age-group counts to show 0.
+        String cleanText = HtmlUtils.htmlEscape(textResponse, "UTF-8");
         int maxLength = surveyProperties.getTextResponseMaxLength();
         if(maxLength > 0 && cleanText.length() > maxLength) {
             return cleanText.substring(0, maxLength);
