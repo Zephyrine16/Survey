@@ -5,6 +5,7 @@ on:
     branches: [ main ] # Runs CI and deploys when pushing to main
   pull_request:
     branches: [ main ] # Runs CI checks for PRs targeting main (deploy step skipped)
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
 
 jobs:
   # --- BACKEND CI/CD ---
@@ -20,6 +21,7 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: 'maven'
+          cache-dependency-path: backend/pom.xml
 
       - name: Make Maven wrapper executable
         run: |
@@ -75,6 +77,8 @@ jobs:
           npx vitest run
 
       - name: Build Vue Production Bundle
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL || 'https://api.survey.example.com' }}
         run: |
           cd frontend
           npm run build
