@@ -83,14 +83,14 @@
         <section class="kpi-grid">
           <div class="new-kpi-card global-card">
             <div class="scope-label"><span class="scope-dot blue-dot"></span> GLOBAL</div>
-            <h2 class="kpi-val">{{ demographics.totalParticipants || baselineCount }}</h2>
+            <h2 class="kpi-val">{{ demographics.globalParticipants || baselineCount }}</h2>
             <p class="kpi-name">PARTICIPANTS</p>
             <p class="kpi-desc">
               Target {{ SURVEY_BASELINE_TARGET }} •
               {{
-                (demographics.totalParticipants || baselineCount) >= SURVEY_BASELINE_TARGET
+                (demographics.globalParticipants || baselineCount) >= SURVEY_BASELINE_TARGET
                   ? 'Goal Reached!'
-                  : `Need ${SURVEY_BASELINE_TARGET - (demographics.totalParticipants || baselineCount)} more`
+                  : `Need ${SURVEY_BASELINE_TARGET - (demographics.globalParticipants || baselineCount)} more`
               }}
             </p>
           </div>
@@ -99,7 +99,7 @@
             <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
             <h2 class="kpi-val">{{ itemTotal }}</h2>
             <p class="kpi-name">TOTAL RESPONSES</p>
-            <p class="kpi-desc">For {{ menuItem?.name || 'selected item' }}</p>
+            <p class="kpi-desc">{{ itemCoverageLabel }}</p>
           </div>
 
           <div class="new-kpi-card item-card">
@@ -111,31 +111,16 @@
 
           <div class="new-kpi-card item-card">
             <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
+            <h2 class="kpi-val">{{ sentiment.neuPct }}%</h2>
+            <p class="kpi-name">NEUTRAL</p>
+            <p class="kpi-desc">Rating 3 (Moderate)</p>
+          </div>
+
+          <div class="new-kpi-card item-card">
+            <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
             <h2 class="kpi-val">{{ sentiment.negPct }}%</h2>
             <p class="kpi-name">NEEDS ATTENTION</p>
             <p class="kpi-desc">Ratings 1-2 (Low suitability)</p>
-          </div>
-
-          <div class="new-kpi-card item-card">
-            <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
-            <div class="kpi-val-wrapper">
-              <span class="keyword-pill" style="text-transform: capitalize">
-                {{ displayMoodData.topRowLabel ? `${displayMoodData.topRowLabel} (${displayMoodData.topRowScore.toFixed(1)}★)` : '-' }}
-              </span>
-            </div>
-            <p class="kpi-name">TOP MOOD</p>
-            <p class="kpi-desc">Highest rated mood match</p>
-          </div>
-
-          <div class="new-kpi-card item-card">
-            <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
-            <div class="kpi-val-wrapper">
-              <span class="keyword-pill" style="text-transform: capitalize">
-                {{ displayWeatherData.topRowLabel ? `${displayWeatherData.topRowLabel} (${displayWeatherData.topRowScore.toFixed(1)}★)` : '-' }}
-              </span>
-            </div>
-            <p class="kpi-name">TOP WEATHER</p>
-            <p class="kpi-desc">Optimal weather match</p>
           </div>
         </section>
 
@@ -147,16 +132,13 @@
               <div>
                 <h3>SECTION 1 — Survey Respondent Profile</h3>
                 <p class="demo-panel-sub">
-                  Overall demographic distribution across all survey takers (Total: {{ demographics.totalParticipants || baselineCount }} respondent{{ (demographics.totalParticipants || baselineCount) === 1 ? '' : 's' }})
+                  Overall demographic distribution across all survey takers (Total: {{ demographics.globalParticipants || baselineCount }} respondent{{ (demographics.globalParticipants || baselineCount) === 1 ? '' : 's' }})
                 </p>
               </div>
             </div>
-            <button class="toggle-profile-btn" @click="showDemographics = !showDemographics">
-              {{ showDemographics ? 'Hide Profile ▴' : 'Show Profile ▾' }}
-            </button>
           </div>
 
-          <div v-show="showDemographics" class="demo-panel-content">
+          <div class="demo-panel-content">
             <div class="demo-stat-card">
               <div class="demo-card-top">
                 <span class="demo-icon">🎂</span>
@@ -193,7 +175,7 @@
                     <span class="demo-opt-val"><strong>{{ item.count }}</strong> ({{ item.pct }}%)</span>
                   </div>
                   <div class="demo-track">
-                    <div class="demo-fill orange-theme" :style="{ width: item.pct + '%' }"></div>
+                    <div class="demo-fill blue-theme" :style="{ width: item.pct + '%' }"></div>
                   </div>
                 </div>
               </div>
@@ -307,10 +289,6 @@
                 <span class="metric-lbl">Avg Suitability</span>
               </div>
               <div class="metric-pill-box">
-                <span class="metric-num">{{ sentiment.posPct }}%</span>
-                <span class="metric-lbl">Positive Match</span>
-              </div>
-              <div class="metric-pill-box">
                 <span class="metric-num">{{ displayMoodData.topRowLabel || '-' }}</span>
                 <span class="metric-lbl">Top Mood</span>
               </div>
@@ -344,7 +322,7 @@
                 <div class="grid-col-headers">
                   <span class="hdr-label">Mood & Emotion</span>
                   <span class="hdr-score">Avg Score</span>
-                  <span class="hdr-bar">Rating Track (1 to 5)</span>
+                  <span class="hdr-bar">Score Track & Vote Spread</span>
                   <span class="hdr-suit">% Suitable</span>
                   <span class="hdr-votes">Votes</span>
                 </div>
@@ -377,12 +355,12 @@
                           :style="{ width: Math.min(100, (row.avgRating / 5) * 100) + '%' }"
                         ></div>
                       </div>
-                      <div class="mini-scale-ticks">
-                        <span>1</span>
-                        <span>2</span>
-                        <span>3</span>
-                        <span>4</span>
-                        <span>5</span>
+                      <div class="mini-scale-ticks dist-ticks" :title="distTitle(row)">
+                        <span
+                          v-for="n in [1, 2, 3, 4, 5]"
+                          :key="n"
+                          :class="{ 'dist-zero': !rowVoteCount(row, n) }"
+                        >{{ n }}:{{ rowVoteCount(row, n) }}</span>
                       </div>
                     </div>
 
@@ -431,7 +409,7 @@
                 <div class="grid-col-headers">
                   <span class="hdr-label">Weather Condition</span>
                   <span class="hdr-score">Avg Score</span>
-                  <span class="hdr-bar">Rating Track (1 to 5)</span>
+                  <span class="hdr-bar">Score Track & Vote Spread</span>
                   <span class="hdr-suit">% Suitable</span>
                   <span class="hdr-votes">Votes</span>
                 </div>
@@ -459,18 +437,18 @@
                     </div>
 
                     <div class="row-bar-col">
-                      <div class="rating-track-bar weather-track">
+                      <div class="rating-track-bar">
                         <div
-                          class="rating-track-fill weather-fill"
+                          class="rating-track-fill"
                           :style="{ width: Math.min(100, (row.avgRating / 5) * 100) + '%' }"
                         ></div>
                       </div>
-                      <div class="mini-scale-ticks">
-                        <span>1</span>
-                        <span>2</span>
-                        <span>3</span>
-                        <span>4</span>
-                        <span>5</span>
+                      <div class="mini-scale-ticks dist-ticks" :title="distTitle(row)">
+                        <span
+                          v-for="n in [1, 2, 3, 4, 5]"
+                          :key="n"
+                          :class="{ 'dist-zero': !rowVoteCount(row, n) }"
+                        >{{ n }}:{{ rowVoteCount(row, n) }}</span>
                       </div>
                     </div>
 
@@ -569,52 +547,6 @@
             </div>
           </div>
 
-          <!-- Dynamic Questions (if any additional custom questions configured in Question Manager) -->
-          <div v-if="hasCustomQuestions" class="custom-questions-wrap">
-            <h3 class="custom-sec-title">Additional Survey Questions</h3>
-            <div class="cards-grid">
-              <div
-                v-for="(answers, question, index) in customRadioQuestions"
-                :key="question"
-                class="insight-card radio-card-v2"
-                :style="getCategoryStyles(menuItem?.category)"
-              >
-                <div class="card-body insight-body">
-                  <h4 class="question-title">{{ question }}</h4>
-                  <p class="response-count">{{ itemTotal }} responses</p>
-                  <div class="bars-container">
-                    <div v-for="stat in answers" :key="stat.optionLabel" class="bar-row">
-                      <span class="bar-label">{{ stat.optionLabel }}</span>
-                      <div class="bar-track-v2">
-                        <div
-                          class="bar-fill orange-solid"
-                          :style="{ width: calculatePercentage(stat.voteCount, answers) + '%' }"
-                        ></div>
-                      </div>
-                      <span class="bar-value">{{ stat.voteCount }}</span>
-                      <span class="bar-percent">{{ calculatePercentage(stat.voteCount, answers) }}%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                v-for="(answers, question, index) in customTextQuestions"
-                :key="question"
-                class="insight-card text-card-v2"
-                :style="getCategoryStyles(menuItem?.category)"
-              >
-                <div class="card-body insight-body">
-                  <h4 class="question-title">{{ question }}</h4>
-                  <div class="excerpt-grid-v2">
-                    <div v-for="(feedback, i) in answers" :key="i" class="exc-card">
-                      <p class="exc-text">"{{ feedback.response || feedback.textResponse || feedback }}"</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -1005,7 +937,7 @@
                     <button class="action-btn edit-btn" @click="openEditQuestionModal(q)">
                       ✏️ Edit
                     </button>
-                    <button class="action-btn del-btn" @click="confirmDeleteQuestion(q.id)">🗑️</button>
+                    <button class="action-btn del-btn" @click="confirmDeleteQuestion(q.id, q.text)">🗑️</button>
                   </div>
                 </div>
 
@@ -1342,6 +1274,9 @@
           <div class="modal-card danger-card" style="text-align: center; max-width: 400px">
             <div class="modal-icon text-red" style="font-size: 3rem; margin-bottom: 15px">🚨</div>
             <h2 style="color: #0f172a">Delete Question?</h2>
+            <p class="section-subtext mb-2" style="font-style: italic; color: #64748b">
+              "{{ questionToDeleteText }}"
+            </p>
             <p class="section-subtext mb-4">
               Are you sure? All survey analytics tied to this question will be permanently lost!
             </p>
@@ -1501,6 +1436,7 @@ export interface GridQuestionAnalytics {
 }
 
 export interface DemographicAnalytics {
+  globalParticipants: number
   totalParticipants: number
   ageGroupCounts: Record<string, number>
   diningFrequencyCounts: Record<string, number>
@@ -1533,6 +1469,7 @@ const handleLogin = async () => {
 
     const token = response.data.token
     adminToken.value = token
+    localStorage.setItem('admin_token', token)
 
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
 
@@ -1550,6 +1487,7 @@ const handleLogin = async () => {
 const handleLogout = async () => {
   showLogoutModal.value = false
 
+  localStorage.removeItem('admin_token')
   adminToken.value = null
   delete axios.defaults.headers.common['Authorization']
   isAuthenticated.value = false
@@ -1572,6 +1510,7 @@ const showClearModal = ref(false)
 const moodAnalytics = ref<GridQuestionAnalytics | null>(null)
 const weatherAnalytics = ref<GridQuestionAnalytics | null>(null)
 const demographics = ref<DemographicAnalytics>({
+  globalParticipants: 0,
   totalParticipants: 0,
   ageGroupCounts: {},
   diningFrequencyCounts: {},
@@ -1582,7 +1521,6 @@ const topMoodScore = ref<number | null>(null)
 const topWeather = ref<string | null>(null)
 const topWeatherScore = ref<number | null>(null)
 const avgSuitabilityScore = ref<number | null>(null)
-const showDemographics = ref(true)
 
 const foodSubcategories = FOOD_SUBCATEGORIES
 const drinkSubcategories = DRINK_SUBCATEGORIES
@@ -1691,7 +1629,6 @@ const fetchQuestions = async () => {
 
 const selectItem = async (itemId: number) => {
   selectedItemId.value = itemId
-  activeKeywordFilter.value = null
   await fetchCombinedAnalyticsForItem(itemId)
 }
 
@@ -1714,107 +1651,6 @@ const autoSelectFirstFilteredItem = () => {
     selectedItemId.value = null
     analyticsData.value = {}
   }
-}
-
-// 🛡️ BULLETPROOF RADIO QUESTIONS (Dictionary Version)
-const radioQuestions = computed(() => {
-  const result: Record<string, any> = {}
-
-  const rQuestions = dynamicQuestions.value.filter(
-    (q) => !q.type || q.type.toUpperCase() !== 'TEXT',
-  )
-
-  rQuestions.forEach((q) => {
-    const analyticsKey = String(q.id)
-    let ans = analyticsData.value[analyticsKey]
-    if (ans) {
-      if (!Array.isArray(ans)) {
-        ans = Object.keys(ans).map((key) => ({ optionLabel: key, voteCount: ans[key] }))
-      }
-
-      result[q.text] = ans
-    }
-  })
-
-  return result
-})
-
-// 🛡️ BULLETPROOF TEXT QUESTIONS (Dictionary Version)
-const textQuestions = computed(() => {
-  const result: Record<string, any> = {}
-  const tQuestions = dynamicQuestions.value.filter((q) => q.type && q.type.toUpperCase() === 'TEXT')
-
-  tQuestions.forEach((q) => {
-    const analyticsKey = String(q.id)
-    if (analyticsData.value[analyticsKey]) {
-      result[q.text] = analyticsData.value[analyticsKey]
-    }
-  })
-
-  return result
-})
-
-const calculatePercentage = (votes: number, allStats: any[]) => {
-  const total = allStats.reduce((sum, stat) => sum + Number(stat.voteCount), 0)
-  if (total === 0) return 0
-  return Math.round((votes / total) * 100)
-}
-
-const topResponse = (answers: any[]) => {
-  if (!answers || answers.length === 0) return 'N/A'
-  const highest = answers.reduce((prev, current) =>
-    Number(prev.voteCount) > Number(current.voteCount) ? prev : current,
-  )
-  return highest.optionLabel
-}
-
-const getSentimentData = (feedback: any) => {
-  const text = (
-    feedback.response ||
-    feedback.textResponse ||
-    (typeof feedback === 'string' ? feedback : '')
-  ).toLowerCase()
-  if (!text) return { class: 'neu', icon: '-', label: 'Neutral' }
-  const positiveWords = [
-    'good',
-    'great',
-    'love',
-    'best',
-    'delicious',
-    'yummy',
-    'perfect',
-    'nice',
-    'amazing',
-    'sweet',
-    'comfort',
-    'favorite',
-    'warm',
-    'fresh',
-    'hot',
-    'filling',
-  ]
-  const negativeWords = [
-    'bad',
-    'hate',
-    'awful',
-    'terrible',
-    'gross',
-    'expensive',
-    'worse',
-    'bland',
-    'nasty',
-    'disgusting',
-    'dry',
-    'salty',
-    'cold',
-    'hard',
-    'stale',
-  ]
-  if (negativeWords.some((word) => text.includes(word)))
-    return { class: 'neg', icon: '👎', label: 'Negative' }
-  if (positiveWords.some((word) => text.includes(word)))
-    return { class: 'pos', icon: '👍', label: 'Positive' }
-  return { class: 'neu', icon: '-', label: 'Neutral' }
 }
 
 const downloadReport = async () => {
@@ -1846,56 +1682,36 @@ const clearAllData = async () => {
 
 const globalTotal = ref(0)
 const itemTotal = ref(0)
-const engagementPct = ref(0)
-const topKeywords = ref([])
 const sentiment = ref({ pos: 0, neu: 0, neg: 0, posPct: 0, neuPct: 0, negPct: 0 })
-const activeSentimentFilter = ref('All')
-const activeKeywordFilter = ref<string | null>(null)
 
-const filteredAnswers = (answers: any[]) => {
-  let filtered = answers
+// Share of all participants who evaluated the current item (itemTotal counts
+// distinct evaluators per item, so this is directly comparable to the global
+// participant base).
+const itemCoverageLabel = computed(() => {
+  const itemName = menuItem.value?.name || 'selected item'
+  const total = demographics.value?.globalParticipants || baselineCount.value || 0
+  if (!total) return `For ${itemName}`
+  const pct = Math.min(100, Math.round((itemTotal.value / total) * 100))
+  return `For ${itemName} • ${pct}% of ${total} participants`
+})
 
-  // 1. Filter by Sentiment
-  if (activeSentimentFilter.value !== 'All') {
-    const targetClass =
-      activeSentimentFilter.value === 'Positive'
-        ? 'pos'
-        : activeSentimentFilter.value === 'Neutral'
-          ? 'neu'
-          : 'neg'
-    filtered = filtered.filter((f) => getSentimentData(f).class === targetClass)
-  }
-
-  if (activeKeywordFilter.value) {
-    const keyword = activeKeywordFilter.value.toLowerCase()
-    filtered = filtered.filter((f) => {
-      const text = (f.response || f.textResponse || (typeof f === 'string' ? f : '')).toLowerCase()
-      return text.includes(keyword)
-    })
-  }
-
-  return filtered
+// Votes for one star rating within a grid row's 1-5 distribution.
+const rowVoteCount = (row: any, rating: number): number => {
+  return Number(row?.distribution?.[rating] ?? 0)
 }
 
-const toggleKeywordFilter = (word: string) => {
-  if (activeKeywordFilter.value === word) {
-    activeKeywordFilter.value = null
-  } else {
-    activeKeywordFilter.value = word
-  }
-}
-
-const getWordClass = (index: number) => {
-  if (index < 2) return 'w-huge'
-  if (index < 4) return 'w-large'
-  if (index < 6) return 'w-med'
-  return 'w-small'
+// Full vote-spread sentence for the distribution tooltip.
+const distTitle = (row: any): string => {
+  const parts = [1, 2, 3, 4, 5].map((n) => {
+    const count = rowVoteCount(row, n)
+    return `${n}★: ${count} vote${count === 1 ? '' : 's'}`
+  })
+  return `Vote spread — ${parts.join(' • ')}`
 }
 
 const applyItemStats = (data: any) => {
   globalTotal.value = data?.globalTotal ?? 0
   itemTotal.value = data?.itemTotal ?? 0
-  engagementPct.value = data?.engagementPct ?? 0
   sentiment.value = {
     pos: data?.positiveCount ?? 0,
     neu: data?.neutralCount ?? 0,
@@ -1904,7 +1720,6 @@ const applyItemStats = (data: any) => {
     neuPct: data?.neutralPct ?? 0,
     negPct: data?.negativePct ?? 0,
   }
-  topKeywords.value = data?.topKeywords || []
   topMood.value = data?.topMood || null
   topMoodScore.value = data?.topMoodScore ?? null
   topWeather.value = data?.topWeather || null
@@ -1957,23 +1772,64 @@ const fetchStats = async () => {
   await fetchDemographics()
 }
 
-// Section 1 Demographic Computed Stats
+// Section 1 Demographic Computed Stats & Normalization Helpers
+const normalizeDemoKey = (key: string): string => {
+  return (key || '')
+    .replace(/&#8211;|&ndash;|\u2013|\u2014/g, '-') // Normalize en-dash, em-dash, and HTML entities to standard hyphen
+    .replace(/\s*-\s*/g, '-')                       // Normalize spaces around hyphens ('18 - 20' -> '18-20')
+    .replace(/\s+/g, ' ')                           // Normalize whitespace
+    .trim()
+    .toLowerCase()
+}
+
+const getAgeGroupCount = (opt: string): number => {
+  if (!demographics.value?.ageGroupCounts) return 0
+  const target = normalizeDemoKey(opt)
+  let sum = 0
+  for (const [key, val] of Object.entries(demographics.value.ageGroupCounts)) {
+    if (normalizeDemoKey(key) === target) {
+      sum += Number(val) || 0
+    }
+  }
+  return sum
+}
+
+const getDiningFreqCount = (opt: string): number => {
+  if (!demographics.value?.diningFrequencyCounts) return 0
+  const target = normalizeDemoKey(opt)
+  let sum = 0
+  for (const [key, val] of Object.entries(demographics.value.diningFrequencyCounts)) {
+    if (normalizeDemoKey(key) === target) {
+      sum += Number(val) || 0
+    }
+  }
+  return sum
+}
+
 const ageGroupStats = computed(() => {
-  const total = demographics.value?.totalParticipants || baselineCount.value || 1
-  return AGE_GROUP_OPTIONS.map((opt) => {
-    const count = demographics.value?.ageGroupCounts?.[opt] || 0
-    const pct = total > 0 ? Math.round((count / total) * 100) : 0
-    return { label: opt, count, pct }
-  })
+  const items = AGE_GROUP_OPTIONS.map((opt) => ({
+    label: opt,
+    count: getAgeGroupCount(opt),
+  }))
+  const totalAnswers = items.reduce((acc, curr) => acc + curr.count, 0)
+  const total = totalAnswers > 0 ? totalAnswers : (demographics.value?.totalParticipants || 0)
+  return items.map((item) => ({
+    ...item,
+    pct: total > 0 ? Math.round((item.count / total) * 100) : 0,
+  }))
 })
 
 const diningFrequencyStats = computed(() => {
-  const total = demographics.value?.totalParticipants || baselineCount.value || 1
-  return DINING_FREQUENCY_OPTIONS.map((opt) => {
-    const count = demographics.value?.diningFrequencyCounts?.[opt] || 0
-    const pct = total > 0 ? Math.round((count / total) * 100) : 0
-    return { label: opt, count, pct }
-  })
+  const items = DINING_FREQUENCY_OPTIONS.map((opt) => ({
+    label: opt,
+    count: getDiningFreqCount(opt),
+  }))
+  const totalAnswers = items.reduce((acc, curr) => acc + curr.count, 0)
+  const total = totalAnswers > 0 ? totalAnswers : (demographics.value?.totalParticipants || 0)
+  return items.map((item) => ({
+    ...item,
+    pct: total > 0 ? Math.round((item.count / total) * 100) : 0,
+  }))
 })
 
 // Section 2 Grid Fallback & Display Logic
@@ -2164,47 +2020,6 @@ const hasRatings = (map: any) => {
   return map && typeof map === 'object' && Object.keys(map).length > 0
 }
 
-const customRadioQuestions = computed(() => {
-  const result: Record<string, any> = {}
-  const rQuestions = dynamicQuestions.value.filter(
-    (q) => (!q.type || q.type.toUpperCase() !== 'TEXT') && q.id !== 1 && q.id !== 2,
-  )
-  rQuestions.forEach((q) => {
-    const analyticsKey = String(q.id)
-    let ans = analyticsData.value[analyticsKey]
-    if (ans) {
-      if (!Array.isArray(ans)) {
-        ans = Object.keys(ans).map((key) => ({ optionLabel: key, voteCount: ans[key] }))
-      }
-      if (ans.length > 0 && ans[0].optionLabel !== undefined) {
-        result[q.text] = ans
-      }
-    }
-  })
-  return result
-})
-
-const customTextQuestions = computed(() => {
-  const result: Record<string, any> = {}
-  const tQuestions = dynamicQuestions.value.filter(
-    (q) => q.type && q.type.toUpperCase() === 'TEXT' && q.id !== 1 && q.id !== 2,
-  )
-  tQuestions.forEach((q) => {
-    const analyticsKey = String(q.id)
-    if (analyticsData.value[analyticsKey]) {
-      result[q.text] = analyticsData.value[analyticsKey]
-    }
-  })
-  return result
-})
-
-const hasCustomQuestions = computed(() => {
-  return (
-    Object.keys(customRadioQuestions.value).length > 0 ||
-    Object.keys(customTextQuestions.value).length > 0
-  )
-})
-
 let securityInterceptor: number | null = null
 
 const activeAdminTab = ref('analytics')
@@ -2219,6 +2034,7 @@ const showDeleteAllModal = ref(false)
 const isDeletingItem = ref(false)
 const isDeletingAll = ref(false)
 const questionToDelete = ref<number | null>(null)
+const questionToDeleteText = ref('')
 const itemToDelete = ref<number | null>(null)
 const itemEditSnapshot = ref('')
 
@@ -2458,8 +2274,9 @@ const executeDeleteAllItems = async () => {
   }
 }
 
-const confirmDeleteQuestion = (id: number) => {
+const confirmDeleteQuestion = (id: number, text: string) => {
   questionToDelete.value = id // Remember which question we are deleting
+  questionToDeleteText.value = text // Remember the text to show in the modal
   showDeleteQuestionModal.value = true // Open the custom modal
 }
 
@@ -2470,12 +2287,15 @@ const executeDeleteQuestion = async () => {
     await axios.delete(`/api/admin/questions/${questionToDelete.value}`)
     await fetchQuestions() // Refresh the list
     showDeleteQuestionModal.value = false // Close modal
+    showToast('Question deleted successfully.')
     questionToDelete.value = null // Clear memory
+    questionToDeleteText.value = '' // Clear text
   } catch (error) {
     console.error('Failed to delete question:', error)
-    alert('Could not delete question.')
+    showToast('Could not delete question. Please try again.', 'error')
   }
 }
+
 
 const quickEmojis = QUICK_EMOJIS
 
@@ -2532,7 +2352,7 @@ const executeDeleteOption = async () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   document.addEventListener('click', handleClickOutsideCategoryDropdown)
   securityInterceptor = axios.interceptors.response.use(
     (response) => response,
@@ -2546,6 +2366,7 @@ onMounted(() => {
         isDeleteAll
       if (!skipRedirect && error.response && (error.response.status === 401 || error.response.status === 403)) {
         console.warn('Session expired! Returning to login screen...')
+        localStorage.removeItem('admin_token')
         adminToken.value = null
 
         delete axios.defaults.headers.common['Authorization']
@@ -2554,6 +2375,21 @@ onMounted(() => {
       return Promise.reject(error)
     },
   )
+
+  // On page refresh: restore session if valid admin token exists and sync latest analytics
+  const savedToken = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null
+  if (savedToken) {
+    adminToken.value = savedToken
+    axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`
+    isAuthenticated.value = true
+    try {
+      await fetchMenuItems()
+      await fetchQuestions()
+      await fetchStats()
+    } catch (e) {
+      console.error('Failed to sync analytics results on page refresh:', e)
+    }
+  }
 })
 
 onUnmounted(() => {
@@ -2818,23 +2654,9 @@ onUnmounted(() => {
   line-height: 1;
 }
 
-.kpi-val-wrapper {
-  margin: 0 0 4px 0;
-  min-height: 42px;
-  display: flex;
-  align-items: center;
-}
-
-.keyword-pill {
-  background: #fff3e8;
-  color: #f07000;
-  font-size: 28px;
-  font-weight: 800;
-  padding: 8px 14px;
-  border-radius: 8px;
-  display: inline-block;
-  line-height: 1;
-}
+/* NOTE: kpi-val-wrapper / keyword-pill were removed with the TOP MOOD and
+   TOP WEATHER KPI cards (that info already lives in the item summary and the
+   Key Insight footers). */
 
 .kpi-name {
   margin: 0 0 8px 0;
@@ -3326,203 +3148,9 @@ onUnmounted(() => {
   gap: 10px;
 }
 
-/* TEXT CARDS */
-.text-top-row {
-  display: grid;
-  grid-template-columns: 280px 1.5fr 1fr;
-  border-bottom: 1px solid #f1f5f9;
-  position: relative;
-  z-index: 2;
-  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.03);
-}
-.text-col-sentiment {
-  padding: 25px;
-  border-right: 1px solid #f1f5f9;
-  position: relative;
-  z-index: 1;
-  box-shadow: 4px 0 12px -2px rgba(0, 0, 0, 0.03);
-}
-.text-col-image {
-  position: relative;
-  background-color: #e2e8f0;
-  background-size: cover;
-  background-position: center;
-  min-height: 250px;
-  display: flex;
-  align-items: flex-end;
-  padding: 20px;
-}
-.text-col-image::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 60%;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
-}
-.text-col-image::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 30%;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), transparent);
-}
-.text-col-image .q-circle {
-  top: 15px;
-  right: 15px;
-  bottom: auto;
-  background: rgba(255, 255, 255, 0.8);
-  color: #94a3b8;
-  border: none;
-}
-.badge-row {
-  display: flex;
-  gap: 8px;
-}
-.text-col-sentiment {
-  padding: 25px;
-  border-right: 1px solid #f1f5f9;
-}
-.question-title-v2 {
-  margin: 0 0 5px 0;
-  font-size: 1.1rem;
-  color: #0f172a;
-  font-weight: 600;
-}
-.response-count-v2 {
-  margin: 0 0 20px 0;
-  font-size: 0.85rem;
-  color: #94a3b8;
-}
-.section-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #64748b;
-  letter-spacing: 1px;
-  margin-bottom: 12px;
-  text-transform: uppercase;
-}
-.section-subtext {
-  font-size: 0.7rem;
-  color: #94a3b8;
-  margin-top: -8px;
-  margin-bottom: 12px;
-}
-.sent-boxes-v2 {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-.s-box-v2 {
-  flex: 1;
-  text-align: center;
-  padding: 12px 10px;
-  border-radius: 8px;
-  border: 1px solid #f1f5f9;
-}
-.s-box-v2 h2 {
-  margin: 0;
-  font-size: 1.6rem;
-  font-weight: 700;
-}
-.s-box-v2 span {
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-.s-box-v2.pos {
-  background: #f0fdf4;
-  color: #16a34a;
-  border-color: #dcfce7;
-}
-.s-box-v2.neu {
-  background: #f8fafc;
-  color: #64748b;
-}
-.s-box-v2.neg {
-  background: #fef2f2;
-  color: #ef4444;
-  border-color: #fee2e2;
-}
-.sent-bar-thick {
-  height: 16px;
-  display: flex;
-  border-radius: 8px;
-  overflow: hidden;
-  gap: 0;
-  margin-bottom: 12px;
-}
-.s-fill-thick {
-  height: 100%;
-}
-.s-fill-thick.pos {
-  background: #22c55e;
-}
-.s-fill-thick.neu {
-  background: #94a3b8;
-}
-.s-fill-thick.neg {
-  background: #ef4444;
-}
-.sent-legend {
-  display: flex;
-  gap: 15px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-.l-pos {
-  color: #16a34a;
-}
-.l-neu {
-  color: #64748b;
-}
-.l-neg {
-  color: #ef4444;
-}
-.l-total {
-  color: #94a3b8;
-  margin-left: auto;
-}
-.text-col-keywords {
-  padding: 25px;
-  display: flex;
-  flex-direction: column;
-}
-.word-cloud-v2 {
-  flex-grow: 1;
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 12px;
-  margin-top: 10px;
-}
-.word-cloud-v2 span {
-  font-weight: 700;
-  color: var(--c-main, #f97316);
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-.word-cloud-v2 span:hover {
-  opacity: 0.7;
-}
-.w-huge {
-  font-size: 1.8rem;
-}
-.w-large {
-  font-size: 1.3rem;
-  opacity: 0.8;
-}
-.w-med {
-  font-size: 1.05rem;
-  opacity: 0.6;
-}
-.w-small {
-  font-size: 0.85rem;
-  opacity: 0.4;
-  color: #94a3b8 !important;
-}
+/* NOTE: The legacy TEXT CARDS / sentiment-panel / word-cloud layout was removed.
+   The analytics view now shows sentiment in the KPI strip, vote spread per grid
+   row, demographics, and the individual-responses log instead. */
 
 /* Excerpts */
 .text-bottom-row {
@@ -3861,26 +3489,7 @@ onUnmounted(() => {
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
-/* KEYWORD FILTER INTERACTIONS */
-.word-cloud-v2 span {
-  opacity: 1 !important;
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-.word-cloud-v2 span {
-  opacity: 0.2 !important;
-  filter: grayscale(100%);
-}
-.keyword-clear-btn {
-  border-color: var(--c-main, #f97316) !important;
-  color: var(--c-main, #f97316) !important;
-  font-weight: 700;
-  background: var(--c-light, #fff7ed) !important;
-}
-.keyword-clear-btn:hover {
-  background: var(--c-main, #f97316) !important;
-  color: white !important;
-}
+/* NOTE: Keyword-filter interaction styles were removed with the word-cloud feature. */
 
 /* ==========================================
    ⚙️ MENU MANAGER STYLES
@@ -4970,23 +4579,6 @@ onUnmounted(() => {
   color: #64748b;
 }
 
-.toggle-profile-btn {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 6px 14px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #334155;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.toggle-profile-btn:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
-}
-
 .demo-panel-content {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -5389,9 +4981,6 @@ onUnmounted(() => {
   transition: width 0.4s ease-out;
 }
 
-.rating-track-bar.weather-track .rating-track-fill.weather-fill {
-  background: linear-gradient(90deg, #38bdf8, #0284c7);
-}
 
 .mini-scale-ticks {
   display: flex;
@@ -5400,6 +4989,20 @@ onUnmounted(() => {
   color: #cbd5e1;
   font-weight: 600;
   padding: 0 2px;
+}
+
+/* Per-rating vote spread under each score track (e.g. "4:7" = seven 4★ votes).
+   Hovering shows the full 1-5 breakdown. */
+.dist-ticks {
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+.dist-ticks span {
+  white-space: nowrap;
+}
+.dist-ticks .dist-zero {
+  color: #cbd5e1;
+  font-weight: 500;
 }
 
 .row-suit-col {
@@ -5648,14 +5251,4 @@ onUnmounted(() => {
   line-height: 1.35;
 }
 
-.custom-questions-wrap {
-  margin-top: 15px;
-}
-
-.custom-sec-title {
-  margin: 0 0 15px 0;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #0f172a;
-}
 </style>

@@ -209,6 +209,7 @@ const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 30))
 describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
     ;(axios.post as any).mockImplementation((url: string) => {
       if (url === '/api/admin/login') {
         return Promise.resolve({ data: { token: 'mock-jwt-token' } })
@@ -254,12 +255,11 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     // 2. Verify KPI Cards show accurate survey taker metrics
     expect(wrapper.text()).toContain('PARTICIPANTS')
     expect(wrapper.text()).toContain('TOTAL RESPONSES')
+    expect(wrapper.text()).toContain('40% of 25 participants')
     expect(wrapper.text()).toContain('SUITABILITY RATE')
+    expect(wrapper.text()).toContain('NEUTRAL')
     expect(wrapper.text()).toContain('NEEDS ATTENTION')
-    expect(wrapper.text()).toContain('TOP MOOD')
-    expect(wrapper.text()).toContain('Comfort (4.8★)')
-    expect(wrapper.text()).toContain('TOP WEATHER')
-    expect(wrapper.text()).toContain('Rainy (4.6★)')
+    expect(wrapper.findAll('.new-kpi-card').length).toBe(5)
 
     // 3. Verify Section 1 Demographic Profile Card
     expect(wrapper.text()).toContain('SECTION 1 — Survey Respondent Profile')
@@ -283,6 +283,9 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     expect(wrapper.text()).toContain('Quick')
     expect(wrapper.text()).toContain('4.8 ★')
     expect(wrapper.text()).toContain('100%')
+    expect(wrapper.text()).toContain('Score Track & Vote Spread')
+    expect(wrapper.text()).toContain('5:8')
+    expect(wrapper.find('.dist-ticks').attributes('title')).toContain('Vote spread')
     expect(wrapper.text()).toContain('Comfort is the leading mood association')
 
     // 5. Verify Question 2 — Weather Association with 4 weather conditions
@@ -302,5 +305,73 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     expect(wrapper.text()).toContain('Comfort: 5★')
     expect(wrapper.text()).toContain('Rainy: 5★')
     expect(wrapper.text()).toContain('Super creamy and comforting!')
+  })
+
+  it('normalizes and displays age group distribution when keys use standard hyphens or HTML entities', async () => {
+    const rawHyphenDemographics = {
+      totalParticipants: 10,
+      globalParticipants: 10,
+      ageGroupCounts: {
+        '18-20': 4,
+        '21-23': 6,
+      },
+      diningFrequencyCounts: {
+        'Once a week': 10,
+      },
+    }
+
+    ;(axios.get as any).mockImplementation((url: string) => {
+      if (url === '/menu-items') return Promise.resolve({ data: mockMenuItems })
+      if (url === '/questions/all') return Promise.resolve({ data: mockQuestions })
+      if (url === '/api/stats/baseline') return Promise.resolve({ data: 10 })
+      if (url === '/analytics/demographics') return Promise.resolve({ data: rawHyphenDemographics })
+      if (url.startsWith('/analytics/combined/')) {
+        return Promise.resolve({
+          data: {
+            ...mockCombinedAnalytics,
+            demographics: rawHyphenDemographics,
+          },
+        })
+      }
+      return Promise.resolve({ data: {} })
+    })
+
+    const wrapper = mount(Dashboard)
+    await flushPromises()
+
+    const usernameInput = wrapper.find('input[type="text"]')
+    const passwordInput = wrapper.find('input[type="password"]')
+    await usernameInput.setValue('admin')
+    await passwordInput.setValue('password')
+    await wrapper.find('form.login-form').trigger('submit')
+    await flushPromises()
+
+    // 18-20 (4 respondents = 40%) should match option '18–20'
+    expect(wrapper.text()).toContain('18–20')
+    expect(wrapper.text()).toContain('4')
+    expect(wrapper.text()).toContain('40%')
+
+    // 21-23 (6 respondents = 60%) should match option '21–23'
+    expect(wrapper.text()).toContain('21–23')
+    expect(wrapper.text()).toContain('6')
+    expect(wrapper.text()).toContain('60%')
+  })
+
+  it('restores authenticated session on page refresh and syncs analytics results', async () => {
+    localStorage.setItem('admin_token', 'persisted-jwt-token')
+
+    const wrapper = mount(Dashboard)
+    await flushPromises()
+
+    // Does not display login wrapper
+    expect(wrapper.find('.login-wrapper').exists()).toBe(false)
+
+    // Displays dashboard with synced analytics
+    expect(wrapper.text()).toContain('Analytics View')
+    expect(wrapper.text()).toContain('Chicken Alfredo')
+    expect(wrapper.text()).toContain('SECTION 1 — Survey Respondent Profile')
+
+    // Authorization header was automatically configured with stored token
+    expect(axios.defaults.headers.common['Authorization']).toBe('Bearer persisted-jwt-token')
   })
 })
