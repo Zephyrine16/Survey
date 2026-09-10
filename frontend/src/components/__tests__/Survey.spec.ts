@@ -65,7 +65,7 @@ describe('Survey.vue', () => {
 
   it('renders welcome screen initially', () => {
     const wrapper = mount(Survey)
-    expect(wrapper.text()).toContain('Welcome to CaféRater!')
+    expect(wrapper.text()).toContain('Welcome to the Food Preference Survey!')
     expect(wrapper.find('.welcome-screen').exists()).toBe(true)
   })
 
@@ -81,7 +81,7 @@ describe('Survey.vue', () => {
     expect(wrapper.find('.demographic-view').exists()).toBe(true)
   })
 
-  it('navigates to Section 2 Starter after completing Section 1', async () => {
+  it('shows Section 2 instructions as a modal atop the rating view', async () => {
     const wrapper = mount(Survey)
     await flushPromises()
     await wrapper.find('.primary-btn.pulse').trigger('click')
@@ -97,8 +97,11 @@ describe('Survey.vue', () => {
     expect(proceedBtn.attributes('disabled')).toBeUndefined()
     await proceedBtn.trigger('click')
 
-    expect(wrapper.find('.section2-starter-view').exists()).toBe(true)
-    const starterText = wrapper.find('.section2-starter-view').text()
+    // Rating view renders immediately with the instructions modal on top of it
+    expect(wrapper.find('.rating-view').exists()).toBe(true)
+    const instructionsModal = document.body.querySelector('.instructions-modal-card')
+    expect(instructionsModal).not.toBeNull()
+    const starterText = instructionsModal?.textContent || ''
 
     expect(starterText).toContain('SECTION 2 — Menu Item Evaluation')
     expect(starterText).toContain('Instructions')
@@ -113,20 +116,27 @@ describe('Survey.vue', () => {
     expect(starterText).toContain('4 — Suitable')
     expect(starterText).toContain('5 — Very Suitable')
 
-    const startSec2Btn = wrapper.find('.starter-proceed-btn')
-    expect(startSec2Btn.exists()).toBe(true)
-    await startSec2Btn.trigger('click')
+    const startSec2Btn = document.body.querySelector(
+      '.instructions-modal-card .starter-proceed-btn',
+    ) as HTMLButtonElement
+    expect(startSec2Btn).not.toBeNull()
+    startSec2Btn.click()
+    await flushPromises()
+    await wrapper.vm.$nextTick()
 
-    expect(wrapper.find('.section2-starter-view').exists()).toBe(false)
+    expect(document.body.querySelector('.instructions-modal-card')).toBeNull()
     expect(wrapper.find('.rating-view').exists()).toBe(true)
 
     const viewInstructionsBtn = wrapper.find('.view-instructions-btn')
     expect(viewInstructionsBtn.exists()).toBe(true)
     await viewInstructionsBtn.trigger('click')
-    expect(wrapper.find('.section2-starter-view').exists()).toBe(true)
+    await wrapper.vm.$nextTick()
+    expect(document.body.querySelector('.instructions-modal-card')).not.toBeNull()
+    // Rating view stays mounted behind the reopened modal
+    expect(wrapper.find('.rating-view').exists()).toBe(true)
   })
 
-  it('allows going back to Section 1 from Section 2 Starter', async () => {
+  it('allows going back to Section 1 from the instructions modal', async () => {
     const wrapper = mount(Survey)
     await wrapper.find('.primary-btn.pulse').trigger('click')
 
@@ -135,12 +145,18 @@ describe('Survey.vue', () => {
     await demoButtons[5].trigger('click')
     await wrapper.find('.demo-proceed-btn').trigger('click')
 
-    expect(wrapper.find('.section2-starter-view').exists()).toBe(true)
+    expect(document.body.querySelector('.instructions-modal-card')).not.toBeNull()
+    expect(wrapper.find('.rating-view').exists()).toBe(true)
 
-    const backBtn = wrapper.find('.starter-footer .nav-btn.secondary')
-    await backBtn.trigger('click')
+    const backBtn = document.body.querySelector(
+      '.instructions-modal-actions .nav-btn.secondary',
+    ) as HTMLButtonElement
+    expect(backBtn).not.toBeNull()
+    backBtn.click()
+    await flushPromises()
+    await wrapper.vm.$nextTick()
 
-    expect(wrapper.find('.section2-starter-view').exists()).toBe(false)
+    expect(document.body.querySelector('.instructions-modal-card')).toBeNull()
     expect(wrapper.find('.demographic-view').exists()).toBe(true)
   })
 
@@ -155,7 +171,9 @@ describe('Survey.vue', () => {
     await demoButtons[5].trigger('click')
     await wrapper.find('.demo-proceed-btn').trigger('click')
 
-    await wrapper.find('.starter-proceed-btn').trigger('click')
+    // Dismiss the instructions modal to interact with the rating view
+    ;(wrapper.vm as any).showInstructionsModal = false
+    await wrapper.vm.$nextTick()
     await flushPromises()
 
     expect(wrapper.find('.rating-view').exists()).toBe(true)
@@ -169,7 +187,6 @@ describe('Survey.vue', () => {
 
     // Verify Question 1 — Mood Association
     expect(wrapper.text()).toContain('Question 1 — Mood Association')
-    expect(wrapper.text()).toContain('Question type: Multiple-choice grid')
     expect(wrapper.text()).toContain(
       'How suitable is Chicken Alfredo for each of the following moods?',
     )
@@ -192,7 +209,6 @@ describe('Survey.vue', () => {
 
     // Verify Question 2 — Weather Association
     expect(wrapper.text()).toContain('Question 2 — Weather Association')
-    expect(wrapper.text()).toContain('Question type: Multiple-choice grid')
     expect(wrapper.text()).toContain(
       'How suitable is Chicken Alfredo for each of the following weather conditions?',
     )
@@ -217,22 +233,20 @@ describe('Survey.vue', () => {
     // Next item button should be disabled because not all rows are answered
     const nextBtn = wrapper.find('.nav-btn.primary')
     expect(nextBtn.attributes('disabled')).toBeDefined()
-    expect(wrapper.find('.incomplete-warning').text()).toContain(
-      'Require a response in each row before proceeding to the next item.',
-    )
   })
 
   it('enforces row requirements, advances to next item dynamically, and submits successfully', async () => {
     const wrapper = mount(Survey)
     await flushPromises()
 
-    // Start Survey -> Complete Section 1 -> Start Section 2
+    // Start Survey -> Complete Section 1 -> Dismiss instructions modal -> Section 2
     await wrapper.find('.primary-btn.pulse').trigger('click')
     const demoButtons = wrapper.findAll('.demo-opt-btn')
     await demoButtons[0].trigger('click')
     await demoButtons[5].trigger('click')
     await wrapper.find('.demo-proceed-btn').trigger('click')
-    await wrapper.find('.starter-proceed-btn').trigger('click')
+    ;(wrapper.vm as any).showInstructionsModal = false
+    await wrapper.vm.$nextTick()
     await flushPromises()
 
     // Answer all 9 mood rows on Item 1 (Chicken Alfredo)

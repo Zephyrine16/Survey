@@ -3,7 +3,7 @@
     <div v-if="!hasStarted" class="welcome-screen">
       <div class="welcome-card glass-effect">
         <div class="welcome-icon">🍴</div>
-        <h1>Welcome to CaféRater!</h1>
+        <h1>Welcome to the Food Preference Survey!</h1>
         <p>
           Help us build a smarter AI by rating our menu items. Your feedback directly shapes the
           future of our cafe!
@@ -26,7 +26,7 @@
         <div class="nav-content">
           <div class="logo">
             <span class="logo-icon">🍴</span>
-            <h1>CaféRater</h1>
+            <h1>Food Preference Survey</h1>
           </div>
 
           <div class="header-actions">
@@ -34,12 +34,6 @@
               <div class="global-progress">
                 <span class="section-indicator-badge blue-badge">Section 1 of 2</span>
                 <span class="section-badge-label">Respondent Information</span>
-              </div>
-            </template>
-            <template v-else-if="!hasStartedSection2">
-              <div class="global-progress">
-                <span class="section-indicator-badge orange-badge">Section 2 of 2</span>
-                <span class="section-badge-label">Menu Item Evaluation</span>
               </div>
             </template>
             <template v-else>
@@ -53,7 +47,7 @@
                 :disabled="!isCurrentItemComplete"
                 :class="{ 'disabled-btn': !isCurrentItemComplete }"
               >
-                I'm Done 🏁
+                I'm Done
               </button>
             </template>
           </div>
@@ -89,7 +83,6 @@
                   </div>
                   <div>
                     <h4>Age Group</h4>
-                    <span class="q-sub-badge">Question type: Multiple choice</span>
                   </div>
                 </div>
 
@@ -123,7 +116,6 @@
                   </div>
                   <div>
                     <h4>How often do you dine at cafés or restaurants?</h4>
-                    <span class="q-sub-badge">Question type: Multiple choice</span>
                   </div>
                 </div>
 
@@ -167,72 +159,6 @@
         </div>
 
         <!-- ======================================================== -->
-        <!-- SECTION 2 — Starter / Instructions                       -->
-        <!-- ======================================================== -->
-        <div v-else-if="!hasStartedSection2" class="section2-starter-view fade-in">
-          <div class="section2-starter-card">
-            <div class="section-banner starter-banner">
-              <div class="section-scope-pill orange-scope-pill">
-                <span class="scope-dot orange-dot"></span> SECTION 2 OF 2
-              </div>
-              <h2>SECTION 2 — Menu Item Evaluation</h2>
-              <p class="section-desc">
-                Evaluate our menu items to help train our AI recommendation engine.
-              </p>
-            </div>
-
-            <div class="starter-instructions-box">
-              <div class="instructions-header">
-                <span class="instructions-icon">📋</span>
-                <h3>Instructions</h3>
-              </div>
-
-              <div class="instructions-body">
-                <p class="instruction-main">
-                  You will be asked to evaluate <strong>{{ menuItems.length || SURVEY_ITEM_LIMIT }} menu items</strong>.
-                </p>
-                <p class="instruction-sub">
-                  For each menu item, rate how suitable you think the item is for each mood and weather condition.
-                </p>
-              </div>
-
-              <div class="rating-scale-box">
-                <h4 class="scale-heading">Rating scale:</h4>
-                <div class="scale-list">
-                  <div
-                    v-for="item in ratingScaleGuide"
-                    :key="item.value"
-                    class="scale-item"
-                    :class="`scale-item-${item.value}`"
-                  >
-                    <span class="scale-badge">{{ item.value }}</span>
-                    <span class="scale-separator"> — </span>
-                    <span class="scale-label">{{ item.label }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="action-footer starter-footer">
-              <button
-                type="button"
-                class="nav-btn secondary"
-                @click="goToSection1"
-              >
-                &larr; Back to Section 1
-              </button>
-              <button
-                type="button"
-                class="nav-btn primary starter-proceed-btn"
-                @click="startSection2"
-              >
-                {{ completedItemsCount > 0 ? 'Continue Evaluation' : 'Start Section 2' }} &rarr;
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- ======================================================== -->
         <!-- SECTION 2 — Menu Item Evaluation                         -->
         <!-- ======================================================== -->
         <div v-else class="rating-view fade-in">
@@ -250,7 +176,7 @@
                 <button
                   type="button"
                   class="view-instructions-btn"
-                  @click="hasStartedSection2 = false"
+                  @click="showInstructionsModal = true"
                   title="View Section 2 instructions and rating scale"
                 >
                   📋 View Instructions
@@ -297,7 +223,7 @@
               <div class="question-card grid-question-card">
                 <div class="q-header">
                   <div
-                    class="q-bubble"
+                    class="q-bubble grid-bubble"
                     :class="{ answered: isMoodComplete(currentItem?.id) }"
                   >
                     <span v-if="isMoodComplete(currentItem?.id)">✓</span>
@@ -305,7 +231,6 @@
                   </div>
                   <div>
                     <h4>Question 1 — Mood Association</h4>
-                    <span class="q-sub-badge">Question type: Multiple-choice grid</span>
                   </div>
                 </div>
 
@@ -359,7 +284,7 @@
               <div class="question-card grid-question-card">
                 <div class="q-header">
                   <div
-                    class="q-bubble"
+                    class="q-bubble grid-bubble"
                     :class="{ answered: isWeatherComplete(currentItem?.id) }"
                   >
                     <span v-if="isWeatherComplete(currentItem?.id)">✓</span>
@@ -367,7 +292,6 @@
                   </div>
                   <div>
                     <h4>Question 2 — Weather Association</h4>
-                    <span class="q-sub-badge">Question type: Multiple-choice grid</span>
                   </div>
                 </div>
 
@@ -426,10 +350,6 @@
                   &larr; Previous Item
                 </button>
 
-                <p v-if="!isCurrentItemComplete" class="incomplete-warning">
-                  * Require a response in each row before proceeding to the next item.
-                </p>
-
                 <button
                   v-if="!isLastItem"
                   class="nav-btn primary"
@@ -445,7 +365,7 @@
                   @click="showConfirmModal = true"
                   :disabled="!isCurrentItemComplete"
                 >
-                  Save Survey Answers 💾
+                  Save Survey Answers
                 </button>
               </div>
             </div>
@@ -453,6 +373,71 @@
         </div>
       </main>
     </div>
+
+    <Teleport to="body">
+      <div v-if="showInstructionsModal" class="modal-overlay instructions-modal-overlay">
+        <div class="modal-card instructions-modal-card">
+          <div class="section-banner starter-banner instructions-modal-banner">
+            <div class="section-scope-pill orange-scope-pill">
+              <span class="scope-dot orange-dot"></span> SECTION 2 OF 2
+            </div>
+            <h2>SECTION 2 — Menu Item Evaluation</h2>
+            <p class="section-desc">
+              Evaluate our menu items to help train our AI recommendation engine.
+            </p>
+          </div>
+
+          <div class="starter-instructions-box instructions-modal-box">
+            <div class="instructions-header">
+              <span class="instructions-icon">📋</span>
+              <h3>Instructions</h3>
+            </div>
+
+            <div class="instructions-body">
+              <p class="instruction-main">
+                You will be asked to evaluate <strong>{{ menuItems.length || SURVEY_ITEM_LIMIT }} menu items</strong>.
+              </p>
+              <p class="instruction-sub">
+                For each menu item, rate how suitable you think the item is for each mood and weather condition.
+              </p>
+            </div>
+
+            <div class="rating-scale-box">
+              <h4 class="scale-heading">Rating scale:</h4>
+              <div class="scale-list">
+                <div
+                  v-for="item in ratingScaleGuide"
+                  :key="item.value"
+                  class="scale-item"
+                  :class="`scale-item-${item.value}`"
+                >
+                  <span class="scale-badge">{{ item.value }}</span>
+                  <span class="scale-separator"> — </span>
+                  <span class="scale-label">{{ item.label }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-actions instructions-modal-actions">
+            <button
+              type="button"
+              class="nav-btn secondary"
+              @click="showInstructionsModal = false; goToSection1()"
+            >
+              &larr; Back to Section 1
+            </button>
+            <button
+              type="button"
+              class="nav-btn primary starter-proceed-btn"
+              @click="startSection2"
+            >
+              {{ completedItemsCount > 0 ? 'Continue Evaluation' : 'Start Section 2' }} &rarr;
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <Teleport to="body">
       <div v-if="showConfirmModal" class="modal-overlay">
@@ -620,7 +605,7 @@
 </template>
 
 <script setup lang="ts">
-import { watch, ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 import {
   AGE_GROUP_OPTIONS,
@@ -636,6 +621,11 @@ import { getCategoryPillClass, getImagePath, getItemDescription } from '../utils
 // --- State ---
 const hasStarted = ref(false)
 
+// A fresh UUID generated on every page load. Sent with submissions so the
+// backend treats each survey open as a completely independent new session,
+// regardless of any existing participant cookie.
+const sessionId = ref(crypto.randomUUID())
+
 const ageGroupOptions = AGE_GROUP_OPTIONS
 const diningFrequencyOptions = DINING_FREQUENCY_OPTIONS
 
@@ -644,7 +634,7 @@ const weatherRows = SECTION_2_WEATHER_ROWS
 const ratingLevels = RATING_SCALE_LEVELS
 
 const currentSection = ref(1)
-const hasStartedSection2 = ref(false)
+const showInstructionsModal = ref(false)
 
 const ratingScaleGuide = RATING_SCALE_LEVELS
 
@@ -663,18 +653,18 @@ const isDemographicComplete = computed(() => {
 const proceedToSection2 = () => {
   if (!isDemographicComplete.value) return
   currentSection.value = 2
-  hasStartedSection2.value = false
+  showInstructionsModal.value = true
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 const startSection2 = () => {
-  hasStartedSection2.value = true
+  showInstructionsModal.value = false
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 const goToSection1 = () => {
   currentSection.value = 1
-  hasStartedSection2.value = false
+  showInstructionsModal.value = false
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -860,12 +850,19 @@ const getWeatherQuestionId = (): number => {
 
 const resetSurvey = () => {
   showSuccessModal.value = false
+  showConfirmModal.value = false
+  showReviewModal.value = false
+  showLimitModal.value = false
+  showInstructionsModal.value = false
+  hasStarted.value = false
   currentSection.value = 1
-  hasStartedSection2.value = false
+  currentItemIndex.value = 0
   demographicAnswers.value = { ageGroup: '', diningFrequency: '' }
   answers.value = {}
-  localStorage.removeItem(DRAFT_KEY)
-  localStorage.removeItem(DEMO_DRAFT_KEY)
+  honeypotField.value = ''
+  // Generate a brand-new session ID so this restart is a completely independent session
+  sessionId.value = crypto.randomUUID()
+  clearStaleDrafts()
   window.location.reload()
 }
 
@@ -921,14 +918,12 @@ const executeFinalSubmit = async () => {
       phoneNumber: honeypotField.value,
       ageGroup: demographicAnswers.value.ageGroup || null,
       diningFrequency: demographicAnswers.value.diningFrequency || null,
+      sessionId: sessionId.value,
     }
-
-    window.removeEventListener('beforeunload', handleBeforeUnload)
 
     await axios.post('/submit-category', finalSubmission)
 
-    localStorage.removeItem(DRAFT_KEY)
-    localStorage.removeItem(DEMO_DRAFT_KEY)
+    clearStaleDrafts()
 
     showConfirmModal.value = false
     showReviewModal.value = false
@@ -943,81 +938,52 @@ const executeFinalSubmit = async () => {
       console.error('Error saving data:', error)
       alert('Oops! There was a problem saving your answers. Please try again.')
     }
-
-    window.addEventListener('beforeunload', handleBeforeUnload)
   }
 }
 
-const DRAFT_KEY = 'cafeRater_survey_draft'
-const DEMO_DRAFT_KEY = 'cafeRater_survey_demo_draft'
+// Legacy draft keys from when unfinished answers were persisted locally.
+// They are no longer written, but we clear them so reopening the survey
+// always starts with a fresh, empty session.
+const DRAFT_KEY = 'foodPreferenceSurvey_draft'
+const DEMO_DRAFT_KEY = 'foodPreferenceSurvey_demo_draft'
+const LEGACY_DRAFT_KEYS = ['cafeRater_survey_draft', 'cafeRater_survey_demo_draft']
 
-watch(
-  answers,
-  (newAnswers) => {
-    if (Object.keys(newAnswers).length > 0) {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(newAnswers))
-    }
-  },
-  { deep: true },
-)
-
-watch(
-  demographicAnswers,
-  (newAnswers) => {
-    if (newAnswers.ageGroup || newAnswers.diningFrequency) {
-      localStorage.setItem(DEMO_DRAFT_KEY, JSON.stringify(newAnswers))
-    }
-  },
-  { deep: true },
-)
-
-const handleBeforeUnload = (event: any) => {
-  const hasAnswers =
-    Object.keys(answers.value).length > 0 ||
-    !!demographicAnswers.value.ageGroup ||
-    !!demographicAnswers.value.diningFrequency
-
-  if (hasAnswers) {
-    event.preventDefault()
-    event.returnValue = ''
+const clearStaleDrafts = () => {
+  try {
+    localStorage.removeItem(DRAFT_KEY)
+    localStorage.removeItem(DEMO_DRAFT_KEY)
+    LEGACY_DRAFT_KEYS.forEach((key) => localStorage.removeItem(key))
+  } catch {
+    // Storage may be unavailable (e.g. private mode) — survey still starts fresh
+    // because in-memory state is always initialized empty.
   }
+}
+
+const resetSessionState = () => {
+  hasStarted.value = false
+  currentSection.value = 1
+  showInstructionsModal.value = false
+  currentItemIndex.value = 0
+  demographicAnswers.value = { ageGroup: '', diningFrequency: '' }
+  answers.value = {}
+  honeypotField.value = ''
+  showLimitModal.value = false
+  showConfirmModal.value = false
+  showSuccessModal.value = false
+  showReviewModal.value = false
+  // Always start with a fresh session ID so each visit is independent
+  sessionId.value = crypto.randomUUID()
 }
 
 onMounted(() => {
-  const savedDraft = localStorage.getItem(DRAFT_KEY)
-  if (savedDraft) {
-    try {
-      answers.value = JSON.parse(savedDraft)
-    } catch (e) {
-      console.error('Failed to parse saved draft', e)
-      localStorage.removeItem(DRAFT_KEY)
-    }
-  }
-
-  const savedDemoDraft = localStorage.getItem(DEMO_DRAFT_KEY)
-  if (savedDemoDraft) {
-    try {
-      const parsedDemo = JSON.parse(savedDemoDraft)
-      if (parsedDemo && typeof parsedDemo === 'object') {
-        demographicAnswers.value = {
-          ageGroup: parsedDemo.ageGroup || '',
-          diningFrequency: parsedDemo.diningFrequency || '',
-        }
-      }
-    } catch (e) {
-      localStorage.removeItem(DEMO_DRAFT_KEY)
-    }
-  }
+  // Every open starts a new session: discard any unfinished answers left
+  // behind by a previous visit instead of restoring them.
+  resetSessionState()
+  clearStaleDrafts()
 
   checkSurveyLimit()
   fetchMenuItems()
   fetchQuestions()
-
-  window.addEventListener('beforeunload', handleBeforeUnload)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 </script>
 
@@ -1228,13 +1194,17 @@ onUnmounted(() => {
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
 }
 .pane-header {
-  padding: 15px 20px;
+  padding: 12px 20px;
+  min-height: 52px;
+  box-sizing: border-box;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
   background: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
   font-size: 0.85rem;
+  line-height: 1.4;
 }
 .breadcrumb {
   color: #64748b;
@@ -1273,9 +1243,13 @@ onUnmounted(() => {
   bottom: 20px;
   left: 20px;
   right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
 }
 .cover-info h3 {
-  margin: 0 0 10px 0;
+  margin: 0;
   color: white;
   font-size: 1.4rem;
   font-weight: 700;
@@ -1294,7 +1268,7 @@ onUnmounted(() => {
 .questions-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 25px;
 }
 .question-card {
   background: white;
@@ -1308,6 +1282,12 @@ onUnmounted(() => {
   align-items: flex-start;
   gap: 15px;
   margin-bottom: 25px;
+}
+.q-header > div:last-child {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 .q-bubble {
   width: 28px;
@@ -1332,7 +1312,7 @@ onUnmounted(() => {
   font-size: 1.15rem;
   color: #0f172a;
   line-height: 1.4;
-  padding-top: 2px;
+  padding-top: 0;
 }
 
 .opt-btn-vertical,
@@ -2045,18 +2025,19 @@ onUnmounted(() => {
   color: #334155;
 }
 .demo-opt-btn:hover {
-  border-color: #f97316;
-  background: #fffaf5;
+  border-color: #60a5fa;
+  background: #f0f7ff;
 }
 .demo-opt-btn.selected {
-  border-color: #f97316;
-  background: #fff7ed;
-  color: #c2410c;
+  border-color: #3b82f6 !important;
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
   font-weight: 600;
 }
 .custom-radio-circle {
   width: 18px;
   height: 18px;
+  box-sizing: border-box;
   border-radius: 50%;
   border: 2px solid #cbd5e1;
   display: inline-block;
@@ -2065,17 +2046,18 @@ onUnmounted(() => {
   transition: all 0.2s;
 }
 .custom-radio-circle.active {
-  border-color: #f97316;
+  border-color: #3b82f6 !important;
 }
 .custom-radio-circle.active::after {
   content: '';
   position: absolute;
-  top: 3px;
-  left: 3px;
+  top: 50%;
+  left: 50%;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #f97316;
+  background: #3b82f6 !important;
+  transform: translate(-50%, -50%);
 }
 .demographic-footer {
   margin-top: 30px;
@@ -2091,6 +2073,10 @@ onUnmounted(() => {
   border-radius: 10px;
   width: 100%;
   max-width: 420px;
+  background: #3b82f6 !important;
+}
+.demo-proceed-btn:hover:not(:disabled) {
+  background: #2563eb !important;
 }
 .complete-info {
   color: #16a34a;
@@ -2099,12 +2085,16 @@ onUnmounted(() => {
   margin: 0;
 }
 .section-switch-header {
-  padding: 10px 20px;
+  padding: 12px 20px;
+  min-height: 52px;
+  box-sizing: border-box;
   background: #f1f5f9;
   border-bottom: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
+  line-height: 1.4;
 }
 .back-to-sec1-btn {
   background: none;
@@ -2180,18 +2170,34 @@ onUnmounted(() => {
   margin-bottom: 0.5rem;
 }
 
-/* SECTION 2 — STARTER VIEW */
-.section2-starter-view {
-  max-width: 780px;
-  margin: 0 auto;
+/* SECTION 2 — INSTRUCTIONS MODAL (atop Section 2 page) */
+.instructions-modal-card {
+  max-width: 640px !important;
+  width: 95%;
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+  text-align: left;
+  border-top: 4px solid #f97316;
 }
-.section2-starter-card {
-  background: white;
-  border-radius: 24px;
-  padding: 35px 40px;
-  border: 1px solid #e2e8f0;
-  border-top: 4px solid #f97316 !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+.instructions-modal-banner {
+  padding: 28px 36px 20px 36px;
+  margin-bottom: 0;
+}
+.instructions-modal-box {
+  margin: 20px 36px 0 36px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.instructions-modal-actions {
+  padding: 20px 36px 28px 36px;
+}
+.instructions-modal-actions .nav-btn {
+  flex: 1;
+  margin: 0;
+  text-align: center;
 }
 .orange-scope-pill {
   background: #fff7ed !important;
@@ -2216,22 +2222,25 @@ onUnmounted(() => {
 }
 .instructions-header h3 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   color: #0f172a;
-  font-weight: 800;
+  font-weight: 700;
+  line-height: 1.4;
 }
 .instructions-body {
   margin-bottom: 24px;
 }
 .instruction-main {
   margin: 0 0 8px 0;
-  font-size: 1.05rem;
-  color: #1e293b;
+  font-size: 1rem;
+  color: #334155;
+  font-weight: 500;
   line-height: 1.6;
 }
 .instruction-sub {
   margin: 0;
   font-size: 1rem;
+  font-weight: 400;
   color: #475569;
   line-height: 1.6;
 }
@@ -2243,7 +2252,7 @@ onUnmounted(() => {
 }
 .scale-heading {
   margin: 0 0 14px 0;
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -2304,16 +2313,9 @@ onUnmounted(() => {
   font-weight: 600;
 }
 .scale-label {
-  font-size: 0.98rem;
+  font-size: 1rem;
   font-weight: 600;
-  color: #1e293b;
-}
-.starter-footer {
-  margin-top: 25px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 15px;
+  color: #334155;
 }
 .starter-proceed-btn {
   padding: 14px 28px;
@@ -2324,22 +2326,21 @@ onUnmounted(() => {
 }
 
 @media (max-width: 600px) {
-  .section2-starter-card {
-    padding: 24px 20px;
+  .instructions-modal-banner {
+    padding: 22px 20px 16px 20px;
+  }
+  .instructions-modal-box {
+    margin: 16px 20px 0 20px;
+  }
+  .instructions-modal-actions {
+    padding: 16px 20px 22px 20px;
+    flex-direction: column-reverse;
   }
   .starter-instructions-box {
     padding: 18px 16px;
   }
   .rating-scale-box {
     padding: 14px 16px;
-  }
-  .starter-footer {
-    flex-direction: column-reverse;
-    gap: 12px;
-  }
-  .starter-footer .nav-btn {
-    width: 100%;
-    text-align: center;
   }
 }
 
@@ -2366,7 +2367,8 @@ onUnmounted(() => {
   color: #fdba74;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  margin-bottom: 4px;
+  margin-bottom: 0;
+  line-height: 1.4;
 }
 
 .item-desc-panel {
@@ -2374,6 +2376,10 @@ onUnmounted(() => {
   background: #f8fafc;
   border-top: 1px solid #e2e8f0;
   border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
 }
 
 .desc-tag {
@@ -2383,7 +2389,8 @@ onUnmounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #64748b;
-  margin-bottom: 6px;
+  margin-bottom: 0;
+  line-height: 1.4;
 }
 
 .desc-text {
@@ -2394,14 +2401,37 @@ onUnmounted(() => {
 }
 
 .grid-question-card {
-  padding: 28px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px;
+  border-top: 4px solid #f97316 !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+}
+
+.grid-bubble {
+  background: #fff7ed !important;
+  color: #ea580c !important;
+  border: 1px solid #fed7aa !important;
+}
+
+.grid-bubble.answered {
+  background: #10b981 !important;
+  color: white !important;
+  border-color: #10b981 !important;
 }
 
 .grid-prompt-text {
-  font-size: 1.05rem;
-  color: #1e293b;
+  font-size: 1rem;
+  font-weight: 400;
+  color: #334155;
   margin: 0 0 18px 0;
-  line-height: 1.5;
+  line-height: 1.6;
+}
+.grid-prompt-text strong,
+.instruction-main strong {
+  color: #0f172a;
+  font-weight: 600;
 }
 
 .matrix-wrapper {
@@ -2411,31 +2441,34 @@ onUnmounted(() => {
   border: 1px solid #e2e8f0;
   background: white;
   margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   -webkit-overflow-scrolling: touch;
 }
 
 .matrix-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   text-align: center;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
 }
 
 .matrix-table thead {
-  background: #f8fafc;
-  border-bottom: 2px solid #e2e8f0;
+  background: #fafbfc;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .matrix-table th {
   padding: 12px 10px;
   font-weight: 600;
   color: #475569;
+  vertical-align: middle;
 }
 
 .col-corner {
   text-align: left;
   padding-left: 18px !important;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -2444,32 +2477,36 @@ onUnmounted(() => {
 }
 
 .col-scale {
-  width: 80px;
-  min-width: 70px;
+  width: 72px;
+  min-width: 64px;
   text-align: center;
-  vertical-align: bottom;
+  vertical-align: middle;
   padding: 10px 6px;
 }
 
 .scale-header-num {
   display: block;
-  font-size: 1.15rem;
-  font-weight: 800;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 700;
   color: #0f172a;
-  margin-bottom: 2px;
+  margin: 0 auto 2px auto;
+  line-height: 1.4;
 }
 
 .scale-header-hint {
   display: block;
-  font-size: 0.68rem;
+  text-align: center;
+  font-size: 0.75rem;
   font-weight: 600;
   color: #64748b;
-  line-height: 1.2;
+  line-height: 1.3;
+  margin: 0 auto;
 }
 
 .matrix-tr {
   border-bottom: 1px solid #f1f5f9;
-  transition: background-color 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .matrix-tr:last-child {
@@ -2477,19 +2514,27 @@ onUnmounted(() => {
 }
 
 .matrix-tr:hover {
-  background-color: #f8fafc;
+  background-color: #fffaf5;
 }
 
 .matrix-tr.row-answered {
-  background-color: #fffaf5;
+  background-color: #fff7ed;
 }
 
 .matrix-row-title {
   text-align: left;
+  vertical-align: middle;
   padding: 14px 18px;
-  font-size: 0.92rem;
-  color: #1e293b;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #334155;
   line-height: 1.45;
+  transition: color 0.2s ease;
+}
+
+.matrix-tr.row-answered .matrix-row-title {
+  color: #c2410c;
+  font-weight: 600;
 }
 
 .row-text {
@@ -2505,40 +2550,45 @@ onUnmounted(() => {
 
 .matrix-td:hover .grid-radio-circle {
   border-color: #f97316;
-  transform: scale(1.15);
+  transform: scale(1.1);
 }
 
 .grid-radio-circle {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
   border-radius: 50%;
   border: 2px solid #cbd5e1;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  margin: 0 auto;
   position: relative;
-  transition: all 0.15s ease-in-out;
+  transition: all 0.2s ease-in-out;
   background: white;
 }
 
 .grid-radio-circle.active {
   border-color: #f97316;
-  background: #f97316;
-  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+  background: white;
 }
 
 .grid-radio-circle.active::after {
   content: '';
   position: absolute;
-  top: 5px;
-  left: 5px;
+  top: 50%;
+  left: 50%;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: white;
+  background: #f97316;
+  transform: translate(-50%, -50%);
 }
 
 .grid-req-footer {
   margin-top: 10px;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: #64748b;
   display: flex;
   align-items: center;

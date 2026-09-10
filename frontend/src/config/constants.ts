@@ -24,7 +24,7 @@ const parsePositiveInt = (value: string | undefined, name: string, fallback?: nu
 const DEFAULT_SURVEY_ITEM_LIMIT = 15
 const DEFAULT_SURVEY_TEXT_MAX_LENGTH = 250
 const DEFAULT_SURVEY_BASELINE_TARGET = 30
-const DEFAULT_REPORT_FILENAME = 'CafeRater_Analytics.csv'
+const DEFAULT_REPORT_FILENAME = 'FoodPreferenceSurvey_Analytics.csv'
 
 export const SURVEY_ITEM_LIMIT = parsePositiveInt(
   import.meta.env.VITE_SURVEY_ITEM_LIMIT,
