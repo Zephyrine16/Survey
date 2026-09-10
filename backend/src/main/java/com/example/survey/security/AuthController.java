@@ -14,6 +14,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -22,7 +24,10 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class AuthController {
 
+    private static final String DUMMY_BCRYPT_HASH = "$2a$10$e8kPqZ2aZJ6w1K4e7rXGVuY7w1K4e7rXGVuY7w1K4e7rXGVuY7w1K4";
+
     private final JwtUtil jwtUtil;
+    private final ClientIpResolver clientIpResolver;
 
     @Value("${admin.username}")
     private String adminUser;
@@ -48,7 +53,7 @@ public class AuthController {
         String username = credentials.getUsername();
         String password = credentials.getPassword();
 
-        String rateLimitKey = extractClientIp(request);
+        String rateLimitKey = clientIpResolver.resolveClientIp(request);
 
         Integer failures = failedLoginAttempts.getIfPresent(rateLimitKey);
         int failureCount = failures == null ? 0 : failures;
@@ -58,7 +63,21 @@ public class AuthController {
                     .body(Map.of("error", "Too many failed login attempts. Try again later."));
         }
 
-        if(adminUser.equals(username) && passwordEncoder.matches(password, adminPassHash)) {
+        boolean usernameMatches = MessageDigest.isEqual(
+                adminUser.getBytes(StandardCharsets.UTF_8),
+                username.getBytes(StandardCharsets.UTF_8)
+        );
+
+        boolean passwordMatches;
+        if (usernameMatches) {
+            passwordMatches = passwordEncoder.matches(password, adminPassHash);
+        } else {
+            // Mitigate timing attack: execute dummy check so response time is indistinguishable
+            passwordEncoder.matches(password, DUMMY_BCRYPT_HASH);
+            passwordMatches = false;
+        }
+
+        if(usernameMatches && passwordMatches) {
             failedLoginAttempts.invalidate(rateLimitKey);
             String token = jwtUtil.generateToken(username);
             return ResponseEntity.ok(Map.of("token", token));
@@ -66,14 +85,5 @@ public class AuthController {
 
         failedLoginAttempts.put(rateLimitKey, failureCount + 1);
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid credentials"));
-    }
-
-    private String extractClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if(forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-
-        return request.getRemoteAddr();
     }
 }

@@ -37,6 +37,9 @@ public class SurveyController {
     private static final Logger log = LoggerFactory.getLogger(SurveyController.class);
     private final SurveyProperties surveyProperties;
 
+    @org.springframework.beans.factory.annotation.Value("${survey.participant-cookie-secure:false}")
+    private boolean participantCookieSecure;
+
     // ==========================================
     // 1. SAVE SURVEY ANSWERS
     // ==========================================
@@ -55,7 +58,13 @@ public class SurveyController {
 
         try {
             List<CategorySubmissionDTO> categorySubmissions = submissionRequest.getAnswers();
-            String participantId = getOrCreateParticipantId(httpRequest, httpResponse);
+
+            // If the frontend supplied a per-page-load sessionId, use it directly so
+            // every survey open is a completely independent session.  We still
+            // issue/refresh the cookie for legacy clients and as a fallback.
+            String cookieId = getOrCreateParticipantId(httpRequest, httpResponse);
+            String participantId = resolveParticipantId(submissionRequest.getSessionId(), cookieId);
+
             assignParticipantToPayload(categorySubmissions, participantId);
 
             boolean savedUnderLimit = surveyService.saveSurveyIfUnderLimit(categorySubmissions);
@@ -76,6 +85,22 @@ public class SurveyController {
             log.error("Failed to save survey category submission.", e);
             return ResponseEntity.internalServerError().body("{\"error\": \"Failed to save data.\"}");
         }
+    }
+
+    /**
+     * Returns the frontend-supplied sessionId when it is a syntactically valid UUID;
+     * otherwise falls back to the cookie-based participantId.
+     */
+    private String resolveParticipantId(String sessionId, String cookieId) {
+        if (sessionId != null && !sessionId.isBlank()) {
+            try {
+                UUID.fromString(sessionId.trim());
+                return sessionId.trim();
+            } catch (IllegalArgumentException ignored) {
+                log.warn("Invalid sessionId format received from frontend, falling back to cookie.");
+            }
+        }
+        return cookieId;
     }
 
     private boolean isHoneypotTriggered(com.example.survey.dto.SurveySubmissionRequest request) {
