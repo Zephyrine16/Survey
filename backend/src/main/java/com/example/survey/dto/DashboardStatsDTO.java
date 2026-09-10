@@ -10,4 +10,9 @@ public class DashboardStatsDTO {
     public double neutralPct;
     public double negativePct;
     public java.util.List<String> topKeywords;
+    public String topMood;
+    public double topMoodScore;
+    public String topWeather;
+    public double topWeatherScore;
+    public double avgSuitabilityScore;
 }

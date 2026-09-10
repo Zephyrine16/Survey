@@ -22,10 +22,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);
 
     private final RateLimitProperties rateLimitProperties;
+    private final ClientIpResolver clientIpResolver;
     private final Cache<String, Boolean> ipCooldowns;
 
-    public RateLimitFilter(RateLimitProperties rateLimitProperties) {
+    public RateLimitFilter(RateLimitProperties rateLimitProperties, ClientIpResolver clientIpResolver) {
         this.rateLimitProperties = rateLimitProperties;
+        this.clientIpResolver = clientIpResolver;
 
         this.ipCooldowns = Caffeine.newBuilder()
                 .expireAfterWrite(rateLimitProperties.getWindowSeconds(), TimeUnit.SECONDS)
@@ -46,13 +48,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String rateLimitPath = rateLimitProperties.getPath();
 
         // We only want to rate-limit the public category submission endpoint!
-        if (rateLimitPath != null && !rateLimitPath.isBlank() && path.startsWith(rateLimitPath)) {
-            String clientIp = extractClientIp(request);
+        if (rateLimitPath != null && !rateLimitPath.isBlank()
+                && (path.equals(rateLimitPath) || path.startsWith(rateLimitPath + "/"))) {
+            String clientIp = clientIpResolver.resolveClientIp(request);
 
             // Check if this IP is on cooldown
             if(ipCooldowns.getIfPresent(clientIp) != null) {
                 log.warn("Blocked repeat submit-category request from IP {}", clientIp);
                 response.setStatus(429); // HTTP 429 = "Too Many Requests"
+                response.setContentType("text/plain;charset=UTF-8");
                 response.getWriter().write(rateLimitProperties.getMessage());
                 return;
             }
@@ -64,14 +68,5 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         // Allow the request to pass through normally
         filterChain.doFilter(request, response);
-    }
-
-    private String extractClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if(forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
-
-        return request.getRemoteAddr();
     }
 }

@@ -83,14 +83,14 @@
         <section class="kpi-grid">
           <div class="new-kpi-card global-card">
             <div class="scope-label"><span class="scope-dot blue-dot"></span> GLOBAL</div>
-            <h2 class="kpi-val">{{ baselineCount }}</h2>
-            <p class="kpi-name">BASELINE METRIC</p>
+            <h2 class="kpi-val">{{ demographics.globalParticipants || baselineCount }}</h2>
+            <p class="kpi-name">PARTICIPANTS</p>
             <p class="kpi-desc">
               Target {{ SURVEY_BASELINE_TARGET }} •
               {{
-                baselineCount >= SURVEY_BASELINE_TARGET
+                (demographics.globalParticipants || baselineCount) >= SURVEY_BASELINE_TARGET
                   ? 'Goal Reached!'
-                  : `Need ${SURVEY_BASELINE_TARGET - baselineCount} more responses`
+                  : `Need ${SURVEY_BASELINE_TARGET - (demographics.globalParticipants || baselineCount)} more`
               }}
             </p>
           </div>
@@ -99,32 +99,87 @@
             <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
             <h2 class="kpi-val">{{ itemTotal }}</h2>
             <p class="kpi-name">TOTAL RESPONSES</p>
-            <p class="kpi-desc">For selected menu item</p>
+            <p class="kpi-desc">{{ itemCoverageLabel }}</p>
           </div>
 
           <div class="new-kpi-card item-card">
             <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
             <h2 class="kpi-val">{{ sentiment.posPct }}%</h2>
-            <p class="kpi-name">POSITIVE SENTIMENT</p>
-            <p class="kpi-desc">Happy Reviewers</p>
+            <p class="kpi-name">SUITABILITY RATE</p>
+            <p class="kpi-desc">Ratings 4-5 (Suitable / High)</p>
+          </div>
+
+          <div class="new-kpi-card item-card">
+            <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
+            <h2 class="kpi-val">{{ sentiment.neuPct }}%</h2>
+            <p class="kpi-name">NEUTRAL</p>
+            <p class="kpi-desc">Rating 3 (Moderate)</p>
           </div>
 
           <div class="new-kpi-card item-card">
             <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
             <h2 class="kpi-val">{{ sentiment.negPct }}%</h2>
             <p class="kpi-name">NEEDS ATTENTION</p>
-            <p class="kpi-desc">Critical / Negative Feedback</p>
+            <p class="kpi-desc">Ratings 1-2 (Low suitability)</p>
+          </div>
+        </section>
+
+        <!-- SECTION 1: DEMOGRAPHIC OVERVIEW -->
+        <section class="demographics-overview-panel">
+          <div class="demo-panel-header">
+            <div class="demo-panel-title-wrap">
+              <span class="scope-dot blue-dot"></span>
+              <div>
+                <h3>SECTION 1 — Survey Respondent Profile</h3>
+                <p class="demo-panel-sub">
+                  Overall demographic distribution across all survey takers (Total: {{ demographics.globalParticipants || baselineCount }} respondent{{ (demographics.globalParticipants || baselineCount) === 1 ? '' : 's' }})
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div class="new-kpi-card item-card">
-            <div class="scope-label"><span class="scope-dot orange-dot"></span> CURRENT ITEM</div>
-            <div class="kpi-val-wrapper">
-              <span class="keyword-pill" style="text-transform: capitalize">
-                {{ topKeywords.length > 0 ? topKeywords[0] : '-' }}
-              </span>
+          <div class="demo-panel-content">
+            <div class="demo-stat-card">
+              <div class="demo-card-top">
+                <span class="demo-icon">🎂</span>
+                <div>
+                  <h4>Age Group Distribution</h4>
+                  <p class="demo-hint">Participant age range</p>
+                </div>
+              </div>
+              <div class="demo-bars-list">
+                <div v-for="item in ageGroupStats" :key="item.label" class="demo-bar-item">
+                  <div class="demo-bar-meta">
+                    <span class="demo-opt-label">{{ item.label }}</span>
+                    <span class="demo-opt-val"><strong>{{ item.count }}</strong> ({{ item.pct }}%)</span>
+                  </div>
+                  <div class="demo-track">
+                    <div class="demo-fill blue-theme" :style="{ width: item.pct + '%' }"></div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <p class="kpi-name">TOP KEYWORD</p>
-            <p class="kpi-desc">Most used in text reviews</p>
+
+            <div class="demo-stat-card">
+              <div class="demo-card-top">
+                <span class="demo-icon">🍽️</span>
+                <div>
+                  <h4>Dining Frequency Distribution</h4>
+                  <p class="demo-hint">How often participants dine at cafés / restaurants</p>
+                </div>
+              </div>
+              <div class="demo-bars-list">
+                <div v-for="item in diningFrequencyStats" :key="item.label" class="demo-bar-item">
+                  <div class="demo-bar-meta">
+                    <span class="demo-opt-label">{{ item.label }}</span>
+                    <span class="demo-opt-val"><strong>{{ item.count }}</strong> ({{ item.pct }}%)</span>
+                  </div>
+                  <div class="demo-track">
+                    <div class="demo-fill blue-theme" :style="{ width: item.pct + '%' }"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -207,229 +262,292 @@
           </p>
         </div>
 
-        <section v-else class="cards-grid">
-          <div
-            v-for="(answers, question, index) in radioQuestions"
-            :key="question"
-            class="insight-card radio-card-v2"
-            :style="getCategoryStyles(menuItem?.category)"
-          >
-            <div
-              class="card-image-header-v2"
-              :style="
-                menuItem?.imageName ? { backgroundImage: `url('${getImagePath(menuItem)}')` } : {}
-              "
-            >
-              <div class="image-overlay-v2">
-                <h3 class="truncate-text">{{ menuItem?.name }}</h3>
-                <span class="badge-v2 food-badge" :class="getPillClass(menuItem?.category)"
-                  >🍴 {{ menuItem?.category }}</span
-                >
-              </div>
-              <span class="q-circle">Q{{ index + 1 }}</span>
-            </div>
-
-            <div class="card-body insight-body">
-              <h4 class="question-title">{{ question }}</h4>
-              <p class="response-count">{{ itemTotal }} response{{ itemTotal === 1 ? '' : 's' }}</p>
-
-              <div class="bars-container">
-                <div v-for="stat in answers" :key="stat.optionLabel" class="bar-row">
-                  <span class="bar-label" :title="stat.optionLabel">{{ stat.optionLabel }}</span>
-                  <div class="bar-track-v2">
-                    <div
-                      class="bar-fill orange-solid"
-                      :style="{ width: calculatePercentage(stat.voteCount, answers) + '%' }"
-                    ></div>
-                  </div>
-                  <span class="bar-value">{{ stat.voteCount }}</span>
-                  <span class="bar-percent"
-                    >{{ calculatePercentage(stat.voteCount, answers) }}%</span
-                  >
+        <div v-else class="item-analytics-view">
+          <!-- Item Summary Header Card -->
+          <div class="item-summary-card" :style="getCategoryStyles(menuItem?.category)">
+            <div class="summary-left">
+              <div
+                class="summary-thumb"
+                :style="menuItem?.imageName ? { backgroundImage: `url('${getImagePath(menuItem)}')` } : {}"
+              ></div>
+              <div class="summary-details">
+                <div class="summary-badges">
+                  <span class="badge-v2 food-badge" :class="getPillClass(menuItem?.category)">
+                    🍴 {{ menuItem?.category }}
+                  </span>
+                  <span class="badge-v2 eval-badge">
+                    👥 {{ itemTotal }} Evaluation{{ itemTotal === 1 ? '' : 's' }}
+                  </span>
                 </div>
+                <h2 class="summary-title">{{ menuItem?.name }}</h2>
+                <p class="summary-desc">{{ getItemDescription(menuItem?.name) }}</p>
               </div>
-
-              <div class="key-insight-v2">
-                <span class="insight-icon">📈</span>
-                <span
-                  ><strong>Key insight:</strong> {{ topResponse(answers) }} is the leading
-                  choice.</span
-                >
+            </div>
+            <div class="summary-metrics">
+              <div class="metric-pill-box">
+                <span class="metric-num">{{ avgSuitabilityScore ? `${avgSuitabilityScore.toFixed(1)} ★` : `${(sentiment.posPct / 20).toFixed(1)} ★` }}</span>
+                <span class="metric-lbl">Avg Suitability</span>
+              </div>
+              <div class="metric-pill-box">
+                <span class="metric-num">{{ displayMoodData.topRowLabel || '-' }}</span>
+                <span class="metric-lbl">Top Mood</span>
+              </div>
+              <div class="metric-pill-box">
+                <span class="metric-num">{{ displayWeatherData.topRowLabel || '-' }}</span>
+                <span class="metric-lbl">Top Weather</span>
               </div>
             </div>
           </div>
 
-          <div
-            v-for="(answers, question, index) in textQuestions"
-            :key="question"
-            class="insight-card text-card-v2"
-            :style="getCategoryStyles(menuItem?.category)"
-          >
-            <div class="text-top-row">
-              <div
-                class="text-col-image"
-                :style="
-                  menuItem?.imageName ? { backgroundImage: `url('${getImagePath(menuItem)}')` } : {}
-                "
-              >
-                <span class="q-circle"
-                  >Q{{
-                    (radioQuestions ? Object.keys(radioQuestions).length : 0) + index + 1
-                  }}</span
-                >
-                <div class="image-overlay-v2">
-                  <h3 class="truncate-text">{{ menuItem?.name }}</h3>
-                  <div class="badge-row">
-                    <span class="badge-v2 food-badge" :class="getPillClass(menuItem?.category)"
-                      >🍴 {{ menuItem?.category }}</span
-                    >
-                    <span class="badge-v2 type-badge">💬 Open-ended</span>
+          <!-- SECTION 2: GRID EVALUATION CARDS (QUESTION 1 & QUESTION 2) -->
+          <div class="section2-grid-columns">
+            <!-- Question 1 — Mood Association Card -->
+            <div class="grid-card-container" :style="getCategoryStyles(menuItem?.category)">
+              <div class="grid-card-head">
+                <div class="head-title-wrap">
+                  <span class="q-badge">Q1</span>
+                  <div>
+                    <h3>Question 1 — Mood Association</h3>
+                    <p class="grid-card-subtitle">
+                      How suitable is <strong>{{ menuItem?.name }}</strong> for each mood? (Scale 1–5)
+                    </p>
                   </div>
                 </div>
+                <span class="evaluator-pill">
+                  👥 {{ displayMoodData.totalEvaluators || itemTotal }} Evaluator{{ (displayMoodData.totalEvaluators || itemTotal) === 1 ? '' : 's' }}
+                </span>
               </div>
 
-              <div class="text-col-sentiment">
-                <h4 class="question-title-v2">{{ question }}</h4>
-                <p class="response-count-v2">
-                  {{ answers.length }} text response{{ answers.length === 1 ? '' : 's' }}
-                </p>
-                <p class="section-label">SENTIMENT BREAKDOWN</p>
-
-                <div class="sent-boxes-v2">
-                  <div class="s-box-v2 pos">
-                    <h2>{{ sentiment.pos }}</h2>
-                    <span>Positive</span>
-                  </div>
-                  <div class="s-box-v2 neu">
-                    <h2>{{ sentiment.neu }}</h2>
-                    <span>Neutral</span>
-                  </div>
-                  <div class="s-box-v2 neg">
-                    <h2>{{ sentiment.neg }}</h2>
-                    <span>Negative</span>
-                  </div>
+              <div class="grid-card-content">
+                <div class="grid-col-headers">
+                  <span class="hdr-label">Mood & Emotion</span>
+                  <span class="hdr-score">Avg Score</span>
+                  <span class="hdr-bar">Score Track & Vote Spread</span>
+                  <span class="hdr-suit">% Suitable</span>
+                  <span class="hdr-votes">Votes</span>
                 </div>
 
-                <div class="sent-bar-thick">
-                  <div class="s-fill-thick pos" :style="{ width: sentiment.posPct + '%' }"></div>
-                  <div class="s-fill-thick neu" :style="{ width: sentiment.neuPct + '%' }"></div>
-                  <div class="s-fill-thick neg" :style="{ width: sentiment.negPct + '%' }"></div>
-                </div>
-
-                <div class="sent-legend">
-                  <span class="l-pos">● Positive {{ sentiment.posPct }}%</span>
-                  <span class="l-neu">● Neutral {{ sentiment.neuPct }}%</span>
-                  <span class="l-neg">● Negative {{ sentiment.negPct }}%</span>
-                  <span class="l-total">= 100%</span>
-                </div>
-              </div>
-
-              <div class="text-col-keywords">
-                <p class="section-label"># TOP KEYWORDS</p>
-                <p class="section-subtext">Automatically extracted from reviews</p>
-                <div class="word-cloud-v2">
-                  <span v-if="topKeywords.length === 0" class="w-small" style="color: #94a3b8"
-                    >Not enough text data yet.</span
+                <div class="grid-rows-list">
+                  <div
+                    v-for="row in displayMoodData.rows"
+                    :key="row.id"
+                    class="grid-row-item"
+                    :class="{ 'leader-row': row.shortLabel === displayMoodData.topRowLabel }"
                   >
+                    <div class="row-info-col">
+                      <div class="row-mood-title">
+                        <strong>{{ row.shortLabel }}</strong>
+                        <span v-if="row.shortLabel === displayMoodData.topRowLabel" class="top-tag">⭐ Top</span>
+                      </div>
+                      <span class="row-mood-desc">{{ getMoodContext(row.label, row.shortLabel) }}</span>
+                    </div>
 
-                  <span
-                    v-for="(word, index) in topKeywords"
-                    :key="word"
-                    :class="[
-                      getWordClass(index),
-                      {
-                        'active-word': activeKeywordFilter === word,
-                        'dimmed-word': activeKeywordFilter && activeKeywordFilter !== word,
-                      },
-                    ]"
-                    @click="toggleKeywordFilter(word)"
-                  >
-                    {{ word }}
+                    <div class="row-score-col">
+                      <span class="score-chip" :class="getScoreBadgeClass(row.avgRating)">
+                        {{ row.avgRating > 0 ? `${row.avgRating.toFixed(1)} ★` : '—' }}
+                      </span>
+                    </div>
+
+                    <div class="row-bar-col">
+                      <div class="rating-track-bar">
+                        <div
+                          class="rating-track-fill"
+                          :style="{ width: Math.min(100, (row.avgRating / 5) * 100) + '%' }"
+                        ></div>
+                      </div>
+                      <div class="mini-scale-ticks dist-ticks" :title="distTitle(row)">
+                        <span
+                          v-for="n in [1, 2, 3, 4, 5]"
+                          :key="n"
+                          :class="{ 'dist-zero': !rowVoteCount(row, n) }"
+                        >{{ n }}:{{ rowVoteCount(row, n) }}</span>
+                      </div>
+                    </div>
+
+                    <div class="row-suit-col">
+                      <span
+                        class="suit-badge"
+                        :class="row.suitabilityPct >= 70 ? 'suit-high' : row.suitabilityPct >= 40 ? 'suit-med' : 'suit-low'"
+                      >
+                        {{ row.suitabilityPct }}%
+                      </span>
+                    </div>
+
+                    <div class="row-votes-col">
+                      <span class="votes-badge">{{ row.totalVotes }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid-insight-footer" v-if="displayMoodData.topRowLabel">
+                  <span class="insight-lamp">💡</span>
+                  <span class="insight-text">
+                    <strong>Key Insight:</strong> <strong>{{ displayMoodData.topRowLabel }}</strong> is the leading mood association with an average suitability score of <strong>{{ displayMoodData.topRowScore.toFixed(1) }} / 5.0</strong>.
                   </span>
                 </div>
               </div>
             </div>
 
-            <div class="text-bottom-row">
-              <div class="excerpt-header-row">
-                <div class="header-left-side">
-                  <p class="section-label mb-0">⚑ RESPONSE EXCERPTS</p>
-                  <span class="excerpt-count"
-                    >{{ Math.min(filteredAnswers(answers).length, 8) }} of
-                    {{ filteredAnswers(answers).length }}</span
-                  >
+            <!-- Question 2 — Weather Association Card -->
+            <div class="grid-card-container" :style="getCategoryStyles(menuItem?.category)">
+              <div class="grid-card-head">
+                <div class="head-title-wrap">
+                  <span class="q-badge">Q2</span>
+                  <div>
+                    <h3>Question 2 — Weather Association</h3>
+                    <p class="grid-card-subtitle">
+                      How suitable is <strong>{{ menuItem?.name }}</strong> for each weather condition? (Scale 1–5)
+                    </p>
+                  </div>
                 </div>
-                <div class="excerpt-filters">
-                  <button
-                    class="f-btn"
-                    :class="{ active: activeSentimentFilter === 'All' }"
-                    @click="activeSentimentFilter = 'All'"
-                  >
-                    All
-                  </button>
-                  <button
-                    class="f-btn pos-btn"
-                    :class="{ active: activeSentimentFilter === 'Positive' }"
-                    @click="activeSentimentFilter = 'Positive'"
-                  >
-                    Positive
-                  </button>
-                  <button
-                    class="f-btn neu-btn"
-                    :class="{ active: activeSentimentFilter === 'Neutral' }"
-                    @click="activeSentimentFilter = 'Neutral'"
-                  >
-                    Neutral
-                  </button>
-                  <button
-                    class="f-btn neg-btn"
-                    :class="{ active: activeSentimentFilter === 'Negative' }"
-                    @click="activeSentimentFilter = 'Negative'"
-                  >
-                    Negative
-                  </button>
-
-                  <button
-                    v-if="activeKeywordFilter"
-                    class="f-btn keyword-clear-btn"
-                    @click="activeKeywordFilter = null"
-                  >
-                    Contains: "{{ activeKeywordFilter }}" ✕
-                  </button>
-                </div>
+                <span class="evaluator-pill">
+                  ⛅ {{ displayWeatherData.totalEvaluators || itemTotal }} Evaluator{{ (displayWeatherData.totalEvaluators || itemTotal) === 1 ? '' : 's' }}
+                </span>
               </div>
 
-              <div
-                v-if="filteredAnswers(answers).length === 0"
-                class="empty-filter"
-                style="text-align: center; padding: 40px; color: #64748b; font-style: italic"
-              >
-                No responses found matching your filters.
-              </div>
+              <div class="grid-card-content">
+                <div class="grid-col-headers">
+                  <span class="hdr-label">Weather Condition</span>
+                  <span class="hdr-score">Avg Score</span>
+                  <span class="hdr-bar">Score Track & Vote Spread</span>
+                  <span class="hdr-suit">% Suitable</span>
+                  <span class="hdr-votes">Votes</span>
+                </div>
 
-              <div v-else class="excerpt-grid-v2">
-                <div
-                  v-for="(feedback, i) in filteredAnswers(answers).slice(0, 8)"
-                  :key="i"
-                  class="exc-card"
-                >
-                  <p class="exc-text">
-                    "{{
-                      feedback.response ||
-                      feedback.textResponse ||
-                      (typeof feedback === 'string' ? feedback : 'No text saved in database')
-                    }}"
-                  </p>
-                  <div class="exc-footer">
-                    <span class="exc-tag" :class="getSentimentData(feedback).class">
-                      {{ getSentimentData(feedback).icon }} {{ getSentimentData(feedback).label }}
-                    </span>
+                <div class="grid-rows-list">
+                  <div
+                    v-for="row in displayWeatherData.rows"
+                    :key="row.id"
+                    class="grid-row-item"
+                    :class="{ 'leader-row': row.shortLabel === displayWeatherData.topRowLabel }"
+                  >
+                    <div class="row-info-col">
+                      <div class="row-mood-title">
+                        <strong>{{ getWeatherIcon(row.shortLabel) }} {{ row.shortLabel }}</strong>
+                        <span v-if="row.shortLabel === displayWeatherData.topRowLabel" class="top-tag">⭐ Top</span>
+                      </div>
+                      <span class="row-mood-desc" v-if="row.id === 'cool_dry'">Breezy, air-conditioned, cool evening weather</span>
+                      <span class="row-mood-desc" v-else>{{ row.shortLabel }} weather condition</span>
+                    </div>
+
+                    <div class="row-score-col">
+                      <span class="score-chip" :class="getScoreBadgeClass(row.avgRating)">
+                        {{ row.avgRating > 0 ? `${row.avgRating.toFixed(1)} ★` : '—' }}
+                      </span>
+                    </div>
+
+                    <div class="row-bar-col">
+                      <div class="rating-track-bar">
+                        <div
+                          class="rating-track-fill"
+                          :style="{ width: Math.min(100, (row.avgRating / 5) * 100) + '%' }"
+                        ></div>
+                      </div>
+                      <div class="mini-scale-ticks dist-ticks" :title="distTitle(row)">
+                        <span
+                          v-for="n in [1, 2, 3, 4, 5]"
+                          :key="n"
+                          :class="{ 'dist-zero': !rowVoteCount(row, n) }"
+                        >{{ n }}:{{ rowVoteCount(row, n) }}</span>
+                      </div>
+                    </div>
+
+                    <div class="row-suit-col">
+                      <span
+                        class="suit-badge"
+                        :class="row.suitabilityPct >= 70 ? 'suit-high' : row.suitabilityPct >= 40 ? 'suit-med' : 'suit-low'"
+                      >
+                        {{ row.suitabilityPct }}%
+                      </span>
+                    </div>
+
+                    <div class="row-votes-col">
+                      <span class="votes-badge">{{ row.totalVotes }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid-insight-footer" v-if="displayWeatherData.topRowLabel">
+                  <span class="insight-lamp">💡</span>
+                  <span class="insight-text">
+                    <strong>Key Insight:</strong> <strong>{{ displayWeatherData.topRowLabel }}</strong> is the optimal weather condition with an average score of <strong>{{ displayWeatherData.topRowScore.toFixed(1) }} / 5.0</strong>.
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- INDIVIDUAL RESPONSES LOG (SURVEY TAKER DATA) -->
+          <div class="responses-log-section">
+            <div class="log-section-header">
+              <div class="log-title-area">
+                <span class="log-emoji">📋</span>
+                <div>
+                  <h3>Survey Takers — Individual Evaluations</h3>
+                  <p class="log-desc">Complete rating details and feedback submitted for <strong>{{ menuItem?.name }}</strong></p>
+                </div>
+              </div>
+              <span class="log-badge">{{ displayResponses.length }} Submission{{ displayResponses.length === 1 ? '' : 's' }}</span>
+            </div>
+
+            <div v-if="displayResponses.length === 0" class="log-empty">
+              <p>No individual evaluation breakdown recorded yet.</p>
+            </div>
+
+            <div v-else class="log-cards-grid">
+              <div v-for="(resp, idx) in displayResponses" :key="resp.userId || idx" class="submission-card">
+                <div class="sub-card-header">
+                  <div class="respondent-info">
+                    <span class="user-avatar">👤</span>
+                    <div>
+                      <h4 class="respondent-title">Respondent #{{ idx + 1 }}</h4>
+                      <span class="respondent-sub" :title="resp.userId">{{ formatUserId(resp.userId) }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sub-card-body">
+                  <!-- Mood Ratings -->
+                  <div class="sub-group" v-if="hasRatings(resp.moodRatings)">
+                    <p class="sub-group-title">Question 1 — Mood Ratings</p>
+                    <div class="rating-pills-wrap">
+                      <span
+                        v-for="(val, mood) in resp.moodRatings"
+                        :key="mood"
+                        class="eval-pill"
+                        :class="getRatingColorClass(val)"
+                      >
+                        {{ mood }}: <strong>{{ val }}★</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Weather Ratings -->
+                  <div class="sub-group" v-if="hasRatings(resp.weatherRatings)">
+                    <p class="sub-group-title">Question 2 — Weather Ratings</p>
+                    <div class="rating-pills-wrap">
+                      <span
+                        v-for="(val, weather) in resp.weatherRatings"
+                        :key="weather"
+                        class="eval-pill weather"
+                        :class="getRatingColorClass(val)"
+                      >
+                        {{ weather }}: <strong>{{ val }}★</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Text Feedback if any -->
+                  <div class="sub-group text-group" v-if="resp.textFeedback">
+                    <p class="sub-group-title">Written Review</p>
+                    <p class="user-text-quote">"{{ resp.textFeedback }}"</p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </section>
+
+        </div>
       </div>
 
       <div v-if="activeAdminTab === 'manager'" class="manager-layout fade-in">
@@ -471,15 +589,154 @@
               ×
             </button>
           </label>
-          <label class="manager-filter">
-            <span>Category</span>
-            <select v-model="itemCategoryFilter" aria-label="Filter menu items by category">
-              <option value="All">All categories</option>
-              <option v-for="category in allSubcategories" :key="category" :value="category">
-                {{ category }}
-              </option>
-            </select>
-          </label>
+          <div
+            ref="categoryDropdownRef"
+            class="custom-category-dropdown"
+            @keydown="handleCategoryDropdownKeydown"
+          >
+            <button
+              type="button"
+              class="cat-dropdown-trigger"
+              :class="{ open: isCategoryDropdownOpen, active: itemCategoryFilter !== 'All' }"
+              aria-haspopup="listbox"
+              :aria-expanded="isCategoryDropdownOpen"
+              aria-label="Filter menu items by category"
+              @click="toggleCategoryDropdown"
+            >
+              <div class="trigger-content">
+                <span class="trigger-label">Category:</span>
+                <span v-if="itemCategoryFilter === 'All'" class="trigger-badge all-badge">
+                  <span class="filter-tag-icon">🏷️</span> All Categories
+                  <span class="count-pill">{{ menuItems.length }}</span>
+                </span>
+                <span
+                  v-else
+                  class="f-pill selected-cat-pill"
+                  :class="getPillClass(itemCategoryFilter)"
+                >
+                  {{ itemCategoryFilter }}
+                  <span class="count-pill">{{ getCategoryCount(itemCategoryFilter) }}</span>
+                </span>
+              </div>
+              <button
+                v-if="itemCategoryFilter !== 'All'"
+                type="button"
+                class="quick-clear-cat"
+                title="Reset to all categories"
+                aria-label="Reset category filter"
+                @click.stop="selectCategoryFilter('All')"
+              >
+                ✕
+              </button>
+              <span
+                class="chevron-icon"
+                :class="{ rotated: isCategoryDropdownOpen }"
+                aria-hidden="true"
+              >
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </span>
+            </button>
+
+            <Transition name="dropdown-pop">
+              <div
+                v-if="isCategoryDropdownOpen"
+                class="cat-dropdown-menu"
+                role="listbox"
+                aria-label="Categories"
+              >
+                <!-- Option: All Categories -->
+                <button
+                  type="button"
+                  class="cat-menu-item all-option"
+                  :class="{ selected: itemCategoryFilter === 'All' }"
+                  role="option"
+                  :aria-selected="itemCategoryFilter === 'All'"
+                  @click="selectCategoryFilter('All')"
+                >
+                  <div class="item-left">
+                    <span class="all-icon">🏷️</span>
+                    <span class="item-name">All Categories</span>
+                  </div>
+                  <div class="item-right">
+                    <span class="item-count-badge">{{ menuItems.length }}</span>
+                    <span v-if="itemCategoryFilter === 'All'" class="check-mark">✓</span>
+                  </div>
+                </button>
+
+                <div class="menu-divider"></div>
+
+                <!-- Section 1: Meals -->
+                <div class="menu-section">
+                  <div class="section-title-row">
+                    <span class="section-badge-icon">🍽️</span>
+                    <span class="section-heading">MEALS</span>
+                    <span class="section-count">({{ mealsCount }})</span>
+                  </div>
+                  <div class="section-items">
+                    <button
+                      v-for="cat in foodSubcategories"
+                      :key="cat"
+                      type="button"
+                      class="cat-menu-item"
+                      :class="{ selected: itemCategoryFilter === cat }"
+                      role="option"
+                      :aria-selected="itemCategoryFilter === cat"
+                      @click="selectCategoryFilter(cat)"
+                    >
+                      <div class="item-left">
+                        <span class="f-pill cat-preview-pill" :class="getPillClass(cat)">
+                          {{ cat }}
+                        </span>
+                      </div>
+                      <div class="item-right">
+                        <span class="item-count-badge">{{ getCategoryCount(cat) }}</span>
+                        <span v-if="itemCategoryFilter === cat" class="check-mark">✓</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="menu-divider"></div>
+
+                <!-- Section 2: Beverages -->
+                <div class="menu-section">
+                  <div class="section-title-row">
+                    <span class="section-badge-icon">🥤</span>
+                    <span class="section-heading">BEVERAGES</span>
+                    <span class="section-count">({{ beveragesCount }})</span>
+                  </div>
+                  <div class="section-items">
+                    <button
+                      v-for="cat in drinkSubcategories"
+                      :key="cat"
+                      type="button"
+                      class="cat-menu-item"
+                      :class="{ selected: itemCategoryFilter === cat }"
+                      role="option"
+                      :aria-selected="itemCategoryFilter === cat"
+                      @click="selectCategoryFilter(cat)"
+                    >
+                      <div class="item-left">
+                        <span class="f-pill cat-preview-pill" :class="getPillClass(cat)">
+                          {{ cat }}
+                        </span>
+                      </div>
+                      <div class="item-right">
+                        <span class="item-count-badge">{{ getCategoryCount(cat) }}</span>
+                        <span v-if="itemCategoryFilter === cat" class="check-mark">✓</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </Transition>
+          </div>
           <span class="result-count"
             >{{ filteredManagerItems.length }} of {{ menuItems.length }} items</span
           >
@@ -554,12 +811,14 @@
       </div>
 
       <div v-if="activeAdminTab === 'questions'" class="manager-layout fade-in">
-        <div
-          class="manager-header-row"
-          style="display: flex; justify-content: space-between; align-items: center"
-        >
-          <h2>Survey Questions</h2>
+        <div class="manager-header-row question-manager-header">
           <div>
+            <h2>Survey Question Manager</h2>
+            <p class="manager-description">
+              Organized into 2 sections: Respondent Demographics and Menu Item Evaluations.
+            </p>
+          </div>
+          <div class="manager-header-actions">
             <button
               class="nav-btn orange-solid"
               @click="openNewQuestionModal"
@@ -570,72 +829,146 @@
           </div>
         </div>
 
-        <div class="table-container" style="padding: 20px">
-          <div
-            v-for="(q, index) in dynamicQuestions"
-            :key="q.id"
-            class="insight-card mb-4"
-            style="border: 1px solid #e2e8f0"
-          >
-            <div
-              class="manager-header-row"
-              style="background: white; border-bottom: none; padding: 15px 20px"
-            >
-              <div>
-                <span
-                  class="q-circle"
-                  style="position: static; display: inline-block; margin-right: 10px"
-                  >Q{{ index + 1 }}</span
-                >
-                <strong style="font-size: 1.1rem; color: #0f172a">{{ q.text }}</strong>
-                <span
-                  class="badge-v2 ml-2"
-                  :class="q.type === 'TEXT' ? 'type-badge' : 'food-badge'"
-                >
-                  {{ q.type === 'TEXT' ? '💬 Open-ended (Text)' : '🔘 Multiple Choice (Radio)' }}
-                </span>
+        <div class="table-container question-manager-body" style="padding: 24px">
+          <!-- ======================================================== -->
+          <!-- SECTION 1 — Respondent Information                       -->
+          <!-- ======================================================== -->
+          <div class="qm-section-group mb-5">
+            <div class="qm-section-header demo-header">
+              <div class="qm-header-left">
+                <div class="qm-icon-box blue-box">👤</div>
+                <div>
+                  <div class="scope-label"><span class="scope-dot blue-dot"></span> SECTION 1</div>
+                  <h3 class="qm-section-title">SECTION 1 — Respondent Information</h3>
+                  <p class="qm-section-desc">
+                    Demographic questions answered by respondents before rating menu items.
+                  </p>
+                </div>
               </div>
-              <div>
-                <button class="action-btn edit-btn" @click="openEditQuestionModal(q)">
-                  ✏️ Edit
+              <span class="qm-badge blue-pill">2 Questions • Baseline Demographics</span>
+            </div>
+
+            <div class="qm-cards-list">
+              <div
+                v-for="(q, index) in demographicQuestions"
+                :key="q.id"
+                class="insight-card mb-3 demo-q-card"
+              >
+                <div class="manager-header-row q-card-top-row">
+                  <div class="q-card-title-group">
+                    <span class="q-circle demo-q-num">Q1.{{ index + 1 }}</span>
+                    <div>
+                      <strong class="q-title-text">{{ q.text }}</strong>
+                      <div class="q-badge-row">
+                        <span class="badge-v2 demo-scope-badge">👤 Demographic</span>
+                        <span class="badge-v2 type-badge">🔘 Multiple choice</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span class="fixed-indicator-badge">Fixed Baseline</span>
+                </div>
+
+                <div class="q-card-options-row">
+                  <p class="section-label mb-2">Available Options ({{ q.options.length }}):</p>
+                  <div class="options-pills-row">
+                    <span
+                      v-for="(opt, oIdx) in q.options"
+                      :key="opt"
+                      class="f-pill pill-demo"
+                    >
+                      <span class="opt-num">{{ oIdx + 1 }}.</span>
+                      <span>{{ opt }}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ======================================================== -->
+          <!-- SECTION 2 — Current Questions (Menu Item Evaluation)     -->
+          <!-- ======================================================== -->
+          <div class="qm-section-group">
+            <div class="qm-section-header menu-header">
+              <div class="qm-header-left">
+                <div class="qm-icon-box orange-box">🍴</div>
+                <div>
+                  <div class="scope-label"><span class="scope-dot orange-dot"></span> SECTION 2</div>
+                  <h3 class="qm-section-title">SECTION 2 — Menu Item Evaluation Questions</h3>
+                  <p class="qm-section-desc">
+                    Current questions asked for each food and beverage item in the survey.
+                  </p>
+                </div>
+              </div>
+              <div class="qm-header-right">
+                <span class="qm-badge orange-pill">{{ dynamicQuestions.length }} Current Questions</span>
+                <button
+                  class="nav-btn orange-solid add-q-sub-btn"
+                  @click="openNewQuestionModal"
+                >
+                  + Add Question
                 </button>
-                <button class="action-btn del-btn" @click="confirmDeleteQuestion(q.id)">🗑️</button>
               </div>
             </div>
 
-            <div v-if="q.type !== 'TEXT'" style="padding: 0 20px 20px 60px">
-              <p class="section-label mb-2">Available Options:</p>
-              <div style="display: flex; flex-wrap: wrap; gap: 10px">
-                <span
-                  v-for="opt in q.options"
-                  :key="opt.id"
-                  class="f-pill"
-                  style="display: flex; align-items: center; gap: 8px"
-                >
-                  <span v-if="opt.icon">{{ opt.icon }}</span>
+            <div class="qm-cards-list">
+              <div
+                v-for="(q, index) in dynamicQuestions"
+                :key="q.id"
+                class="insight-card mb-4 menu-q-card"
+              >
+                <div class="manager-header-row q-card-top-row">
+                  <div class="q-card-title-group">
+                    <span class="q-circle">Q2.{{ index + 1 }}</span>
+                    <div>
+                      <strong class="q-title-text">{{ q.text }}</strong>
+                      <div class="q-badge-row">
+                        <span class="badge-v2 food-badge">🍴 Item Evaluation</span>
+                        <span
+                          class="badge-v2"
+                          :class="q.type === 'TEXT' ? 'type-badge' : 'food-badge'"
+                        >
+                          {{ q.type === 'TEXT' ? '💬 Open-ended (Text)' : '🔘 Multiple Choice (Radio)' }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="q-actions-row">
+                    <button class="action-btn edit-btn" @click="openEditQuestionModal(q)">
+                      ✏️ Edit
+                    </button>
+                    <button class="action-btn del-btn" @click="confirmDeleteQuestion(q.id, q.text)">🗑️</button>
+                  </div>
+                </div>
 
-                  <span>{{ opt.text || opt.label || opt.name || '⚠️ Blank Option' }}</span>
-
-                  <button
-                    @click="confirmDeleteOption(opt.id)"
-                    style="
-                      background: none;
-                      border: none;
-                      color: #ef4444;
-                      cursor: pointer;
-                      font-weight: bold;
-                    "
-                  >
-                    ✕
-                  </button>
-                </span>
-                <button
-                  @click="openAddOptionModal(q.id)"
-                  class="f-pill"
-                  style="border: 1px dashed #cbd5e1; background: transparent; cursor: pointer"
-                >
-                  + Add Option
-                </button>
+                <div v-if="q.type !== 'TEXT'" class="q-card-options-row">
+                  <p class="section-label mb-2">Available Options ({{ q.options?.length || 0 }}):</p>
+                  <div class="options-pills-row">
+                    <span
+                      v-for="opt in q.options"
+                      :key="opt.id"
+                      class="f-pill"
+                      style="display: flex; align-items: center; gap: 8px"
+                    >
+                      <span v-if="opt.icon">{{ opt.icon }}</span>
+                      <span>{{ opt.text || opt.label || opt.name || '⚠️ Blank Option' }}</span>
+                      <button
+                        @click="confirmDeleteOption(opt.id)"
+                        class="del-opt-btn"
+                        title="Delete option"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                    <button
+                      @click="openAddOptionModal(q.id)"
+                      class="f-pill"
+                      style="border: 1px dashed #cbd5e1; background: transparent; cursor: pointer"
+                    >
+                      + Add Option
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -701,31 +1034,51 @@
               </div>
 
               <div class="form-group">
-                <label for="menu-item-category"
-                  >Category <span class="required-mark">Required</span></label
-                >
-                <select
-                  id="menu-item-category"
-                  v-model="editingItem.category"
-                  required
-                  class="form-input"
-                >
-                  <optgroup label="🍽️ Meals">
-                    <option value="APPETIZER">APPETIZER</option>
-                    <option value="PASTA">PASTA</option>
-                    <option value="SANDWICH & WRAPS">SANDWICH & WRAPS</option>
-                    <option value="CHICKEN WINGS">CHICKEN WINGS</option>
-                    <option value="RICE MEAL">RICE MEAL</option>
-                  </optgroup>
-                  <optgroup label="🥤 Beverages">
-                    <option value="CLASSICS">CLASSICS</option>
-                    <option value="ICE-BLENDED">ICE-BLENDED</option>
-                    <option value="SPECIALTY">SPECIALTY</option>
-                    <option value="NON-COFFEE">NON-COFFEE</option>
-                    <option value="REFRESHER">REFRESHER</option>
-                    <option value="CEREMONIAL MATCHA">CEREMONIAL MATCHA</option>
-                  </optgroup>
-                </select>
+                <div class="form-label-row">
+                  <label for="menu-item-category"
+                    >Category <span class="required-mark">Required</span></label
+                  >
+                  <span
+                    v-if="editingItem.category"
+                    class="f-pill form-pill-preview"
+                    :class="getPillClass(editingItem.category)"
+                  >
+                    {{ editingItem.category }}
+                  </span>
+                </div>
+                <div class="custom-select-wrapper">
+                  <select
+                    id="menu-item-category"
+                    v-model="editingItem.category"
+                    required
+                    class="form-input custom-styled-select"
+                  >
+                    <optgroup label="🍽️ Meals">
+                      <option value="APPETIZER">APPETIZER</option>
+                      <option value="PASTA">PASTA</option>
+                      <option value="SANDWICH & WRAPS">SANDWICH & WRAPS</option>
+                      <option value="CHICKEN WINGS">CHICKEN WINGS</option>
+                      <option value="RICE MEAL">RICE MEAL</option>
+                    </optgroup>
+                    <optgroup label="🥤 Beverages">
+                      <option value="CLASSICS">CLASSICS</option>
+                      <option value="ICE-BLENDED">ICE-BLENDED</option>
+                      <option value="SPECIALTY">SPECIALTY</option>
+                      <option value="NON-COFFEE">NON-COFFEE</option>
+                      <option value="REFRESHER">REFRESHER</option>
+                      <option value="CEREMONIAL MATCHA">CEREMONIAL MATCHA</option>
+                    </optgroup>
+                  </select>
+                  <span class="custom-select-arrow" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                      <path
+                        fill-rule="evenodd"
+                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                        clip-rule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                </div>
               </div>
 
               <div class="form-group">
@@ -921,6 +1274,9 @@
           <div class="modal-card danger-card" style="text-align: center; max-width: 400px">
             <div class="modal-icon text-red" style="font-size: 3rem; margin-bottom: 15px">🚨</div>
             <h2 style="color: #0f172a">Delete Question?</h2>
+            <p class="section-subtext mb-2" style="font-style: italic; color: #64748b">
+              "{{ questionToDeleteText }}"
+            </p>
             <p class="section-subtext mb-4">
               Are you sure? All survey analytics tied to this question will be permanently lost!
             </p>
@@ -1040,19 +1396,58 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import axios from 'axios'
 import {
+  AGE_GROUP_OPTIONS,
+  DINING_FREQUENCY_OPTIONS,
   DRINK_SUBCATEGORIES,
   FOOD_SUBCATEGORIES,
   QUICK_EMOJIS,
   REPORT_FILENAME,
+  SECTION_1_DEMOGRAPHIC_QUESTIONS,
+  SECTION_2_MOOD_ROWS,
+  SECTION_2_WEATHER_ROWS,
   SURVEY_BASELINE_TARGET,
 } from '../config/constants'
 import {
   getCategoryPillClass,
   getCategoryStyles,
   getImagePath,
+  getItemDescription,
   isDrinkCategory,
   isFoodCategory,
 } from '../utils/menu'
+
+export interface GridRowStat {
+  id: string
+  label: string
+  shortLabel: string
+  avgRating: number
+  totalVotes: number
+  suitabilityPct: number
+  distribution: Record<number, number>
+}
+
+export interface GridQuestionAnalytics {
+  title: string
+  prompt: string
+  rows: GridRowStat[]
+  topRowLabel: string | null
+  topRowScore: number
+  totalEvaluators: number
+}
+
+export interface DemographicAnalytics {
+  globalParticipants: number
+  totalParticipants: number
+  ageGroupCounts: Record<string, number>
+  diningFrequencyCounts: Record<string, number>
+}
+
+export interface SurveyResponseDetail {
+  userId: string
+  moodRatings: Record<string, number>
+  weatherRatings: Record<string, number>
+  textFeedback?: string | null
+}
 
 //Security State
 const isAuthenticated = ref(false)
@@ -1074,6 +1469,7 @@ const handleLogin = async () => {
 
     const token = response.data.token
     adminToken.value = token
+    localStorage.setItem('admin_token', token)
 
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
 
@@ -1091,6 +1487,7 @@ const handleLogin = async () => {
 const handleLogout = async () => {
   showLogoutModal.value = false
 
+  localStorage.removeItem('admin_token')
   adminToken.value = null
   delete axios.defaults.headers.common['Authorization']
   isAuthenticated.value = false
@@ -1110,6 +1507,21 @@ const selectedItemId = ref<number | null>(null)
 const baselineCount = ref(0)
 const showClearModal = ref(false)
 
+const moodAnalytics = ref<GridQuestionAnalytics | null>(null)
+const weatherAnalytics = ref<GridQuestionAnalytics | null>(null)
+const demographics = ref<DemographicAnalytics>({
+  globalParticipants: 0,
+  totalParticipants: 0,
+  ageGroupCounts: {},
+  diningFrequencyCounts: {},
+})
+const recentResponses = ref<SurveyResponseDetail[]>([])
+const topMood = ref<string | null>(null)
+const topMoodScore = ref<number | null>(null)
+const topWeather = ref<string | null>(null)
+const topWeatherScore = ref<number | null>(null)
+const avgSuitabilityScore = ref<number | null>(null)
+
 const foodSubcategories = FOOD_SUBCATEGORIES
 const drinkSubcategories = DRINK_SUBCATEGORIES
 const isFood = isFoodCategory
@@ -1123,6 +1535,45 @@ const currentSubcategories = computed(() => {
 const allSubcategories = [...foodSubcategories, ...drinkSubcategories]
 const itemSearch = ref('')
 const itemCategoryFilter = ref('All')
+const isCategoryDropdownOpen = ref(false)
+const categoryDropdownRef = ref<HTMLElement | null>(null)
+
+const toggleCategoryDropdown = () => {
+  isCategoryDropdownOpen.value = !isCategoryDropdownOpen.value
+}
+
+const selectCategoryFilter = (category: string) => {
+  itemCategoryFilter.value = category
+  isCategoryDropdownOpen.value = false
+}
+
+const getCategoryCount = (category: string) => {
+  if (category === 'All') return menuItems.value.length
+  return menuItems.value.filter((item) => item.category === category).length
+}
+
+const mealsCount = computed(
+  () => menuItems.value.filter((item) => isFood(item.category)).length,
+)
+
+const beveragesCount = computed(
+  () => menuItems.value.filter((item) => isDrink(item.category)).length,
+)
+
+const handleClickOutsideCategoryDropdown = (event: MouseEvent) => {
+  if (
+    categoryDropdownRef.value &&
+    !categoryDropdownRef.value.contains(event.target as Node)
+  ) {
+    isCategoryDropdownOpen.value = false
+  }
+}
+
+const handleCategoryDropdownKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && isCategoryDropdownOpen.value) {
+    isCategoryDropdownOpen.value = false
+  }
+}
 const toastMessage = ref('')
 const toastType = ref<'success' | 'error'>('success')
 let toastTimer: ReturnType<typeof setTimeout> | null = null
@@ -1164,6 +1615,7 @@ const fetchMenuItems = async () => {
   }
 }
 
+const demographicQuestions = ref(SECTION_1_DEMOGRAPHIC_QUESTIONS)
 const dynamicQuestions = ref<any[]>([])
 
 const fetchQuestions = async () => {
@@ -1177,7 +1629,6 @@ const fetchQuestions = async () => {
 
 const selectItem = async (itemId: number) => {
   selectedItemId.value = itemId
-  activeKeywordFilter.value = null
   await fetchCombinedAnalyticsForItem(itemId)
 }
 
@@ -1200,107 +1651,6 @@ const autoSelectFirstFilteredItem = () => {
     selectedItemId.value = null
     analyticsData.value = {}
   }
-}
-
-// 🛡️ BULLETPROOF RADIO QUESTIONS (Dictionary Version)
-const radioQuestions = computed(() => {
-  const result: Record<string, any> = {}
-
-  const rQuestions = dynamicQuestions.value.filter(
-    (q) => !q.type || q.type.toUpperCase() !== 'TEXT',
-  )
-
-  rQuestions.forEach((q) => {
-    const analyticsKey = String(q.id)
-    let ans = analyticsData.value[analyticsKey]
-    if (ans) {
-      if (!Array.isArray(ans)) {
-        ans = Object.keys(ans).map((key) => ({ optionLabel: key, voteCount: ans[key] }))
-      }
-
-      result[q.text] = ans
-    }
-  })
-
-  return result
-})
-
-// 🛡️ BULLETPROOF TEXT QUESTIONS (Dictionary Version)
-const textQuestions = computed(() => {
-  const result: Record<string, any> = {}
-  const tQuestions = dynamicQuestions.value.filter((q) => q.type && q.type.toUpperCase() === 'TEXT')
-
-  tQuestions.forEach((q) => {
-    const analyticsKey = String(q.id)
-    if (analyticsData.value[analyticsKey]) {
-      result[q.text] = analyticsData.value[analyticsKey]
-    }
-  })
-
-  return result
-})
-
-const calculatePercentage = (votes: number, allStats: any[]) => {
-  const total = allStats.reduce((sum, stat) => sum + Number(stat.voteCount), 0)
-  if (total === 0) return 0
-  return Math.round((votes / total) * 100)
-}
-
-const topResponse = (answers: any[]) => {
-  if (!answers || answers.length === 0) return 'N/A'
-  const highest = answers.reduce((prev, current) =>
-    Number(prev.voteCount) > Number(current.voteCount) ? prev : current,
-  )
-  return highest.optionLabel
-}
-
-const getSentimentData = (feedback: any) => {
-  const text = (
-    feedback.response ||
-    feedback.textResponse ||
-    (typeof feedback === 'string' ? feedback : '')
-  ).toLowerCase()
-  if (!text) return { class: 'neu', icon: '-', label: 'Neutral' }
-  const positiveWords = [
-    'good',
-    'great',
-    'love',
-    'best',
-    'delicious',
-    'yummy',
-    'perfect',
-    'nice',
-    'amazing',
-    'sweet',
-    'comfort',
-    'favorite',
-    'warm',
-    'fresh',
-    'hot',
-    'filling',
-  ]
-  const negativeWords = [
-    'bad',
-    'hate',
-    'awful',
-    'terrible',
-    'gross',
-    'expensive',
-    'worse',
-    'bland',
-    'nasty',
-    'disgusting',
-    'dry',
-    'salty',
-    'cold',
-    'hard',
-    'stale',
-  ]
-  if (negativeWords.some((word) => text.includes(word)))
-    return { class: 'neg', icon: '👎', label: 'Negative' }
-  if (positiveWords.some((word) => text.includes(word)))
-    return { class: 'pos', icon: '👍', label: 'Positive' }
-  return { class: 'neu', icon: '-', label: 'Neutral' }
 }
 
 const downloadReport = async () => {
@@ -1332,56 +1682,36 @@ const clearAllData = async () => {
 
 const globalTotal = ref(0)
 const itemTotal = ref(0)
-const engagementPct = ref(0)
-const topKeywords = ref([])
 const sentiment = ref({ pos: 0, neu: 0, neg: 0, posPct: 0, neuPct: 0, negPct: 0 })
-const activeSentimentFilter = ref('All')
-const activeKeywordFilter = ref<string | null>(null)
 
-const filteredAnswers = (answers: any[]) => {
-  let filtered = answers
+// Share of all participants who evaluated the current item (itemTotal counts
+// distinct evaluators per item, so this is directly comparable to the global
+// participant base).
+const itemCoverageLabel = computed(() => {
+  const itemName = menuItem.value?.name || 'selected item'
+  const total = demographics.value?.globalParticipants || baselineCount.value || 0
+  if (!total) return `For ${itemName}`
+  const pct = Math.min(100, Math.round((itemTotal.value / total) * 100))
+  return `For ${itemName} • ${pct}% of ${total} participants`
+})
 
-  // 1. Filter by Sentiment
-  if (activeSentimentFilter.value !== 'All') {
-    const targetClass =
-      activeSentimentFilter.value === 'Positive'
-        ? 'pos'
-        : activeSentimentFilter.value === 'Neutral'
-          ? 'neu'
-          : 'neg'
-    filtered = filtered.filter((f) => getSentimentData(f).class === targetClass)
-  }
-
-  if (activeKeywordFilter.value) {
-    const keyword = activeKeywordFilter.value.toLowerCase()
-    filtered = filtered.filter((f) => {
-      const text = (f.response || f.textResponse || (typeof f === 'string' ? f : '')).toLowerCase()
-      return text.includes(keyword)
-    })
-  }
-
-  return filtered
+// Votes for one star rating within a grid row's 1-5 distribution.
+const rowVoteCount = (row: any, rating: number): number => {
+  return Number(row?.distribution?.[rating] ?? 0)
 }
 
-const toggleKeywordFilter = (word: string) => {
-  if (activeKeywordFilter.value === word) {
-    activeKeywordFilter.value = null
-  } else {
-    activeKeywordFilter.value = word
-  }
-}
-
-const getWordClass = (index: number) => {
-  if (index < 2) return 'w-huge'
-  if (index < 4) return 'w-large'
-  if (index < 6) return 'w-med'
-  return 'w-small'
+// Full vote-spread sentence for the distribution tooltip.
+const distTitle = (row: any): string => {
+  const parts = [1, 2, 3, 4, 5].map((n) => {
+    const count = rowVoteCount(row, n)
+    return `${n}★: ${count} vote${count === 1 ? '' : 's'}`
+  })
+  return `Vote spread — ${parts.join(' • ')}`
 }
 
 const applyItemStats = (data: any) => {
   globalTotal.value = data?.globalTotal ?? 0
   itemTotal.value = data?.itemTotal ?? 0
-  engagementPct.value = data?.engagementPct ?? 0
   sentiment.value = {
     pos: data?.positiveCount ?? 0,
     neu: data?.neutralCount ?? 0,
@@ -1390,7 +1720,11 @@ const applyItemStats = (data: any) => {
     neuPct: data?.neutralPct ?? 0,
     negPct: data?.negativePct ?? 0,
   }
-  topKeywords.value = data?.topKeywords || []
+  topMood.value = data?.topMood || null
+  topMoodScore.value = data?.topMoodScore ?? null
+  topWeather.value = data?.topWeather || null
+  topWeatherScore.value = data?.topWeatherScore ?? null
+  avgSuitabilityScore.value = data?.avgSuitabilityScore ?? null
 }
 
 const fetchCombinedAnalyticsForItem = async (menuItemId: number) => {
@@ -1399,12 +1733,32 @@ const fetchCombinedAnalyticsForItem = async (menuItemId: number) => {
     const response = await axios.get(`/analytics/combined/${menuItemId}`)
     analyticsData.value = response.data?.analyticsData || {}
     applyItemStats(response.data?.stats)
+    moodAnalytics.value = response.data?.moodAnalytics || null
+    weatherAnalytics.value = response.data?.weatherAnalytics || null
+    if (response.data?.demographics) {
+      demographics.value = response.data.demographics
+    }
+    recentResponses.value = response.data?.recentResponses || []
   } catch (error) {
     console.error(`Error fetching combined analytics for item ${menuItemId}:`, error)
     analyticsData.value = {}
     applyItemStats(null)
+    moodAnalytics.value = null
+    weatherAnalytics.value = null
+    recentResponses.value = []
   } finally {
     isLoading.value = false
+  }
+}
+
+const fetchDemographics = async () => {
+  try {
+    const response = await axios.get('/analytics/demographics')
+    if (response.data) {
+      demographics.value = response.data
+    }
+  } catch (error) {
+    console.error('Error fetching demographics:', error)
   }
 }
 
@@ -1415,6 +1769,255 @@ const fetchStats = async () => {
   } catch (error) {
     console.error('Error fetching baseline count:', error)
   }
+  await fetchDemographics()
+}
+
+// Section 1 Demographic Computed Stats & Normalization Helpers
+const normalizeDemoKey = (key: string): string => {
+  return (key || '')
+    .replace(/&#8211;|&ndash;|\u2013|\u2014/g, '-') // Normalize en-dash, em-dash, and HTML entities to standard hyphen
+    .replace(/\s*-\s*/g, '-')                       // Normalize spaces around hyphens ('18 - 20' -> '18-20')
+    .replace(/\s+/g, ' ')                           // Normalize whitespace
+    .trim()
+    .toLowerCase()
+}
+
+const getAgeGroupCount = (opt: string): number => {
+  if (!demographics.value?.ageGroupCounts) return 0
+  const target = normalizeDemoKey(opt)
+  let sum = 0
+  for (const [key, val] of Object.entries(demographics.value.ageGroupCounts)) {
+    if (normalizeDemoKey(key) === target) {
+      sum += Number(val) || 0
+    }
+  }
+  return sum
+}
+
+const getDiningFreqCount = (opt: string): number => {
+  if (!demographics.value?.diningFrequencyCounts) return 0
+  const target = normalizeDemoKey(opt)
+  let sum = 0
+  for (const [key, val] of Object.entries(demographics.value.diningFrequencyCounts)) {
+    if (normalizeDemoKey(key) === target) {
+      sum += Number(val) || 0
+    }
+  }
+  return sum
+}
+
+const ageGroupStats = computed(() => {
+  const items = AGE_GROUP_OPTIONS.map((opt) => ({
+    label: opt,
+    count: getAgeGroupCount(opt),
+  }))
+  const totalAnswers = items.reduce((acc, curr) => acc + curr.count, 0)
+  const total = totalAnswers > 0 ? totalAnswers : (demographics.value?.totalParticipants || 0)
+  return items.map((item) => ({
+    ...item,
+    pct: total > 0 ? Math.round((item.count / total) * 100) : 0,
+  }))
+})
+
+const diningFrequencyStats = computed(() => {
+  const items = DINING_FREQUENCY_OPTIONS.map((opt) => ({
+    label: opt,
+    count: getDiningFreqCount(opt),
+  }))
+  const totalAnswers = items.reduce((acc, curr) => acc + curr.count, 0)
+  const total = totalAnswers > 0 ? totalAnswers : (demographics.value?.totalParticipants || 0)
+  return items.map((item) => ({
+    ...item,
+    pct: total > 0 ? Math.round((item.count / total) * 100) : 0,
+  }))
+})
+
+// Section 2 Grid Fallback & Display Logic
+const parseGridAnalyticsFromRaw = (
+  rowDefs: readonly any[],
+  title: string,
+  prompt: string,
+): GridQuestionAnalytics => {
+  const accumulators = new Map<
+    string,
+    { def: any; sum: number; total: number; count4or5: number; distribution: Record<number, number> }
+  >()
+  rowDefs.forEach((def) => {
+    accumulators.set(def.id, {
+      def,
+      sum: 0,
+      total: 0,
+      count4or5: 0,
+      distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    })
+  })
+
+  const regex = /:\s*([1-5])\b/
+  const userSet = new Set<string>()
+
+  Object.values(analyticsData.value).forEach((val) => {
+    const list = Array.isArray(val) ? val : []
+    list.forEach((item: any) => {
+      const text = (item.response || item.textResponse || (typeof item === 'string' ? item : '')).trim()
+      if (!text) return
+      const match = text.match(regex)
+      if (match) {
+        const rating = parseInt(match[1], 10)
+        const lower = text.toLowerCase()
+        for (const def of rowDefs) {
+          const shortL = (def.short || def.label).toLowerCase()
+          if (lower.startsWith(shortL) || lower.includes(def.id.toLowerCase())) {
+            const acc = accumulators.get(def.id)!
+            acc.sum += rating
+            acc.total++
+            if (rating >= 4) acc.count4or5++
+            acc.distribution[rating] = (acc.distribution[rating] || 0) + 1
+            if (item.userId) userSet.add(item.userId)
+            break
+          }
+        }
+      }
+    })
+  })
+
+  let topLabel: string | null = null
+  let topScore = 0
+  const rows: GridRowStat[] = []
+
+  accumulators.forEach((acc) => {
+    const avg = acc.total > 0 ? Math.round((acc.sum / acc.total) * 10) / 10 : 0
+    const suitPct = acc.total > 0 ? Math.round((acc.count4or5 / acc.total) * 100) : 0
+    if (avg > topScore) {
+      topScore = avg
+      topLabel = acc.def.short || acc.def.label
+    }
+    rows.push({
+      id: acc.def.id,
+      label: acc.def.label,
+      shortLabel: acc.def.short || acc.def.label,
+      avgRating: avg,
+      totalVotes: acc.total,
+      suitabilityPct: suitPct,
+      distribution: acc.distribution,
+    })
+  })
+
+  return {
+    title,
+    prompt,
+    rows,
+    topRowLabel: topLabel,
+    topRowScore: topScore,
+    totalEvaluators: userSet.size || rows.reduce((max, r) => Math.max(max, r.totalVotes), 0),
+  }
+}
+
+const displayMoodData = computed<GridQuestionAnalytics>(() => {
+  if (moodAnalytics.value && moodAnalytics.value.rows && moodAnalytics.value.rows.length > 0) {
+    return moodAnalytics.value
+  }
+  return parseGridAnalyticsFromRaw(
+    SECTION_2_MOOD_ROWS,
+    'Question 1 — Mood Association',
+    'How suitable is this item for each mood?',
+  )
+})
+
+const displayWeatherData = computed<GridQuestionAnalytics>(() => {
+  if (weatherAnalytics.value && weatherAnalytics.value.rows && weatherAnalytics.value.rows.length > 0) {
+    return weatherAnalytics.value
+  }
+  return parseGridAnalyticsFromRaw(
+    SECTION_2_WEATHER_ROWS,
+    'Question 2 — Weather Association',
+    'How suitable is this item for each weather condition?',
+  )
+})
+
+const displayResponses = computed<SurveyResponseDetail[]>(() => {
+  if (recentResponses.value && recentResponses.value.length > 0) {
+    return recentResponses.value
+  }
+  const userMap: Record<string, SurveyResponseDetail> = {}
+  const ratingRegex = /:\s*([1-5])\b/
+  let anonIndex = 1
+
+  Object.values(analyticsData.value).forEach((val) => {
+    const list = Array.isArray(val) ? val : []
+    list.forEach((item: any) => {
+      const uid = item.userId || `Anon_${anonIndex++}`
+      if (!userMap[uid]) {
+        userMap[uid] = {
+          userId: uid,
+          moodRatings: {},
+          weatherRatings: {},
+          textFeedback: null,
+        }
+      }
+      const text = (item.response || item.textResponse || (typeof item === 'string' ? item : '')).trim()
+      if (!text) return
+      const match = text.match(ratingRegex)
+      if (match) {
+        const rating = parseInt(match[1], 10)
+        const lower = text.toLowerCase()
+        let matched = false
+        for (const def of SECTION_2_MOOD_ROWS) {
+          if (lower.startsWith(def.short.toLowerCase()) || lower.includes(def.id)) {
+            userMap[uid].moodRatings[def.short] = rating
+            matched = true
+            break
+          }
+        }
+        if (!matched) {
+          for (const def of SECTION_2_WEATHER_ROWS) {
+            if (lower.startsWith(def.short.toLowerCase()) || lower.includes(def.id)) {
+              userMap[uid].weatherRatings[def.short] = rating
+              break
+            }
+          }
+        }
+      } else {
+        userMap[uid].textFeedback = text
+      }
+    })
+  })
+  return Object.values(userMap)
+})
+
+const getMoodContext = (label: string, shortLabel: string) => {
+  if (!label) return ''
+  return label.replace(shortLabel, '').replace(/^[\s()–-]+|[\s()–-]+$/g, '')
+}
+
+const getWeatherIcon = (shortLabel: string) => {
+  if (!shortLabel) return '⛅'
+  if (shortLabel.includes('Sunny')) return '☀️'
+  if (shortLabel.includes('Humid')) return '🌤️'
+  if (shortLabel.includes('Rain')) return '🌧️'
+  if (shortLabel.includes('Cool')) return '🍂'
+  return '⛅'
+}
+
+const getScoreBadgeClass = (rating: number) => {
+  if (rating >= 4.0) return 'score-high'
+  if (rating >= 3.0) return 'score-med'
+  return 'score-low'
+}
+
+const getRatingColorClass = (val: number) => {
+  if (val >= 4) return 'pill-pos'
+  if (val === 3) return 'pill-neu'
+  return 'pill-neg'
+}
+
+const formatUserId = (userId: string) => {
+  if (!userId) return 'Anonymous'
+  if (userId.length > 12) return `ID: ...${userId.slice(-6)}`
+  return `ID: ${userId}`
+}
+
+const hasRatings = (map: any) => {
+  return map && typeof map === 'object' && Object.keys(map).length > 0
 }
 
 let securityInterceptor: number | null = null
@@ -1431,6 +2034,7 @@ const showDeleteAllModal = ref(false)
 const isDeletingItem = ref(false)
 const isDeletingAll = ref(false)
 const questionToDelete = ref<number | null>(null)
+const questionToDeleteText = ref('')
 const itemToDelete = ref<number | null>(null)
 const itemEditSnapshot = ref('')
 
@@ -1670,8 +2274,9 @@ const executeDeleteAllItems = async () => {
   }
 }
 
-const confirmDeleteQuestion = (id: number) => {
+const confirmDeleteQuestion = (id: number, text: string) => {
   questionToDelete.value = id // Remember which question we are deleting
+  questionToDeleteText.value = text // Remember the text to show in the modal
   showDeleteQuestionModal.value = true // Open the custom modal
 }
 
@@ -1682,12 +2287,15 @@ const executeDeleteQuestion = async () => {
     await axios.delete(`/api/admin/questions/${questionToDelete.value}`)
     await fetchQuestions() // Refresh the list
     showDeleteQuestionModal.value = false // Close modal
+    showToast('Question deleted successfully.')
     questionToDelete.value = null // Clear memory
+    questionToDeleteText.value = '' // Clear text
   } catch (error) {
     console.error('Failed to delete question:', error)
-    alert('Could not delete question.')
+    showToast('Could not delete question. Please try again.', 'error')
   }
 }
+
 
 const quickEmojis = QUICK_EMOJIS
 
@@ -1744,7 +2352,8 @@ const executeDeleteOption = async () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  document.addEventListener('click', handleClickOutsideCategoryDropdown)
   securityInterceptor = axios.interceptors.response.use(
     (response) => response,
     (error) => {
@@ -1757,6 +2366,7 @@ onMounted(() => {
         isDeleteAll
       if (!skipRedirect && error.response && (error.response.status === 401 || error.response.status === 403)) {
         console.warn('Session expired! Returning to login screen...')
+        localStorage.removeItem('admin_token')
         adminToken.value = null
 
         delete axios.defaults.headers.common['Authorization']
@@ -1765,9 +2375,25 @@ onMounted(() => {
       return Promise.reject(error)
     },
   )
+
+  // On page refresh: restore session if valid admin token exists and sync latest analytics
+  const savedToken = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null
+  if (savedToken) {
+    adminToken.value = savedToken
+    axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`
+    isAuthenticated.value = true
+    try {
+      await fetchMenuItems()
+      await fetchQuestions()
+      await fetchStats()
+    } catch (e) {
+      console.error('Failed to sync analytics results on page refresh:', e)
+    }
+  }
 })
 
 onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutsideCategoryDropdown)
   if (securityInterceptor != null) {
     axios.interceptors.response.eject(securityInterceptor)
   }
@@ -1966,8 +2592,8 @@ onUnmounted(() => {
 /* SLEEK REDESIGNED KPI CARDS */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
   margin-bottom: 25px;
 }
 
@@ -2028,23 +2654,9 @@ onUnmounted(() => {
   line-height: 1;
 }
 
-.kpi-val-wrapper {
-  margin: 0 0 4px 0;
-  min-height: 42px;
-  display: flex;
-  align-items: center;
-}
-
-.keyword-pill {
-  background: #fff3e8;
-  color: #f07000;
-  font-size: 28px;
-  font-weight: 800;
-  padding: 8px 14px;
-  border-radius: 8px;
-  display: inline-block;
-  line-height: 1;
-}
+/* NOTE: kpi-val-wrapper / keyword-pill were removed with the TOP MOOD and
+   TOP WEATHER KPI cards (that info already lives in the item summary and the
+   Key Insight footers). */
 
 .kpi-name {
   margin: 0 0 8px 0;
@@ -2536,203 +3148,9 @@ onUnmounted(() => {
   gap: 10px;
 }
 
-/* TEXT CARDS */
-.text-top-row {
-  display: grid;
-  grid-template-columns: 280px 1.5fr 1fr;
-  border-bottom: 1px solid #f1f5f9;
-  position: relative;
-  z-index: 2;
-  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.03);
-}
-.text-col-sentiment {
-  padding: 25px;
-  border-right: 1px solid #f1f5f9;
-  position: relative;
-  z-index: 1;
-  box-shadow: 4px 0 12px -2px rgba(0, 0, 0, 0.03);
-}
-.text-col-image {
-  position: relative;
-  background-color: #e2e8f0;
-  background-size: cover;
-  background-position: center;
-  min-height: 250px;
-  display: flex;
-  align-items: flex-end;
-  padding: 20px;
-}
-.text-col-image::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 60%;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
-}
-.text-col-image::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 30%;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), transparent);
-}
-.text-col-image .q-circle {
-  top: 15px;
-  right: 15px;
-  bottom: auto;
-  background: rgba(255, 255, 255, 0.8);
-  color: #94a3b8;
-  border: none;
-}
-.badge-row {
-  display: flex;
-  gap: 8px;
-}
-.text-col-sentiment {
-  padding: 25px;
-  border-right: 1px solid #f1f5f9;
-}
-.question-title-v2 {
-  margin: 0 0 5px 0;
-  font-size: 1.1rem;
-  color: #0f172a;
-  font-weight: 600;
-}
-.response-count-v2 {
-  margin: 0 0 20px 0;
-  font-size: 0.85rem;
-  color: #94a3b8;
-}
-.section-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #64748b;
-  letter-spacing: 1px;
-  margin-bottom: 12px;
-  text-transform: uppercase;
-}
-.section-subtext {
-  font-size: 0.7rem;
-  color: #94a3b8;
-  margin-top: -8px;
-  margin-bottom: 12px;
-}
-.sent-boxes-v2 {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-.s-box-v2 {
-  flex: 1;
-  text-align: center;
-  padding: 12px 10px;
-  border-radius: 8px;
-  border: 1px solid #f1f5f9;
-}
-.s-box-v2 h2 {
-  margin: 0;
-  font-size: 1.6rem;
-  font-weight: 700;
-}
-.s-box-v2 span {
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-.s-box-v2.pos {
-  background: #f0fdf4;
-  color: #16a34a;
-  border-color: #dcfce7;
-}
-.s-box-v2.neu {
-  background: #f8fafc;
-  color: #64748b;
-}
-.s-box-v2.neg {
-  background: #fef2f2;
-  color: #ef4444;
-  border-color: #fee2e2;
-}
-.sent-bar-thick {
-  height: 16px;
-  display: flex;
-  border-radius: 8px;
-  overflow: hidden;
-  gap: 0;
-  margin-bottom: 12px;
-}
-.s-fill-thick {
-  height: 100%;
-}
-.s-fill-thick.pos {
-  background: #22c55e;
-}
-.s-fill-thick.neu {
-  background: #94a3b8;
-}
-.s-fill-thick.neg {
-  background: #ef4444;
-}
-.sent-legend {
-  display: flex;
-  gap: 15px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-.l-pos {
-  color: #16a34a;
-}
-.l-neu {
-  color: #64748b;
-}
-.l-neg {
-  color: #ef4444;
-}
-.l-total {
-  color: #94a3b8;
-  margin-left: auto;
-}
-.text-col-keywords {
-  padding: 25px;
-  display: flex;
-  flex-direction: column;
-}
-.word-cloud-v2 {
-  flex-grow: 1;
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 12px;
-  margin-top: 10px;
-}
-.word-cloud-v2 span {
-  font-weight: 700;
-  color: var(--c-main, #f97316);
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-.word-cloud-v2 span:hover {
-  opacity: 0.7;
-}
-.w-huge {
-  font-size: 1.8rem;
-}
-.w-large {
-  font-size: 1.3rem;
-  opacity: 0.8;
-}
-.w-med {
-  font-size: 1.05rem;
-  opacity: 0.6;
-}
-.w-small {
-  font-size: 0.85rem;
-  opacity: 0.4;
-  color: #94a3b8 !important;
-}
+/* NOTE: The legacy TEXT CARDS / sentiment-panel / word-cloud layout was removed.
+   The analytics view now shows sentiment in the KPI strip, vote spread per grid
+   row, demographics, and the individual-responses log instead. */
 
 /* Excerpts */
 .text-bottom-row {
@@ -3071,26 +3489,7 @@ onUnmounted(() => {
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
-/* KEYWORD FILTER INTERACTIONS */
-.word-cloud-v2 span {
-  opacity: 1 !important;
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-.word-cloud-v2 span {
-  opacity: 0.2 !important;
-  filter: grayscale(100%);
-}
-.keyword-clear-btn {
-  border-color: var(--c-main, #f97316) !important;
-  color: var(--c-main, #f97316) !important;
-  font-weight: 700;
-  background: var(--c-light, #fff7ed) !important;
-}
-.keyword-clear-btn:hover {
-  background: var(--c-main, #f97316) !important;
-  color: white !important;
-}
+/* NOTE: Keyword-filter interaction styles were removed with the word-cloud feature. */
 
 /* ==========================================
    ⚙️ MENU MANAGER STYLES
@@ -3272,23 +3671,325 @@ onUnmounted(() => {
 .modal-close:hover {
   color: #0f172a;
 }
-.manager-filter {
+/* Custom Category Dropdown in Menu Manager Toolbar */
+.custom-category-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.cat-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  color: #334155;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.cat-dropdown-trigger:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.cat-dropdown-trigger.open,
+.cat-dropdown-trigger:focus-visible {
+  outline: none;
+  border-color: #f97316;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.cat-dropdown-trigger.active {
+  border-color: #fdba74;
+  background: #fffaf5;
+}
+
+.trigger-content {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.trigger-label {
   color: #64748b;
   font-size: 0.8rem;
   font-weight: 700;
-  white-space: nowrap;
+  letter-spacing: 0.02em;
 }
-.manager-filter select {
-  min-height: 44px;
-  border: 1px solid #cbd5e1;
-  border-radius: 9px;
-  padding: 0 30px 0 12px;
-  color: #334155;
-  background: #fff;
-  font: inherit;
+
+.trigger-badge.all-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.filter-tag-icon {
+  font-size: 0.9rem;
+}
+
+.selected-cat-pill {
+  font-size: 0.78rem !important;
+  padding: 3px 10px !important;
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 999px;
+  line-height: 1;
+}
+
+.quick-clear-cat {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.7rem;
+  line-height: 1;
+  transition: all 0.15s ease;
+  margin-left: -2px;
+}
+
+.quick-clear-cat:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.chevron-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-left: 2px;
+}
+
+.chevron-icon.rotated {
+  transform: rotate(180deg);
+  color: #f97316;
+}
+
+/* Dropdown Menu Panel */
+.cat-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 120;
+  min-width: 290px;
+  max-height: 380px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 16px 36px -6px rgba(15, 23, 42, 0.14), 0 4px 12px -2px rgba(15, 23, 42, 0.06);
+  padding: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.cat-dropdown-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.cat-dropdown-menu::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.cat-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.cat-menu-item:hover {
+  background: #f8fafc;
+}
+
+.cat-menu-item.selected {
+  background: #fff7ed;
+}
+
+.cat-menu-item.all-option {
+  padding: 9px 10px;
+}
+
+.item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.all-icon {
+  font-size: 1rem;
+}
+
+.item-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.cat-preview-pill {
+  font-size: 0.78rem !important;
+  padding: 3px 10px !important;
+  pointer-events: none;
+}
+
+.item-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.item-count-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  background: #f1f5f9;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+.cat-menu-item.selected .item-count-badge {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.check-mark {
+  color: #f97316;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.menu-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 6px 4px;
+}
+
+.menu-section {
+  padding: 4px 0;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px 4px 10px;
+}
+
+.section-badge-icon {
+  font-size: 0.85rem;
+}
+
+.section-heading {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.section-count {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.section-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Dropdown pop animation */
+.dropdown-pop-enter-active,
+.dropdown-pop-leave-active {
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dropdown-pop-enter-from,
+.dropdown-pop-leave-to {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+}
+
+/* Modal Form Custom Select & Pill Preview */
+.form-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.form-pill-preview {
+  font-size: 0.75rem !important;
+  padding: 2px 10px !important;
+  pointer-events: none;
+}
+
+.custom-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.custom-styled-select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 38px !important;
+  cursor: pointer;
+}
+
+.custom-select-arrow {
+  position: absolute;
+  right: 14px;
+  pointer-events: none;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
 }
 .result-count {
   margin-left: auto;
@@ -3527,11 +4228,16 @@ onUnmounted(() => {
   .search-field {
     max-width: none;
   }
-  .manager-filter {
+  .custom-category-dropdown {
+    width: 100%;
+  }
+  .cat-dropdown-trigger {
+    width: 100%;
     justify-content: space-between;
   }
-  .manager-filter select {
-    flex: 1;
+  .cat-dropdown-menu {
+    width: 100%;
+    min-width: unset;
   }
   .result-count {
     margin-left: 0;
@@ -3663,4 +4369,886 @@ onUnmounted(() => {
     transform: translateY(0);
   }
 }
+/* Question Manager 2-Section Styles */
+.qm-section-group {
+  margin-bottom: 2.5rem;
+}
+.qm-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 18px;
+  border: 1px solid #e2e8f0;
+}
+.qm-section-header.demo-header {
+  background: linear-gradient(to right, #eff6ff, #f8fafc);
+  border-color: #bfdbfe;
+}
+.qm-section-header.menu-header {
+  background: linear-gradient(to right, #fff7ed, #f8fafc);
+  border-color: #fed7aa;
+}
+.qm-header-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.qm-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+.qm-icon-box.blue-box {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+.qm-icon-box.orange-box {
+  background: #ffedd5;
+  color: #ea580c;
+  border: 1px solid #fed7aa;
+}
+.qm-section-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.qm-section-desc {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+.qm-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.qm-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.qm-badge.blue-pill {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+.qm-badge.orange-pill {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+.add-q-sub-btn {
+  padding: 8px 16px !important;
+  font-size: 0.85rem !important;
+  border-radius: 8px;
+}
+.demo-q-card {
+  border-top: 4px solid #3b82f6 !important;
+}
+.menu-q-card {
+  border-top: 4px solid #f97316 !important;
+}
+.q-card-top-row {
+  background: white !important;
+  border-bottom: none !important;
+  padding: 16px 20px !important;
+}
+.q-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.demo-q-num {
+  position: static !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border: 1px solid #bfdbfe !important;
+}
+.q-title-text {
+  font-size: 1.1rem;
+  color: #0f172a;
+  display: block;
+}
+.q-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.demo-scope-badge {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+.fixed-indicator-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+.q-card-options-row {
+  padding: 0 20px 20px 64px;
+}
+.options-pills-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.pill-demo {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+.opt-num {
+  font-weight: 800;
+  color: #3b82f6;
+  font-size: 0.8rem;
+}
+.del-opt-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-weight: bold;
+  padding: 0 2px;
+}
+.del-opt-btn:hover {
+  color: #b91c1c;
+}
+
+/* ==========================================================================
+   SECTION 1: DEMOGRAPHIC OVERVIEW PANEL
+   ========================================================================== */
+.demographics-overview-panel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  margin-bottom: 25px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+}
+
+.demo-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.demo-panel-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.demo-panel-title-wrap h3 {
+  margin: 0 0 2px 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.demo-panel-sub {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.demo-panel-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 22px 24px;
+}
+
+@media (max-width: 900px) {
+  .demo-panel-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+.demo-stat-card {
+  background: #fdfdfd;
+  border: 1px solid #eef2f6;
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+
+.demo-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.demo-icon {
+  font-size: 1.3rem;
+}
+
+.demo-card-top h4 {
+  margin: 0 0 2px 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.demo-hint {
+  margin: 0;
+  font-size: 0.76rem;
+  color: #94a3b8;
+}
+
+.demo-bars-list {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.demo-bar-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.demo-bar-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: #334155;
+}
+
+.demo-opt-label {
+  font-weight: 500;
+}
+
+.demo-opt-val {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.demo-opt-val strong {
+  color: #0f172a;
+}
+
+.demo-track {
+  width: 100%;
+  height: 8px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.demo-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease-out;
+}
+
+.demo-fill.blue-theme {
+  background: linear-gradient(90deg, #60a5fa, #3b82f6);
+}
+
+.demo-fill.orange-theme {
+  background: linear-gradient(90deg, #fb923c, #f97316);
+}
+
+/* ==========================================================================
+   ITEM SUMMARY HEADER CARD
+   ========================================================================== */
+.item-analytics-view {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.item-summary-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px 24px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.summary-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex: 1;
+  min-width: 280px;
+}
+
+.summary-thumb {
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+  background-color: #f1f5f9;
+  background-size: cover;
+  background-position: center;
+  border: 2px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.summary-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-badges {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.eval-badge {
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+}
+
+.summary-title {
+  margin: 2px 0 0 0;
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.summary-desc {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
+  max-width: 540px;
+  line-height: 1.4;
+}
+
+.summary-metrics {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.metric-pill-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 90px;
+}
+
+.metric-num {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.metric-lbl {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* ==========================================================================
+   SECTION 2: GRID EVALUATION CARDS (QUESTION 1 & 2)
+   ========================================================================== */
+.section2-grid-columns {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.grid-card-container {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.grid-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  background: #fafafa;
+  border-bottom: 1px solid #eef2f6;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.head-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.q-badge {
+  background: #f97316;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 8px;
+  letter-spacing: 0.03em;
+}
+
+.head-title-wrap h3 {
+  margin: 0 0 2px 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.grid-card-subtitle {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.evaluator-pill {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.grid-card-content {
+  padding: 10px 24px 20px 24px;
+}
+
+.grid-col-headers {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr 2.5fr 1fr 0.8fr;
+  gap: 14px;
+  padding: 12px 14px;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: #94a3b8;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.grid-rows-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.grid-row-item {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr 2.5fr 1fr 0.8fr;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border-bottom: 1px solid #f8fafc;
+  transition: background-color 0.15s;
+  border-radius: 8px;
+}
+
+.grid-row-item:hover {
+  background-color: #f8fafc;
+}
+
+.grid-row-item.leader-row {
+  background-color: #fffaf0;
+  border-left: 3px solid #f97316;
+}
+
+.row-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.row-mood-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.92rem;
+  color: #0f172a;
+}
+
+.top-tag {
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.row-mood-desc {
+  font-size: 0.76rem;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.row-score-col {
+  display: flex;
+  align-items: center;
+}
+
+.score-chip {
+  font-size: 0.88rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.score-chip.score-high {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.score-chip.score-med {
+  background: #fefce8;
+  color: #854d0e;
+}
+
+.score-chip.score-low {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.row-bar-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rating-track-bar {
+  width: 100%;
+  height: 10px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.rating-track-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #fb923c, #ea580c);
+  transition: width 0.4s ease-out;
+}
+
+
+.mini-scale-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: #cbd5e1;
+  font-weight: 600;
+  padding: 0 2px;
+}
+
+/* Per-rating vote spread under each score track (e.g. "4:7" = seven 4★ votes).
+   Hovering shows the full 1-5 breakdown. */
+.dist-ticks {
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+.dist-ticks span {
+  white-space: nowrap;
+}
+.dist-ticks .dist-zero {
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.row-suit-col {
+  display: flex;
+  align-items: center;
+}
+
+.suit-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.suit-badge.suit-high {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.suit-badge.suit-med {
+  background: #fef9c3;
+  color: #a16207;
+}
+
+.suit-badge.suit-low {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.row-votes-col {
+  display: flex;
+  align-items: center;
+}
+
+.votes-badge {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.grid-insight-footer {
+  margin-top: 14px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+.insight-lamp {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   INDIVIDUAL SURVEY TAKER SUBMISSIONS LOG
+   ========================================================================== */
+.responses-log-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.log-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.log-title-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.log-emoji {
+  font-size: 1.5rem;
+}
+
+.log-title-area h3 {
+  margin: 0 0 2px 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.log-desc {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.log-badge {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+}
+
+.log-empty {
+  text-align: center;
+  padding: 30px;
+  color: #94a3b8;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.log-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.submission-card {
+  background: #fdfdfd;
+  border: 1px solid #eef2f6;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.submission-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.sub-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.respondent-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-avatar {
+  font-size: 1.15rem;
+}
+
+.respondent-title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.respondent-sub {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+.sub-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sub-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.sub-group-title {
+  margin: 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.rating-pills-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.eval-pill {
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.eval-pill.pill-pos {
+  background: #f0fdf4;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+
+.eval-pill.pill-neu {
+  background: #fefce8;
+  color: #854d0e;
+  border-color: #fef08a;
+}
+
+.eval-pill.pill-neg {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
+.eval-pill.weather {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  color: #0369a1;
+}
+
+.text-group {
+  background: #f8fafc;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border-left: 2px solid #3b82f6;
+}
+
+.user-text-quote {
+  margin: 2px 0 0 0;
+  font-size: 0.8rem;
+  color: #334155;
+  font-style: italic;
+  line-height: 1.35;
+}
+
 </style>

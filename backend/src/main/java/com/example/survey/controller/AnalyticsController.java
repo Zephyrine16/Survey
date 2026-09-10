@@ -23,4 +23,9 @@ public class AnalyticsController {
     public CombinedAnalyticsDTO getCombinedAnalytics(@PathVariable Long menuItemId) {
         return analyticsService.getCombinedAnalytics(menuItemId);
     }
+
+    @GetMapping("/demographics")
+    public com.example.survey.dto.DemographicAnalyticsDTO getDemographics() {
+        return analyticsService.getDemographics();
+    }
 }

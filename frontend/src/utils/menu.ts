@@ -4,6 +4,7 @@ import {
   DEFAULT_CATEGORY_STYLE,
   DRINK_SUBCATEGORIES,
   FOOD_SUBCATEGORIES,
+  MENU_ITEM_DESCRIPTIONS,
 } from '../config/constants'
 
 const normalizeCategory = (category?: string) => (category ?? '').trim().toLowerCase()
@@ -49,4 +50,20 @@ export const getImagePath = (item?: { imageName?: string | null }) => {
     return `${base}/uploads/${encoded}`
   }
   return `/uploads/${encoded}`
+}
+
+export const getItemDescription = (item?: { name?: string; description?: string } | null): string => {
+  if (!item) return ''
+  if (item.description && item.description.trim()) {
+    return item.description.trim()
+  }
+  const cleanName = (item.name ?? '').trim()
+  if (MENU_ITEM_DESCRIPTIONS[cleanName]) {
+    return MENU_ITEM_DESCRIPTIONS[cleanName]
+  }
+  const baseName = cleanName.replace(/^(Hot|Iced)\s+/i, '')
+  if (MENU_ITEM_DESCRIPTIONS[baseName]) {
+    return MENU_ITEM_DESCRIPTIONS[baseName]
+  }
+  return 'Delicious cafe specialty prepared fresh with premium ingredients.'
 }

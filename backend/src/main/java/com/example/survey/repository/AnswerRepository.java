@@ -30,6 +30,22 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
     """)
     List<Object[]> findTextResponsesForMenuItem(@Param("menuItemId") Long menuItemId);
 
+    @Query("""
+        SELECT a.question.id, a.userId, a.response, o.label, a.question.text, a.question.questionType
+        FROM Answer a
+        LEFT JOIN a.selectedOption o
+        WHERE a.menuItem.id = :menuItemId
+    """)
+    List<Object[]> findAllAnswersForMenuItem(@Param("menuItemId") Long menuItemId);
+
+    @Query("""
+        SELECT a.question.text, a.response, COUNT(a)
+        FROM Answer a
+        WHERE a.menuItem IS NULL AND a.response IS NOT NULL
+        GROUP BY a.question.text, a.response
+    """)
+    List<Object[]> findDemographicResponses();
+
     // ==========================================
     // DATA INGESTION & EXPORT QUERIES
     // ==========================================

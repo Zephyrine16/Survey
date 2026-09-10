@@ -31,6 +31,9 @@ class SurveyServiceTest {
     @Mock
     private SurveyProperties surveyProperties;
 
+    @Mock
+    private com.example.survey.repository.QuestionRepository questionRepository;
+
     @InjectMocks
     private SurveyService surveyService;
 
@@ -66,4 +69,21 @@ class SurveyServiceTest {
         assertTrue(result);
         verify(jdbcTemplate).batchUpdate(eq("INSERT INTO answers (user_id, menu_item_id, question_id, option_id, response) VALUES (?, ?, ?, ?, ?)"), any(BatchPreparedStatementSetter.class));
     }
+
+    @Test
+    void testSaveDemographicAnswer_AgeGroupEncoding() {
+        com.example.survey.model.Question q = new com.example.survey.model.Question();
+        q.setId(10L);
+        q.setText("Age Group");
+        when(questionRepository.findAll()).thenReturn(List.of(q));
+        when(surveyProperties.getTextResponseMaxLength()).thenReturn(255);
+
+        surveyService.saveDemographicAnswer("user1", "Age Group", "18–20");
+
+        org.mockito.ArgumentCaptor<String> captor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(jdbcTemplate).update(anyString(), eq("user1"), eq(10L), captor.capture());
+        System.out.println("CAPTURED DEMOGRAPHIC RESPONSE: " + captor.getValue());
+        assertEquals("18–20", captor.getValue());
+    }
 }
+
