@@ -54,6 +54,7 @@ class SurveyServiceTest {
         when(answerRepository.countTotalParticipants()).thenReturn(50L);
         when(surveyProperties.getParticipantLimit()).thenReturn(100L);
         when(surveyProperties.getTextResponseMaxLength()).thenReturn(255);
+        when(questionRepository.existsById(1L)).thenReturn(true);
 
         CategorySubmissionDTO dto = new CategorySubmissionDTO();
         dto.setUserId("user1");
@@ -82,7 +83,6 @@ class SurveyServiceTest {
 
         org.mockito.ArgumentCaptor<String> captor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(jdbcTemplate).update(anyString(), eq("user1"), eq(10L), captor.capture());
-        System.out.println("CAPTURED DEMOGRAPHIC RESPONSE: " + captor.getValue());
         assertEquals("18–20", captor.getValue());
     }
 }
