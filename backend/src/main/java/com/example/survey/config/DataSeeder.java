@@ -33,7 +33,7 @@ public class DataSeeder implements CommandLineRunner {
     private final JdbcTemplate jdbcTemplate;
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         if(!seederProperties.isEnabled()) {
             log.info("Seeders disabled. Skipping question seed.");
             return;

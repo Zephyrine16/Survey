@@ -34,7 +34,7 @@ public class MenuItemImageController {
     @DeleteMapping
     @Transactional
     public ResponseEntity<Void> deleteAllMenuItems() {
-        // First detach all answers so the FK constraint doesn't block the delete
+        // First detach all answers so the FK constraint doesn't block delete
         menuItemRepository.detachAllAnswersFromMenuItems();
         menuItemRepository.deleteAllInBatch();
         return ResponseEntity.noContent().build();
@@ -71,18 +71,7 @@ public class MenuItemImageController {
             }
         }
 
-        String original = file.getOriginalFilename();
-        String ext = ".webp";
-        if (original != null && original.contains(".")) {
-            String candidate = original.substring(original.lastIndexOf('.')).toLowerCase();
-            if (Set.of(".jpg", ".jpeg", ".png", ".webp").contains(candidate)) {
-                ext = candidate.equals(".jpeg") ? ".jpg" : candidate;
-            }
-        } else if ("image/png".equalsIgnoreCase(contentType)) {
-            ext = ".png";
-        } else if ("image/jpeg".equalsIgnoreCase(contentType)) {
-            ext = ".jpg";
-        }
+        String ext = resolveExtension(file.getOriginalFilename(), contentType);
 
         Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
         Files.createDirectories(uploadPath);
@@ -100,6 +89,22 @@ public class MenuItemImageController {
         return ResponseEntity.ok(Map.of("imageName", filename, "url", "/uploads/" + filename));
     }
 
+    private String resolveExtension(String original, String contentType) {
+        if (original != null && original.contains(".")) {
+            String candidate = original.substring(original.lastIndexOf('.')).toLowerCase();
+            if (Set.of(".jpg", ".jpeg", ".png", ".webp").contains(candidate)) {
+                return candidate.equals(".jpeg") ? ".jpg" : candidate;
+            }
+        }
+        if ("image/png".equalsIgnoreCase(contentType)) {
+            return ".png";
+        }
+        if ("image/jpeg".equalsIgnoreCase(contentType)) {
+            return ".jpg";
+        }
+        return ".webp";
+    }
+
     private static boolean isValidImageSignature(byte[] header) {
         if (header == null || header.length < 12) {
             return false;
@@ -114,10 +119,7 @@ public class MenuItemImageController {
             return true;
         }
         // WEBP: 'RIFF' .... 'WEBP'
-        if (header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F'
-                && header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P') {
-            return true;
-        }
-        return false;
+        return header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F'
+                && header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P';
     }
 }

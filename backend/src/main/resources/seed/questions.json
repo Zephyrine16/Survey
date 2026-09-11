@@ -1,44 +1,27 @@
 [
   {
-    "text": "Which emotion or physical state most strongly makes you want to order this item?",
-    "questionType": "RADIO",
+    "text": "Question 1 — Mood Association: How suitable is this item for each of the following moods?",
+    "questionType": "TEXT",
     "options": [
-      { "label": "Stressed/Overwhelmed", "sub": "(I need comfort/energy)", "icon": "😩" },
-      { "label": "Happy/Celebratory", "sub": "(I want to reward myself)", "icon": "😊" },
-      { "label": "Tired/Low Energy", "sub": "(I need a boost/caffeine)", "icon": "😴" },
-      { "label": "Relaxed/Chilling", "sub": "(I want to enjoy the rooftop/alfresco vibe)", "icon": "😌" },
-      { "label": "Focused/Working", "sub": "(I need something light/non-distracting)", "icon": "🎯" }
+      { "label": "Energy", "sub": "(Wants something energizing)" },
+      { "label": "Comfort", "sub": "(Wants something warm or familiar)" },
+      { "label": "Refreshing", "sub": "(Wants something light or cooling)" },
+      { "label": "Healthy", "sub": "(Wants a healthier choice)" },
+      { "label": "Treat", "sub": "(Wants something enjoyable or indulgent)" },
+      { "label": "Focused", "sub": "(Wants to concentrate or study)" },
+      { "label": "Familiar", "sub": "(Wants a safe, familiar choice)" },
+      { "label": "Adventurous", "sub": "(Wants to try something new)" },
+      { "label": "Quick", "sub": "(Wants something convenient)" }
     ]
   },
   {
-    "text": "In what weather condition does this item feel most satisfying?",
-    "questionType": "RADIO",
+    "text": "Question 2 — Weather Association: How suitable is this item for each of the following weather conditions?",
+    "questionType": "TEXT",
     "options": [
-      { "label": "Hot/Sunny", "sub": "(Refreshing/Cold items)", "icon": "☀️" },
-      { "label": "Cold/Rainy", "sub": "(Warm/Hearty items)", "icon": "🌧️" },
-      { "label": "Any Weather", "sub": "(All-around staples)", "icon": "⛅" }
+      { "label": "Hot/Sunny", "icon": "☀️" },
+      { "label": "Hot/Humid", "icon": "🌤️" },
+      { "label": "Rainy", "icon": "🌧️" },
+      { "label": "Cool Dry", "sub": "(Breezy, air-conditioned, cool evening weather)", "icon": "⛅" }
     ]
-  },
-  {
-    "text": "What is the \"vibe\" of this specific dish?",
-    "questionType": "RADIO",
-    "options": [
-      { "label": "Heavy Meal", "sub": "(Lunch/Dinner)", "icon": "🍽️" },
-      { "label": "Light Snack", "sub": "(Pica-pica/Quick bite)", "icon": "🥗" },
-      { "label": "Drink/Refreshment", "icon": "🥤" }
-    ]
-  },
-  {
-    "text": "Looking at this item, what do you think is a fair \"Student-Friendly\" price for it?",
-    "questionType": "RADIO",
-    "options": [
-      { "label": "Under ₱150", "sub": "(Budget)" },
-      { "label": "₱150 - ₱249", "sub": "(Standard)" },
-      { "label": "₱250 and above", "sub": "(Premium)" }
-    ]
-  },
-  {
-    "text": "How would you describe this dish to the AI chatbot?",
-    "questionType": "TEXT"
   }
 ]

@@ -21,7 +21,7 @@ const parsePositiveInt = (value: string | undefined, name: string, fallback?: nu
   return parsed
 }
 
-const DEFAULT_SURVEY_ITEM_LIMIT = 15
+const DEFAULT_SURVEY_ITEM_LIMIT = 10
 const DEFAULT_SURVEY_TEXT_MAX_LENGTH = 250
 const DEFAULT_SURVEY_BASELINE_TARGET = 30
 const DEFAULT_REPORT_FILENAME = 'FoodPreferenceSurvey_Analytics.csv'
@@ -184,6 +184,33 @@ export const SECTION_2_WEATHER_ROWS = [
     label:
       'Cool Dry (Note: Even in tropical climates, "cool dry" exists: breezy December–February days, air-conditioned spaces, or cool hill stations/evening breezes.)',
     short: 'Cool Dry',
+  },
+] as const
+
+export const SECTION_2_EVALUATION_QUESTIONS = [
+  {
+    id: 'sec2_mood',
+    numberLabel: 'Q2.1',
+    title: 'Question 1 — Mood Association',
+    prompt: 'How suitable is this item for each of the following moods?',
+    type: 'MATRIX',
+    typeLabel: 'Rating Matrix (1–5 Likert Scale)',
+    scopeLabel: '🍴 Item Evaluation',
+    scale: RATING_SCALE_LEVELS,
+    rows: SECTION_2_MOOD_ROWS,
+    requiredNote: 'Require a response in each row',
+  },
+  {
+    id: 'sec2_weather',
+    numberLabel: 'Q2.2',
+    title: 'Question 2 — Weather Association',
+    prompt: 'How suitable is this item for each of the following weather conditions?',
+    type: 'MATRIX',
+    typeLabel: 'Rating Matrix (1–5 Likert Scale)',
+    scopeLabel: '🍴 Item Evaluation',
+    scale: RATING_SCALE_LEVELS,
+    rows: SECTION_2_WEATHER_ROWS,
+    requiredNote: 'Require a response in each row',
   },
 ] as const
 

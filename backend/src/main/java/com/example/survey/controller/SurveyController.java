@@ -139,7 +139,7 @@ public class SurveyController {
                         surveyProperties.getParticipantCookieName(),
                         participantId)
                 .httpOnly(true)
-                .secure(request.isSecure())
+                .secure(participantCookieSecure || request.isSecure())
                 .sameSite("Lax")
                 .path("/")
                 .maxAge(Duration.ofDays(surveyProperties.getParticipantCookieMaxAgeDays()))
