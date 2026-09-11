@@ -52,27 +52,23 @@ public class DataSeeder implements CommandLineRunner {
             return;
         }
 
-        // If questions already exist in DB (e.g. seeded before this logic was added),
-        // record that fact and skip — don't duplicate them.
-        long count = questionRepository.count();
-        if (count > 0) {
-            log.info("Survey questions already present in database. Recording seed marker and skipping.");
-            jdbcTemplate.update(
-                    "INSERT INTO seed_metadata (seed_key) VALUES (?) ON CONFLICT (seed_key) DO NOTHING",
-                    SEED_KEY);
-            return;
-        }
-
-        log.info("Database is empty. Seeding initial survey questions via JPA...");
-
         List<SeedQuestion> seedQuestions = loadSeedQuestions();
         if(seedQuestions.isEmpty()) {
             log.warn("No seed questions found! Check if seed/questions.json exists in resources.");
             return;
         }
 
+        List<Question> existingQuestions = questionRepository.findAll();
+
         for(SeedQuestion seedQuestion : seedQuestions) {
             if(seedQuestion.text() == null || seedQuestion.text().isBlank()) {
+                continue;
+            }
+
+            boolean exists = existingQuestions.stream().anyMatch(q ->
+                    q.getText() != null && q.getText().trim().equalsIgnoreCase(seedQuestion.text().trim()));
+
+            if (exists) {
                 continue;
             }
 

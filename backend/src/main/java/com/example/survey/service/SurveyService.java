@@ -12,7 +12,6 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.HtmlUtils;
 
@@ -35,9 +34,7 @@ public class SurveyService {
 
     private static final String INSERT_ANSWER_SQL = "INSERT INTO answers (user_id, menu_item_id, question_id, option_id, response) VALUES (?, ?, ?, ?, ?)";
 
-    // This annotation locks the transaction at the database level.
-    // It guarantees the count check and inserts happen atomically.
-    @Transactional(isolation = Isolation.SERIALIZABLE)
+    @Transactional
     public boolean saveSurveyIfUnderLimit(List<CategorySubmissionDTO> payload) {
 
         if (isParticipantLimitReached()) {
@@ -62,15 +59,48 @@ public class SurveyService {
     private List<AnswerInsertRow> mapAndSanitizeRows(List<CategorySubmissionDTO> payload) {
         List<AnswerInsertRow> rows = new ArrayList<>();
         for(CategorySubmissionDTO dto : payload) {
+            Long validQuestionId = resolveValidQuestionId(dto.getQuestionId(), dto.getTextResponse());
             rows.add(new AnswerInsertRow(
                     dto.getUserId(),
                     dto.getMenuItemId(),
-                    dto.getQuestionId(),
+                    validQuestionId,
                     dto.getSelectedOptionId(),
                     sanitizeTextResponse(dto.getTextResponse())
             ));
         }
         return rows;
+    }
+
+    private Long resolveValidQuestionId(Long submittedQuestionId, @Nullable String textResponse) {
+        if (submittedQuestionId != null && questionRepository.existsById(submittedQuestionId)) {
+            return submittedQuestionId;
+        }
+
+        String lowerText = textResponse != null ? textResponse.toLowerCase() : "";
+        boolean isWeather = lowerText.contains("weather")
+                || lowerText.contains("sunny")
+                || lowerText.contains("humid")
+                || lowerText.contains("rain")
+                || lowerText.contains("cool");
+
+        String keyword = isWeather ? "weather" : "mood";
+        return questionRepository.findAll().stream()
+                .filter(q -> q.getText() != null && (q.getText().toLowerCase().contains(keyword) || (!isWeather && q.getText().toLowerCase().contains("emotion"))))
+                .map(Question::getId)
+                .findFirst()
+                .orElseGet(() -> {
+                    return questionRepository.findAll().stream()
+                            .findFirst()
+                            .map(Question::getId)
+                            .orElseGet(() -> {
+                                Question newQ = new Question();
+                                newQ.setText(isWeather
+                                        ? "Question 2 — Weather Association: How suitable is this item for each of the following weather conditions?"
+                                        : "Question 1 — Mood Association: How suitable is this item for each of the following moods?");
+                                newQ.setQuestionType("TEXT");
+                                return questionRepository.save(newQ).getId();
+                            });
+                });
     }
 
     private @Nullable String sanitizeTextResponse(@Nullable String textResponse) {

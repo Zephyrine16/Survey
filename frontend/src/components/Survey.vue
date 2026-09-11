@@ -836,7 +836,11 @@ const getMoodQuestionId = (): number => {
     return txt.includes('mood') || txt.includes('emotion')
   })
   if (match) return match.id
-  return questions.value[2]?.id ?? questions.value[0]?.id ?? 3
+  const nonDemo = questions.value.find((q: any) => {
+    const txt = (q.text || '').toLowerCase()
+    return !txt.includes('age group') && !txt.includes('dine')
+  })
+  return nonDemo?.id ?? questions.value[0]?.id ?? 1
 }
 
 const getWeatherQuestionId = (): number => {
@@ -845,7 +849,11 @@ const getWeatherQuestionId = (): number => {
     return txt.includes('weather')
   })
   if (match) return match.id
-  return questions.value[3]?.id ?? questions.value[1]?.id ?? 4
+  const nonDemo = questions.value.filter((q: any) => {
+    const txt = (q.text || '').toLowerCase()
+    return !txt.includes('age group') && !txt.includes('dine')
+  })
+  return nonDemo[1]?.id ?? nonDemo[0]?.id ?? questions.value[1]?.id ?? questions.value[0]?.id ?? 2
 }
 
 const resetSurvey = () => {
@@ -863,11 +871,14 @@ const resetSurvey = () => {
   // Generate a brand-new session ID so this restart is a completely independent session
   sessionId.value = crypto.randomUUID()
   clearStaleDrafts()
-  window.location.reload()
 }
 
 const executeFinalSubmit = async () => {
   try {
+    if (questions.value.length === 0) {
+      await fetchQuestions()
+    }
+
     const payload: any[] = []
     const moodQId = getMoodQuestionId()
     const weatherQId = getWeatherQuestionId()
@@ -929,14 +940,16 @@ const executeFinalSubmit = async () => {
     showReviewModal.value = false
     showSuccessModal.value = true
   } catch (error: any) {
-    const errorMessage = error.response?.data ? JSON.stringify(error.response.data) : ''
+    const errorData = error.response?.data
+    const errorMessage = errorData ? (typeof errorData === 'string' ? errorData : JSON.stringify(errorData)) : ''
     if (errorMessage.includes('LIMIT_REACHED')) {
       showConfirmModal.value = false
       showReviewModal.value = false
       showLimitModal.value = true
     } else {
       console.error('Error saving data:', error)
-      alert('Oops! There was a problem saving your answers. Please try again.')
+      const detail = errorData?.error || errorData?.message || error.message || ''
+      alert(`Oops! There was a problem saving your answers.${detail ? ' (' + detail + ')' : ''} Please try again.`)
     }
   }
 }
