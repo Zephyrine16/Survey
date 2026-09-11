@@ -77,6 +77,7 @@ public class SecurityConfig {
     }
 
     @Bean
+    @SuppressWarnings("HttpUrlsUsage")
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 

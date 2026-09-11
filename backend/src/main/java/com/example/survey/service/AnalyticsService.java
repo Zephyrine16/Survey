@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.function.BiPredicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -106,7 +107,7 @@ public class AnalyticsService {
             Matcher matcher = RATING_PATTERN.matcher(response.trim());
             if (matcher.matches()) {
                 int rating = Integer.parseInt(matcher.group(2));
-                rating = Math.max(1, Math.min(5, rating));
+                rating = Math.clamp(rating, 1, 5);
                 ratingSum += rating;
                 ratingCount++;
                 if (rating >= 4) {
@@ -146,7 +147,7 @@ public class AnalyticsService {
                 stats.topKeywords = new ArrayList<>();
             }
             if (!stats.topKeywords.contains(moodAnalytics.getTopRowLabel())) {
-                stats.topKeywords.add(0, moodAnalytics.getTopRowLabel());
+                stats.topKeywords.addFirst(moodAnalytics.getTopRowLabel());
             }
         }
         if (weatherAnalytics != null && weatherAnalytics.getTopRowLabel() != null) {
@@ -168,64 +169,36 @@ public class AnalyticsService {
     }
 
     public GridQuestionAnalyticsDTO buildMoodAnalytics(Long menuItemId) {
-        List<Object[]> allAnswers = answerRepository.findAllAnswersForMenuItem(menuItemId);
-
-        Map<String, GridRowAccumulator> accumulators = new LinkedHashMap<>();
-        for (RowDef def : MOOD_DEFINITIONS) {
-            accumulators.put(def.id(), new GridRowAccumulator(def));
-        }
-
-        Set<String> uniqueUsers = new HashSet<>();
-
-        for (Object[] row : allAnswers) {
-            String userId = row[1] == null ? null : row[1].toString();
-            String response = row[2] == null ? null : row[2].toString();
-            if (response == null || response.isBlank()) continue;
-
-            Matcher matcher = RATING_PATTERN.matcher(response.trim());
-            if (matcher.matches()) {
-                String rowLabelPart = matcher.group(1).trim().toLowerCase();
-                int rating = Integer.parseInt(matcher.group(2));
-                rating = Math.max(1, Math.min(5, rating));
-
-                for (RowDef def : MOOD_DEFINITIONS) {
-                    if (matchesRow(rowLabelPart, def)) {
-                        accumulators.get(def.id()).addRating(rating);
-                        if (userId != null) uniqueUsers.add(userId);
-                        break;
-                    }
-                }
-            }
-        }
-
-        List<GridRowStatDTO> rows = new ArrayList<>();
-        String topLabel = null;
-        double topScore = 0.0;
-
-        for (GridRowAccumulator acc : accumulators.values()) {
-            GridRowStatDTO stat = acc.toDTO();
-            rows.add(stat);
-            if (stat.getAvgRating() > topScore) {
-                topScore = stat.getAvgRating();
-                topLabel = stat.getShortLabel();
-            }
-        }
-
-        return GridQuestionAnalyticsDTO.builder()
-                .title("Question 1 — Mood Association")
-                .prompt("How suitable is this item for each of the following moods?")
-                .rows(rows)
-                .topRowLabel(topLabel)
-                .topRowScore(topScore)
-                .totalEvaluators(uniqueUsers.size())
-                .build();
+        return buildGridAnalytics(
+                menuItemId,
+                "Question 1 — Mood Association",
+                "How suitable is this item for each of the following moods?",
+                MOOD_DEFINITIONS,
+                this::matchesRow
+        );
     }
 
     public GridQuestionAnalyticsDTO buildWeatherAnalytics(Long menuItemId) {
+        return buildGridAnalytics(
+                menuItemId,
+                "Question 2 — Weather Association",
+                "How suitable is this item for each of the following weather conditions?",
+                WEATHER_DEFINITIONS,
+                this::matchesWeatherRow
+        );
+    }
+
+    private GridQuestionAnalyticsDTO buildGridAnalytics(
+            Long menuItemId,
+            String title,
+            String prompt,
+            List<RowDef> definitions,
+            BiPredicate<String, RowDef> matcherPredicate
+    ) {
         List<Object[]> allAnswers = answerRepository.findAllAnswersForMenuItem(menuItemId);
 
         Map<String, GridRowAccumulator> accumulators = new LinkedHashMap<>();
-        for (RowDef def : WEATHER_DEFINITIONS) {
+        for (RowDef def : definitions) {
             accumulators.put(def.id(), new GridRowAccumulator(def));
         }
 
@@ -239,11 +212,10 @@ public class AnalyticsService {
             Matcher matcher = RATING_PATTERN.matcher(response.trim());
             if (matcher.matches()) {
                 String rowLabelPart = matcher.group(1).trim().toLowerCase();
-                int rating = Integer.parseInt(matcher.group(2));
-                rating = Math.max(1, Math.min(5, rating));
+                int rating = Math.clamp(Integer.parseInt(matcher.group(2)), 1, 5);
 
-                for (RowDef def : WEATHER_DEFINITIONS) {
-                    if (matchesWeatherRow(rowLabelPart, def)) {
+                for (RowDef def : definitions) {
+                    if (matcherPredicate.test(rowLabelPart, def)) {
                         accumulators.get(def.id()).addRating(rating);
                         if (userId != null) uniqueUsers.add(userId);
                         break;
@@ -266,8 +238,8 @@ public class AnalyticsService {
         }
 
         return GridQuestionAnalyticsDTO.builder()
-                .title("Question 2 — Weather Association")
-                .prompt("How suitable is this item for each of the following weather conditions?")
+                .title(title)
+                .prompt(prompt)
                 .rows(rows)
                 .topRowLabel(topLabel)
                 .topRowScore(topScore)
