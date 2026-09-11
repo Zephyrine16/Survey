@@ -871,6 +871,8 @@ const resetSurvey = () => {
   // Generate a brand-new session ID so this restart is a completely independent session
   sessionId.value = crypto.randomUUID()
   clearStaleDrafts()
+  // Re-fetch and re-shuffle menu items so every new attempt gets a different random set
+  fetchMenuItems()
 }
 
 const executeFinalSubmit = async () => {
