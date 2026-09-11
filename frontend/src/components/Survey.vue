@@ -940,9 +940,13 @@ const executeFinalSubmit = async () => {
     showReviewModal.value = false
     showSuccessModal.value = true
   } catch (error: any) {
+    const status = error.response?.status
     const errorData = error.response?.data
     const errorMessage = errorData ? (typeof errorData === 'string' ? errorData : JSON.stringify(errorData)) : ''
-    if (errorMessage.includes('LIMIT_REACHED')) {
+    if (status === 429) {
+      // Rate-limited: inform the user to wait, do not show the error alert
+      alert('Please wait a few seconds before submitting again.')
+    } else if (errorMessage.includes('LIMIT_REACHED')) {
       showConfirmModal.value = false
       showReviewModal.value = false
       showLimitModal.value = true

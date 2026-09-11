@@ -81,7 +81,9 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
     @Query(value = "SELECT COUNT(DISTINCT user_id) FROM answers WHERE menu_item_id = :menuItemId", nativeQuery = true)
     Long countTotalResponsesForItem(@Param("menuItemId") Long menuItemId);
 
-    // Count unique people globally (by their random session ID).
-    @Query("SELECT COUNT(DISTINCT a.userId) FROM Answer a")
+    // Count unique people who submitted actual category answers (menu_item_id NOT NULL).
+    // Excluding demographics-only rows ensures the participant limit is not prematurely
+    // reached by users who submitted demographics but never completed the category survey.
+    @Query("SELECT COUNT(DISTINCT a.userId) FROM Answer a WHERE a.menuItem IS NOT NULL")
     Long countTotalParticipants();
 }

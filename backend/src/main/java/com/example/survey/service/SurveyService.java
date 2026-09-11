@@ -126,7 +126,11 @@ public class SurveyService {
             public void setValues(PreparedStatement ps, int i) throws SQLException {
                 AnswerInsertRow row = rows.get(i);
                 ps.setString(1, row.userId());
-                ps.setLong(2, row.menuItemId());
+                if (row.menuItemId() == null) {
+                    ps.setNull(2, Types.BIGINT);
+                } else {
+                    ps.setLong(2, row.menuItemId());
+                }
                 ps.setLong(3, row.questionId());
                 if(row.selectedOptionId() == null) {
                     ps.setNull(4, Types.BIGINT);
@@ -168,7 +172,7 @@ public class SurveyService {
 
     private record AnswerInsertRow(
             String userId,
-            Long menuItemId,
+            @Nullable Long menuItemId,
             Long questionId,
             @Nullable Long selectedOptionId,
             @Nullable String textResponse
