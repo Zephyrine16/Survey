@@ -105,7 +105,7 @@ describe('Survey.vue', () => {
 
     expect(starterText).toContain('SECTION 2 — Menu Item Evaluation')
     expect(starterText).toContain('Instructions')
-    expect(starterText).toContain('You will be asked to evaluate 15 menu items.')
+    expect(starterText).toContain('You will be asked to evaluate 10 menu items.')
     expect(starterText).toContain(
       'For each menu item, rate how suitable you think the item is for each mood and weather condition.',
     )
@@ -293,10 +293,12 @@ describe('Survey.vue', () => {
     )
 
     // Jump to last item index to test submission flow
-    ;(wrapper.vm as any).currentItemIndex = mockMenuItems.length - 1
+    const totalItems = (wrapper.vm as any).menuItems.length
+    expect(totalItems).toBe(10)
+    ;(wrapper.vm as any).currentItemIndex = totalItems - 1
     await flushPromises()
 
-    expect(wrapper.find('.item-tag-pill').text()).toContain(`MENU ITEM ${mockMenuItems.length}`)
+    expect(wrapper.find('.item-tag-pill').text()).toContain(`MENU ITEM ${totalItems}`)
 
     // Complete the last item
     const lastTables = wrapper.findAll('.matrix-table')

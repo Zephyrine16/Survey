@@ -886,7 +886,7 @@
           </div>
 
           <!-- ======================================================== -->
-          <!-- SECTION 2 — Current Questions (Menu Item Evaluation)     -->
+          <!-- SECTION 2 — Menu Item Evaluation Questions               -->
           <!-- ======================================================== -->
           <div class="qm-section-group">
             <div class="qm-section-header menu-header">
@@ -896,12 +896,14 @@
                   <div class="scope-label"><span class="scope-dot orange-dot"></span> SECTION 2</div>
                   <h3 class="qm-section-title">SECTION 2 — Menu Item Evaluation Questions</h3>
                   <p class="qm-section-desc">
-                    Current questions asked for each food and beverage item in the survey.
+                    Evaluation questions asked for every food and beverage item in the survey.
                   </p>
                 </div>
               </div>
               <div class="qm-header-right">
-                <span class="qm-badge orange-pill">{{ dynamicQuestions.length }} Current Questions</span>
+                <span class="qm-badge orange-pill">
+                  {{ section2EvaluationQuestions.length + (customQuestions.length > 0 ? customQuestions.length : 0) }} Questions • Live Survey Grid
+                </span>
                 <button
                   class="nav-btn orange-solid add-q-sub-btn"
                   @click="openNewQuestionModal"
@@ -912,64 +914,129 @@
             </div>
 
             <div class="qm-cards-list">
+              <!-- Live Section 2 Questions (Matching Survey.vue) -->
               <div
-                v-for="(q, index) in dynamicQuestions"
+                v-for="q in section2EvaluationQuestions"
                 :key="q.id"
                 class="insight-card mb-4 menu-q-card"
               >
                 <div class="manager-header-row q-card-top-row">
                   <div class="q-card-title-group">
-                    <span class="q-circle">Q2.{{ index + 1 }}</span>
+                    <span class="q-circle menu-q-num">{{ q.numberLabel }}</span>
                     <div>
-                      <strong class="q-title-text">{{ q.text }}</strong>
+                      <strong class="q-title-text">{{ q.title }}</strong>
+                      <p class="section-subtext mb-1 prompt-text">
+                        “{{ q.prompt }}”
+                      </p>
                       <div class="q-badge-row">
-                        <span class="badge-v2 food-badge">🍴 Item Evaluation</span>
-                        <span
-                          class="badge-v2"
-                          :class="q.type === 'TEXT' ? 'type-badge' : 'food-badge'"
-                        >
-                          {{ q.type === 'TEXT' ? '💬 Open-ended (Text)' : '🔘 Multiple Choice (Radio)' }}
-                        </span>
+                        <span class="badge-v2 food-badge">{{ q.scopeLabel }}</span>
+                        <span class="badge-v2 type-badge">📊 {{ q.typeLabel }}</span>
                       </div>
                     </div>
                   </div>
-                  <div class="q-actions-row">
-                    <button class="action-btn edit-btn" @click="openEditQuestionModal(q)">
-                      ✏️ Edit
-                    </button>
-                    <button class="action-btn del-btn" @click="confirmDeleteQuestion(q.id, q.text)">🗑️</button>
+                  <span class="fixed-indicator-badge">Live in Survey</span>
+                </div>
+
+                <!-- Rating scale strip -->
+                <div class="q-card-scale-row mb-3">
+                  <p class="section-label mb-1">Likert Rating Scale (1 to 5):</p>
+                  <div class="scale-pills-row">
+                    <span
+                      v-for="scale in q.scale"
+                      :key="scale.value"
+                      class="scale-pill"
+                    >
+                      <strong class="scale-val">{{ scale.value }}</strong>
+                      <span class="scale-lbl">{{ scale.label }}</span>
+                    </span>
                   </div>
                 </div>
 
-                <div v-if="q.type !== 'TEXT'" class="q-card-options-row">
-                  <p class="section-label mb-2">Available Options ({{ q.options?.length || 0 }}):</p>
+                <!-- Evaluation rows -->
+                <div class="q-card-options-row">
+                  <p class="section-label mb-2">
+                    Evaluation Dimensions / Rows ({{ q.rows.length }}):
+                  </p>
                   <div class="options-pills-row">
                     <span
-                      v-for="opt in q.options"
-                      :key="opt.id"
-                      class="f-pill"
-                      style="display: flex; align-items: center; gap: 8px"
+                      v-for="(row, rIdx) in q.rows"
+                      :key="row.id"
+                      class="f-pill pill-matrix-dim"
                     >
-                      <span v-if="opt.icon">{{ opt.icon }}</span>
-                      <span>{{ opt.text || opt.label || opt.name || '⚠️ Blank Option' }}</span>
-                      <button
-                        @click="confirmDeleteOption(opt.id)"
-                        class="del-opt-btn"
-                        title="Delete option"
-                      >
-                        ✕
-                      </button>
+                      <span class="opt-num-orange">{{ rIdx + 1 }}.</span>
+                      <span>{{ row.label }}</span>
                     </span>
-                    <button
-                      @click="openAddOptionModal(q.id)"
-                      class="f-pill"
-                      style="border: 1px dashed #cbd5e1; background: transparent; cursor: pointer"
-                    >
-                      + Add Option
-                    </button>
                   </div>
+                  <p class="grid-req-note mt-2">
+                    <span class="req-asterisk">*</span> {{ q.requiredNote }}
+                  </p>
                 </div>
               </div>
+
+              <!-- Custom / Additional Questions if any -->
+              <template v-if="customQuestions.length > 0">
+                <div class="custom-questions-divider my-4">
+                  <div class="scope-label"><span class="scope-dot orange-dot"></span> ADDITIONAL CUSTOM QUESTIONS</div>
+                </div>
+                <div
+                  v-for="(q, index) in customQuestions"
+                  :key="q.id"
+                  class="insight-card mb-4 menu-q-card"
+                >
+                  <div class="manager-header-row q-card-top-row">
+                    <div class="q-card-title-group">
+                      <span class="q-circle">Q2.{{ section2EvaluationQuestions.length + index + 1 }}</span>
+                      <div>
+                        <strong class="q-title-text">{{ q.text }}</strong>
+                        <div class="q-badge-row">
+                          <span class="badge-v2 food-badge">🍴 Item Evaluation</span>
+                          <span
+                            class="badge-v2"
+                            :class="q.type === 'TEXT' ? 'type-badge' : 'food-badge'"
+                          >
+                            {{ q.type === 'TEXT' ? '💬 Open-ended (Text)' : '🔘 Multiple Choice (Radio)' }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="q-actions-row">
+                      <button class="action-btn edit-btn" @click="openEditQuestionModal(q)">
+                        ✏️ Edit
+                      </button>
+                      <button class="action-btn del-btn" @click="confirmDeleteQuestion(q.id, q.text)">🗑️</button>
+                    </div>
+                  </div>
+
+                  <div v-if="q.type !== 'TEXT'" class="q-card-options-row">
+                    <p class="section-label mb-2">Available Options ({{ q.options?.length || 0 }}):</p>
+                    <div class="options-pills-row">
+                      <span
+                        v-for="opt in q.options"
+                        :key="opt.id"
+                        class="f-pill"
+                        style="display: flex; align-items: center; gap: 8px"
+                      >
+                        <span v-if="opt.icon">{{ opt.icon }}</span>
+                        <span>{{ opt.text || opt.label || opt.name || '⚠️ Blank Option' }}</span>
+                        <button
+                          @click="confirmDeleteOption(opt.id)"
+                          class="del-opt-btn"
+                          title="Delete option"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                      <button
+                        @click="openAddOptionModal(q.id)"
+                        class="f-pill"
+                        style="border: 1px dashed #cbd5e1; background: transparent; cursor: pointer"
+                      >
+                        + Add Option
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -1403,6 +1470,7 @@ import {
   QUICK_EMOJIS,
   REPORT_FILENAME,
   SECTION_1_DEMOGRAPHIC_QUESTIONS,
+  SECTION_2_EVALUATION_QUESTIONS,
   SECTION_2_MOOD_ROWS,
   SECTION_2_WEATHER_ROWS,
   SURVEY_BASELINE_TARGET,
@@ -1617,6 +1685,18 @@ const fetchMenuItems = async () => {
 
 const demographicQuestions = ref(SECTION_1_DEMOGRAPHIC_QUESTIONS)
 const dynamicQuestions = ref<any[]>([])
+const section2EvaluationQuestions = ref(SECTION_2_EVALUATION_QUESTIONS)
+
+const customQuestions = computed(() => {
+  return dynamicQuestions.value.filter((q: any) => {
+    const txt = (q.text || '').toLowerCase()
+    const isMood = txt.includes('mood') || txt.includes('emotion')
+    const isWeather = txt.includes('weather')
+    const isDemo = txt.includes('age group') || txt.includes('how often do you dine')
+    const isLegacyVibe = txt.includes('vibe') || txt.includes('student-friendly') || txt.includes('chatbot')
+    return !isMood && !isWeather && !isDemo && !isLegacyVibe
+  })
+})
 
 const fetchQuestions = async () => {
   try {
@@ -1695,7 +1775,7 @@ const itemCoverageLabel = computed(() => {
   return `For ${itemName} • ${pct}% of ${total} participants`
 })
 
-// Votes for one star rating within a grid row's 1-5 distribution.
+// Votes for one-star rating within a grid row's 1-5 distribution.
 const rowVoteCount = (row: any, rating: number): number => {
   return Number(row?.distribution?.[rating] ?? 0)
 }
@@ -4537,6 +4617,73 @@ onUnmounted(() => {
 }
 .del-opt-btn:hover {
   color: #b91c1c;
+}
+.menu-q-num {
+  position: static !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  background: #fff7ed !important;
+  color: #c2410c !important;
+  border: 1px solid #fed7aa !important;
+}
+.prompt-text {
+  font-style: italic;
+  color: #475569;
+  font-size: 0.9rem;
+}
+.q-card-scale-row {
+  padding: 0 20px 14px 64px;
+}
+.scale-pills-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.scale-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+.scale-val {
+  color: #ea580c;
+  font-weight: 800;
+}
+.scale-lbl {
+  color: #334155;
+}
+.pill-matrix-dim {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+.opt-num-orange {
+  font-weight: 800;
+  color: #ea580c;
+  font-size: 0.8rem;
+}
+.grid-req-note {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+.grid-req-note .req-asterisk {
+  color: #ef4444;
+  font-weight: bold;
+}
+.custom-questions-divider {
+  border-top: 1px dashed #cbd5e1;
+  padding-top: 16px;
+  margin-top: 24px;
+  margin-bottom: 16px;
 }
 
 /* ==========================================================================
