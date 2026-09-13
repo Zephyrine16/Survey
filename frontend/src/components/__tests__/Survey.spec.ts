@@ -69,7 +69,7 @@ describe('Survey.vue', () => {
     expect(wrapper.find('.welcome-screen').exists()).toBe(true)
   })
 
-  it('starts survey when button is clicked', async () => {
+  it('starts survey when button is clicked and shows Section 1 Privacy Notice', async () => {
     const wrapper = mount(Survey)
     expect(wrapper.find('.welcome-screen').exists()).toBe(true)
 
@@ -78,13 +78,40 @@ describe('Survey.vue', () => {
 
     expect(wrapper.find('.welcome-screen').exists()).toBe(false)
     expect(wrapper.find('.app-container').exists()).toBe(true)
+    expect(wrapper.find('.privacy-view').exists()).toBe(true)
+    expect(wrapper.text()).toContain('SECTION 1 — Privacy Notice & Consent')
+    expect(wrapper.text()).toContain('Philippine Data Privacy Act of 2012')
+    expect(wrapper.text()).toContain('Republic Act No. 10173')
+    expect(wrapper.text()).toContain('understanding dining preferences, evaluating food cravings, and improving our cafe menu items')
+    expect(wrapper.text()).toContain('Participation is voluntary')
+
+    // Proceed button should be disabled until consent is checked
+    const proceedBtn = wrapper.find('.privacy-proceed-btn')
+    expect(proceedBtn.attributes('disabled')).toBeDefined()
+
+    // Toggle consent
+    await wrapper.find('.consent-card').trigger('click')
+    expect(proceedBtn.attributes('disabled')).toBeUndefined()
+
+    // Click proceed to advance to Section 2
+    await proceedBtn.trigger('click')
     expect(wrapper.find('.demographic-view').exists()).toBe(true)
+    expect(wrapper.text()).toContain('SECTION 2 — Respondent Information')
+
+    // Can navigate back to Section 1
+    const backBtn = wrapper.find('.demo-back-btn')
+    await backBtn.trigger('click')
+    expect(wrapper.find('.privacy-view').exists()).toBe(true)
   })
 
-  it('shows Section 2 instructions as a modal atop the rating view', async () => {
+  it('shows Section 3 instructions as a modal atop the rating view', async () => {
     const wrapper = mount(Survey)
     await flushPromises()
     await wrapper.find('.primary-btn.pulse').trigger('click')
+
+    // Accept Privacy Notice (Section 1)
+    await wrapper.find('.consent-card').trigger('click')
+    await wrapper.find('.privacy-proceed-btn').trigger('click')
 
     expect(wrapper.find('.demographic-view').exists()).toBe(true)
     const proceedBtn = wrapper.find('.demo-proceed-btn')
@@ -103,7 +130,7 @@ describe('Survey.vue', () => {
     expect(instructionsModal).not.toBeNull()
     const starterText = instructionsModal?.textContent || ''
 
-    expect(starterText).toContain('SECTION 2 — Menu Item Evaluation')
+    expect(starterText).toContain('SECTION 3 — Menu Item Evaluation')
     expect(starterText).toContain('Instructions')
     expect(starterText).toContain('You will be asked to evaluate 10 menu items.')
     expect(starterText).toContain(
@@ -116,11 +143,11 @@ describe('Survey.vue', () => {
     expect(starterText).toContain('4 — Suitable')
     expect(starterText).toContain('5 — Very Suitable')
 
-    const startSec2Btn = document.body.querySelector(
+    const startSec3Btn = document.body.querySelector(
       '.instructions-modal-card .starter-proceed-btn',
     ) as HTMLButtonElement
-    expect(startSec2Btn).not.toBeNull()
-    startSec2Btn.click()
+    expect(startSec3Btn).not.toBeNull()
+    startSec3Btn.click()
     await flushPromises()
     await wrapper.vm.$nextTick()
 
@@ -136,10 +163,15 @@ describe('Survey.vue', () => {
     expect(wrapper.find('.rating-view').exists()).toBe(true)
   })
 
-  it('allows going back to Section 1 from the instructions modal', async () => {
+  it('allows going back to Section 2 from the instructions modal', async () => {
     const wrapper = mount(Survey)
     await wrapper.find('.primary-btn.pulse').trigger('click')
 
+    // Complete Section 1
+    await wrapper.find('.consent-card').trigger('click')
+    await wrapper.find('.privacy-proceed-btn').trigger('click')
+
+    // Complete Section 2
     const demoButtons = wrapper.findAll('.demo-opt-btn')
     await demoButtons[0].trigger('click')
     await demoButtons[5].trigger('click')
@@ -160,11 +192,15 @@ describe('Survey.vue', () => {
     expect(wrapper.find('.demographic-view').exists()).toBe(true)
   })
 
-  it('renders Section 2 Menu Item Evaluation with Question 1 (Mood) & Question 2 (Weather)', async () => {
+  it('renders Section 3 Menu Item Evaluation with Question 1 (Mood) & Question 2 (Weather)', async () => {
     const wrapper = mount(Survey)
     await flushPromises()
 
     await wrapper.find('.primary-btn.pulse').trigger('click')
+
+    // Complete Section 1
+    await wrapper.find('.consent-card').trigger('click')
+    await wrapper.find('.privacy-proceed-btn').trigger('click')
 
     const demoButtons = wrapper.findAll('.demo-opt-btn')
     await demoButtons[0].trigger('click')
@@ -239,8 +275,10 @@ describe('Survey.vue', () => {
     const wrapper = mount(Survey)
     await flushPromises()
 
-    // Start Survey -> Complete Section 1 -> Dismiss instructions modal -> Section 2
+    // Start Survey -> Complete Section 1 -> Complete Section 2 -> Dismiss instructions modal -> Section 3
     await wrapper.find('.primary-btn.pulse').trigger('click')
+    await wrapper.find('.consent-card').trigger('click')
+    await wrapper.find('.privacy-proceed-btn').trigger('click')
     const demoButtons = wrapper.findAll('.demo-opt-btn')
     await demoButtons[0].trigger('click')
     await demoButtons[5].trigger('click')
@@ -331,6 +369,9 @@ describe('Survey.vue', () => {
     const reviewCard = document.body.querySelector('.review-card')
     expect(reviewCard).not.toBeNull()
     const reviewText = reviewCard?.textContent || ''
+    expect(reviewText).toContain('SECTION 1 — Privacy Notice & Consent')
+    expect(reviewText).toContain('SECTION 2 — Respondent Information')
+    expect(reviewText).toContain('SECTION 3 — Menu Item Evaluations')
     expect(reviewText).toContain('Chicken Alfredo')
     expect(reviewText).toContain('Question 1 — Mood Association')
     expect(reviewText).toContain('Question 2 — Weather Association')
