@@ -32,13 +32,19 @@
           <div class="header-actions">
             <template v-if="currentSection === 1">
               <div class="global-progress">
-                <span class="section-indicator-badge blue-badge">Section 1 of 2</span>
+                <span class="section-indicator-badge teal-badge">Section 1 of 3</span>
+                <span class="section-badge-label">Privacy Notice</span>
+              </div>
+            </template>
+            <template v-else-if="currentSection === 2">
+              <div class="global-progress">
+                <span class="section-indicator-badge blue-badge">Section 2 of 3</span>
                 <span class="section-badge-label">Respondent Information</span>
               </div>
             </template>
             <template v-else>
               <div class="global-progress">
-                <span class="section-indicator-badge orange-badge">Section 2 of 2</span>
+                <span class="section-indicator-badge orange-badge">Section 3 of 3</span>
                 Item <strong>{{ currentItemIndex + 1 }}</strong> of {{ menuItems.length }}
               </div>
               <button
@@ -56,15 +62,128 @@
 
       <main class="main-content">
         <!-- ======================================================== -->
-        <!-- SECTION 1 — Respondent Information                       -->
+        <!-- SECTION 1 — Notice of Privacy                            -->
         <!-- ======================================================== -->
-        <div v-if="currentSection === 1" class="demographic-view fade-in">
+        <div v-if="currentSection === 1" class="privacy-view fade-in">
+          <div class="privacy-card">
+            <div class="section-banner">
+              <div class="section-scope-pill teal-scope-pill">
+                <span class="scope-dot teal-dot"></span> SECTION 1 OF 3
+              </div>
+              <h2>SECTION 1 — Privacy Notice & Consent</h2>
+              <p class="section-desc">
+                In compliance with the Philippine Data Privacy Act of 2012 (Republic Act No. 10173).
+              </p>
+            </div>
+
+            <div class="privacy-content-box">
+              <div class="privacy-callout">
+                <div class="privacy-callout-text">
+                  <h3>Republic Act No. 10173 (Data Privacy Act of 2012)</h3>
+                  <p>
+                    In accordance with the Philippine Data Privacy Act of 2012 (Republic Act No. 10173),
+                    any personal data collected through this survey will be processed fairly, transparently,
+                    and only for the purpose of understanding dining preferences, evaluating food cravings,
+                    and improving our cafe menu items and overall customer experience.
+                  </p>
+                </div>
+              </div>
+
+              <div class="privacy-pillars-grid">
+                <div class="pillar-card">
+                  <div class="pillar-info">
+                    <h4>Purpose & Processing</h4>
+                    <p>
+                      Your inputs directly assist in understanding dining preferences and optimizing our cafe menu items.
+                      We only collect general demographics (age bracket, dining frequency) and food ratings.
+                      No sensitive personal records or contact details are collected.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="pillar-card">
+                  <div class="pillar-info">
+                    <h4>Confidentiality & Anonymity</h4>
+                    <p>
+                      All responses are kept strictly confidential, securely stored, and analyzed in aggregate
+                      where possible to train recommendation algorithms and enhance dining offerings.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="pillar-card">
+                  <div class="pillar-info">
+                    <h4>Voluntary Participation</h4>
+                    <p>
+                      Participation is voluntary. By proceeding, you agree to answer all required questions.
+                      You may choose not to proceed with or submit the survey at any time before completion.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="pillar-card">
+                  <div class="pillar-info">
+                    <h4>Your Data Subject Rights</h4>
+                    <p>
+                      Under RA 10173, you maintain the right to be informed, withhold consent, or exit
+                      the survey freely before completion without penalty or consequence.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Explicit Consent Acknowledgment Card -->
+              <div
+                class="consent-card"
+                :class="{ active: hasAgreedToPrivacy }"
+                @click="hasAgreedToPrivacy = !hasAgreedToPrivacy"
+              >
+                <span class="custom-check-box" :class="{ active: hasAgreedToPrivacy }">
+                  <span v-if="hasAgreedToPrivacy" class="check-mark">✓</span>
+                </span>
+                <div class="consent-text-block">
+                  <span class="consent-title">
+                    Consent & Agreement <span class="required-star" title="Required">*</span>
+                  </span>
+                  <p class="consent-description">
+                    I have read and understood this Privacy Notice. I acknowledge that my participation is voluntary, and I hereby give my consent to the collection, processing, and aggregate analysis of my survey answers in accordance with Republic Act No. 10173.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="action-footer privacy-footer">
+              <button
+                type="button"
+                class="nav-btn secondary exit-survey-btn"
+                @click="exitSurvey"
+              >
+                &larr; Decline & Exit
+              </button>
+
+              <button
+                type="button"
+                class="nav-btn primary privacy-proceed-btn"
+                :disabled="!hasAgreedToPrivacy"
+                :class="{ 'disabled-btn': !hasAgreedToPrivacy }"
+                @click="proceedToSection2"
+              >
+                Continue to Section 2: Respondent Info &rarr;
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ======================================================== -->
+        <!-- SECTION 2 — Respondent Information                       -->
+        <!-- ======================================================== -->
+        <div v-else-if="currentSection === 2" class="demographic-view fade-in">
           <div class="demographic-card">
             <div class="section-banner">
               <div class="section-scope-pill">
-                <span class="scope-dot blue-dot"></span> SECTION 1 OF 2
+                <span class="scope-dot blue-dot"></span> SECTION 2 OF 3
               </div>
-              <h2>SECTION 1 — Respondent Information</h2>
+              <h2>SECTION 2 — Respondent Information</h2>
               <p class="section-desc">
                 Please provide your demographic background before proceeding to the menu evaluations.
               </p>
@@ -82,7 +201,7 @@
                     <span v-else>1</span>
                   </div>
                   <div>
-                    <h4>Age Group</h4>
+                    <h4>Age Group <span class="required-star" title="Required">*</span></h4>
                   </div>
                 </div>
 
@@ -115,7 +234,7 @@
                     <span v-else>2</span>
                   </div>
                   <div>
-                    <h4>How often do you dine at cafés or restaurants?</h4>
+                    <h4>How often do you dine at cafés or restaurants? <span class="required-star" title="Required">*</span></h4>
                   </div>
                 </div>
 
@@ -139,27 +258,30 @@
             </div>
 
             <div class="action-footer demographic-footer">
-              <p v-if="!isDemographicComplete" class="incomplete-warning">
-                * Please answer both questions to unlock Section 2.
-              </p>
-              <p v-else class="complete-info">
-                ✓ All respondent details provided!
-              </p>
-              <button
-                type="button"
-                class="nav-btn primary demo-proceed-btn"
-                :disabled="!isDemographicComplete"
-                :class="{ 'disabled-btn': !isDemographicComplete }"
-                @click="proceedToSection2"
-              >
-                Continue to Section 2: Menu Evaluation &rarr;
-              </button>
+              <div class="demo-footer-buttons">
+                <button
+                  type="button"
+                  class="nav-btn secondary demo-back-btn"
+                  @click="goToSection1"
+                >
+                  &larr; Back to Section 1
+                </button>
+                <button
+                  type="button"
+                  class="nav-btn primary demo-proceed-btn"
+                  :disabled="!isDemographicComplete"
+                  :class="{ 'disabled-btn': !isDemographicComplete }"
+                  @click="proceedToSection3"
+                >
+                  Continue to Section 3: Menu Evaluation &rarr;
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- ======================================================== -->
-        <!-- SECTION 2 — Menu Item Evaluation                         -->
+        <!-- SECTION 3 — Menu Item Evaluation                         -->
         <!-- ======================================================== -->
         <div v-else class="rating-view fade-in">
           <div class="left-pane">
@@ -167,17 +289,17 @@
               <div class="section-switch-header">
                 <button
                   type="button"
-                  class="back-to-sec1-btn"
-                  @click="goToSection1"
-                  title="Return to Section 1 to review or change respondent info"
+                  class="back-to-sec2-btn"
+                  @click="goToSection2"
+                  title="Return to Section 2 to review or change respondent info"
                 >
-                  &larr; Back to Section 1 (Respondent Info)
+                  &larr; Back to Section 2
                 </button>
                 <button
                   type="button"
                   class="view-instructions-btn"
                   @click="showInstructionsModal = true"
-                  title="View Section 2 instructions and rating scale"
+                  title="View Section 3 instructions and rating scale"
                 >
                   📋 View Instructions
                 </button>
@@ -379,9 +501,9 @@
         <div class="modal-card instructions-modal-card">
           <div class="section-banner starter-banner instructions-modal-banner">
             <div class="section-scope-pill orange-scope-pill">
-              <span class="scope-dot orange-dot"></span> SECTION 2 OF 2
+              <span class="scope-dot orange-dot"></span> SECTION 3 OF 3
             </div>
-            <h2>SECTION 2 — Menu Item Evaluation</h2>
+            <h2>SECTION 3 — Menu Item Evaluation</h2>
             <p class="section-desc">
               Evaluate our menu items to help train our AI recommendation engine.
             </p>
@@ -422,17 +544,17 @@
           <div class="modal-actions instructions-modal-actions">
             <button
               type="button"
-              class="nav-btn secondary"
-              @click="showInstructionsModal = false; goToSection1()"
+              class="nav-btn secondary modal-back-btn"
+              @click="showInstructionsModal = false; goToSection2()"
             >
-              &larr; Back to Section 1
+              &larr; Back to Section 2
             </button>
             <button
               type="button"
               class="nav-btn primary starter-proceed-btn"
-              @click="startSection2"
+              @click="startSection3"
             >
-              {{ completedItemsCount > 0 ? 'Continue Evaluation' : 'Start Section 2' }} &rarr;
+              {{ completedItemsCount > 0 ? 'Continue Evaluation' : 'Start Section 3' }} &rarr;
             </button>
           </div>
         </div>
@@ -477,8 +599,22 @@
             <!-- Review Section 1 -->
             <div class="review-section-box">
               <div class="review-section-title">
+                <span class="scope-dot teal-dot"></span>
+                <strong>SECTION 1 — Privacy Notice & Consent</strong>
+              </div>
+              <div class="review-q-row">
+                <div class="r-question">Philippine Data Privacy Act (RA 10173)</div>
+                <div class="r-answer text-success">
+                  {{ hasAgreedToPrivacy ? '✓ Acknowledged & Consented' : 'Not consented' }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Review Section 2 -->
+            <div class="review-section-box mt-3">
+              <div class="review-section-title">
                 <span class="scope-dot blue-dot"></span>
-                <strong>SECTION 1 — Respondent Information</strong>
+                <strong>SECTION 2 — Respondent Information</strong>
               </div>
               <div class="review-q-row">
                 <div class="r-question">Age Group</div>
@@ -490,11 +626,11 @@
               </div>
             </div>
 
-            <!-- Review Section 2 -->
+            <!-- Review Section 3 -->
             <div class="review-section-box mt-3 mb-2">
               <div class="review-section-title">
                 <span class="scope-dot orange-dot"></span>
-                <strong>SECTION 2 — Menu Item Evaluations ({{ answeredItems.length }} item{{ answeredItems.length === 1 ? '' : 's' }})</strong>
+                <strong>SECTION 3 — Menu Item Evaluations ({{ answeredItems.length }} item{{ answeredItems.length === 1 ? '' : 's' }})</strong>
               </div>
             </div>
 
@@ -650,22 +786,42 @@ const isDemographicComplete = computed(() => {
   )
 })
 
+const hasAgreedToPrivacy = ref(false)
+
 const proceedToSection2 = () => {
-  if (!isDemographicComplete.value) return
+  if (!hasAgreedToPrivacy.value) return
   currentSection.value = 2
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+const proceedToSection3 = () => {
+  if (!isDemographicComplete.value) return
+  currentSection.value = 3
   showInstructionsModal.value = true
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-const startSection2 = () => {
+const startSection3 = () => {
   showInstructionsModal.value = false
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+
+const startSection2 = startSection3
 
 const goToSection1 = () => {
   currentSection.value = 1
   showInstructionsModal.value = false
   window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+const goToSection2 = () => {
+  currentSection.value = 2
+  showInstructionsModal.value = false
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+const exitSurvey = () => {
+  resetSurvey()
 }
 
 // Modal Flags
@@ -863,6 +1019,7 @@ const resetSurvey = () => {
   showLimitModal.value = false
   showInstructionsModal.value = false
   hasStarted.value = false
+  hasAgreedToPrivacy.value = false
   currentSection.value = 1
   currentItemIndex.value = 0
   demographicAnswers.value = { ageGroup: '', diningFrequency: '' }
@@ -980,6 +1137,7 @@ const clearStaleDrafts = () => {
 
 const resetSessionState = () => {
   hasStarted.value = false
+  hasAgreedToPrivacy.value = false
   currentSection.value = 1
   showInstructionsModal.value = false
   currentItemIndex.value = 0
@@ -1043,18 +1201,7 @@ onMounted(() => {
 .welcome-screen {
   position: fixed;
   inset: 0;
-  /* UPDATE: Removed hardcoded Unsplash URL */
-  background-size: cover;
-  background-position: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-.welcome-screen {
-  position: fixed;
-  inset: 0;
-  background-image: url('https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&q=80&w=2000');
+  background-image: url('/welcome-bg.jpg'), url('https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&q=80&w=2000');
   background-size: cover;
   background-position: center;
   display: flex;
@@ -1940,7 +2087,195 @@ onMounted(() => {
   font-weight: 500; /* Making the font slightly thicker helps against busy backgrounds */
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
-/* SECTION 1 — DEMOGRAPHIC VIEW */
+/* SECTION 1 — NOTICE OF PRIVACY */
+.privacy-view {
+  max-width: 780px;
+  margin: 0 auto;
+}
+.privacy-card {
+  background: white;
+  border-radius: 24px;
+  padding: 35px 40px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+}
+.privacy-content-box {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+.privacy-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #0d9488;
+  border-radius: 12px;
+  padding: 20px;
+}
+.privacy-callout-text {
+  width: 100%;
+}
+.privacy-callout-text h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.15rem;
+  color: #0f172a;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.privacy-callout-text p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #334155;
+}
+.privacy-pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.pillar-card {
+  background: #fafbfc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 20px 22px;
+  display: flex;
+  align-items: flex-start;
+  transition: all 0.2s ease;
+}
+.pillar-card:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+.pillar-info {
+  width: 100%;
+}
+.pillar-info h4 {
+  margin: 0 0 6px 0;
+  font-size: 1.05rem;
+  color: #0f172a;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.pillar-info p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #475569;
+}
+.consent-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+.consent-card:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+.consent-card.active {
+  border-color: #0d9488;
+  background: #f0fdfa;
+}
+.custom-check-box {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #cbd5e1;
+  border-radius: 6px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: all 0.2s ease;
+}
+.custom-check-box.active {
+  background: #0d9488;
+  border-color: #0d9488;
+}
+.check-mark {
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.consent-text-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.consent-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+}
+.required-star {
+  color: #ef4444;
+  font-weight: 800;
+  font-size: 1.2rem;
+  margin-left: 4px;
+  line-height: 1;
+}
+.consent-description {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #334155;
+}
+.privacy-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+.privacy-proceed-btn {
+  background: #0d9488 !important;
+}
+.privacy-proceed-btn:hover:not(:disabled) {
+  background: #0f766e !important;
+}
+.exit-survey-btn {
+  white-space: nowrap;
+  border: 2px solid #0d9488 !important;
+  color: #0d9488 !important;
+}
+.exit-survey-btn:hover {
+  background: #f0fdfa !important;
+  border-color: #0f766e !important;
+  color: #0f766e !important;
+}
+@media (max-width: 640px) {
+  .privacy-pillars-grid {
+    grid-template-columns: 1fr;
+  }
+  .privacy-card {
+    padding: 24px 18px;
+  }
+  .privacy-footer {
+    flex-direction: column-reverse;
+    gap: 12px;
+  }
+  .privacy-footer button {
+    width: 100%;
+  }
+}
+
+/* SECTION 2 — DEMOGRAPHIC VIEW */
 .demographic-view {
   max-width: 780px;
   margin: 0 auto;
@@ -1972,11 +2307,19 @@ onMounted(() => {
   letter-spacing: 0.05em;
   margin-bottom: 12px;
 }
+.teal-scope-pill {
+  background: #f0fdfa !important;
+  border-color: #99f6e4 !important;
+  color: #0f766e !important;
+}
 .section-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
   display: inline-block;
+}
+.teal-dot {
+  background-color: #0d9488;
 }
 .blue-dot {
   background-color: #3b82f6;
@@ -2097,6 +2440,41 @@ onMounted(() => {
 .demo-proceed-btn:hover:not(:disabled) {
   background: #2563eb !important;
 }
+.demo-footer-buttons {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+  max-width: 500px;
+  justify-content: center;
+}
+.demo-back-btn {
+  flex: 1;
+  padding: 14px 20px;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  border: 2px solid #3b82f6 !important;
+  color: #3b82f6 !important;
+}
+.demo-back-btn:hover {
+  background: #eff6ff !important;
+  border-color: #2563eb !important;
+  color: #2563eb !important;
+}
+.demo-proceed-btn {
+  flex: 2;
+  width: auto;
+  max-width: none;
+}
+@media (max-width: 600px) {
+  .demo-footer-buttons {
+    flex-direction: column-reverse;
+  }
+  .demo-footer-buttons button {
+    width: 100%;
+    flex: unset;
+  }
+}
 .complete-info {
   color: #16a34a;
   font-weight: 600;
@@ -2115,20 +2493,35 @@ onMounted(() => {
   gap: 10px;
   line-height: 1.4;
 }
-.back-to-sec1-btn {
-  background: none;
-  border: none;
-  color: #2563eb;
+.back-to-sec2-btn {
+  background: white;
+  border: 2px solid #f97316 !important;
+  color: #f97316 !important;
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 8px;
   cursor: pointer;
-  padding: 0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  transition: all 0.2s ease;
 }
-.back-to-sec1-btn:hover {
-  text-decoration: underline;
+.back-to-sec2-btn:hover {
+  background: #fff7ed !important;
+  border-color: #ea580c !important;
+  color: #ea580c !important;
+  text-decoration: none;
+}
+.modal-back-btn {
+  white-space: nowrap;
+  border: 2px solid #f97316 !important;
+  color: #f97316 !important;
+}
+.modal-back-btn:hover {
+  background: #fff7ed !important;
+  border-color: #ea580c !important;
+  color: #ea580c !important;
 }
 .view-instructions-btn {
   background: none;
@@ -2154,6 +2547,11 @@ onMounted(() => {
   border-radius: 6px;
   margin-right: 6px;
 }
+.section-indicator-badge.teal-badge {
+  background: #f0fdfa;
+  color: #0f766e;
+  border: 1px solid #99f6e4;
+}
 .section-indicator-badge.blue-badge {
   background: #eff6ff;
   color: #1d4ed8;
@@ -2163,6 +2561,9 @@ onMounted(() => {
   background: #fff7ed;
   color: #c2410c;
   border: 1px solid #fed7aa;
+}
+.text-success {
+  color: #16a34a !important;
 }
 .section-badge-label {
   color: #475569;
