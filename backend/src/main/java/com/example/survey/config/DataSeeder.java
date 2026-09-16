@@ -48,6 +48,7 @@ public class DataSeeder implements CommandLineRunner {
                 "SELECT COUNT(*) FROM seed_metadata WHERE seed_key = ?",
                 Integer.class, SEED_KEY);
         if (alreadySeeded != null && alreadySeeded > 0) {
+            ensureEvaluationOptionsIfMissing();
             log.info("Survey questions already seeded previously. Skipping.");
             return;
         }
@@ -58,26 +59,28 @@ public class DataSeeder implements CommandLineRunner {
             return;
         }
 
-        List<Question> existingQuestions = questionRepository.findAll();
+        List<Question> existingQuestions = questionRepository.findAllWithOptions();
 
         for(SeedQuestion seedQuestion : seedQuestions) {
             if(seedQuestion.text() == null || seedQuestion.text().isBlank()) {
                 continue;
             }
 
-            boolean exists = existingQuestions.stream().anyMatch(q ->
-                    q.getText() != null && q.getText().trim().equalsIgnoreCase(seedQuestion.text().trim()));
+            java.util.Optional<Question> existingOpt = existingQuestions.stream().filter(q ->
+                    q.getText() != null && q.getText().trim().equalsIgnoreCase(seedQuestion.text().trim()))
+                    .findFirst();
 
-            if (exists) {
-                continue;
+            Question question;
+            if (existingOpt.isPresent()) {
+                question = existingOpt.get();
+            } else {
+                question = new Question();
+                question.setText(seedQuestion.text().trim());
+                question.setQuestionType(seedQuestion.questionType());
+                question = questionRepository.save(question);
             }
 
-            Question question = new Question();
-            question.setText(seedQuestion.text().trim());
-            question.setQuestionType(seedQuestion.questionType());
-            question = questionRepository.save(question);
-
-            if (seedQuestion.options() != null) {
+            if (seedQuestion.options() != null && (question.getOptions() == null || question.getOptions().isEmpty())) {
                 for(SeedOption option : seedQuestion.options()) {
                     if(option.label() == null || option.label().isBlank()) {
                         continue;
@@ -102,6 +105,34 @@ public class DataSeeder implements CommandLineRunner {
                 "    seeded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP" +
                 ")"
         );
+    }
+
+    private void ensureEvaluationOptionsIfMissing() {
+        List<SeedQuestion> seedQuestions = loadSeedQuestions();
+        if (seedQuestions.isEmpty()) return;
+
+        List<Question> existing = questionRepository.findAllWithOptions();
+        for (SeedQuestion sq : seedQuestions) {
+            if (sq.text() == null || sq.options() == null || sq.options().isEmpty()) continue;
+            String text = sq.text().trim().toLowerCase();
+            boolean isMood = text.contains("mood") || text.contains("emotion");
+            boolean isWeather = text.contains("weather");
+
+            for (Question q : existing) {
+                String qText = q.getText() != null ? q.getText().trim().toLowerCase() : "";
+                boolean match = (isMood && (qText.contains("mood") || qText.contains("emotion"))) ||
+                                (isWeather && qText.contains("weather"));
+                if (match && (q.getOptions() == null || q.getOptions().isEmpty())) {
+                    for (SeedOption opt : sq.options()) {
+                        if (opt.label() != null && !opt.label().isBlank()) {
+                            createOption(opt.label().trim(), opt.sub(), opt.icon(), q);
+                        }
+                    }
+                    log.info("Backfilled missing options for evaluation question: {}", q.getText());
+                    break;
+                }
+            }
+        }
     }
 
     private void createOption(String label, @org.jspecify.annotations.Nullable String subDesc, @org.jspecify.annotations.Nullable String icon, Question question) {

@@ -374,4 +374,97 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     // Authorization header was automatically configured with stored token
     expect(axios.defaults.headers.common['Authorization']).toBe('Bearer persisted-jwt-token')
   })
+
+  it('allows adding, editing and deleting evaluation dimensions in Question Manager', async () => {
+    localStorage.setItem('admin_token', 'persisted-jwt-token')
+
+    const mockEvaluationQuestions = [
+      {
+        id: 1,
+        text: 'Question 1 — Mood Association: How suitable is this item for each mood?',
+        type: 'MATRIX',
+        options: [
+          { id: 10, label: 'Comfort', sub: '(Warm and cozy)' },
+          { id: 11, label: 'Energy', sub: '(Wants energizing)' },
+        ],
+      },
+      {
+        id: 2,
+        text: 'Question 2 — Weather Association: How suitable is this item in this weather?',
+        type: 'MATRIX',
+        options: [
+          { id: 20, label: 'Rainy', icon: '🌧️' },
+        ],
+      },
+    ]
+
+    ;(axios.get as any).mockImplementation((url: string) => {
+      if (url === '/menu-items') return Promise.resolve({ data: mockMenuItems })
+      if (url === '/questions/all') return Promise.resolve({ data: mockEvaluationQuestions })
+      if (url === '/api/stats/baseline') return Promise.resolve({ data: 10 })
+      if (url === '/analytics/demographics') return Promise.resolve({ data: mockDemographics })
+      if (url.startsWith('/analytics/combined/')) {
+        return Promise.resolve({
+          data: {
+            ...mockCombinedAnalytics,
+            demographics: mockDemographics,
+          },
+        })
+      }
+      return Promise.resolve({ data: {} })
+    })
+
+    ;(axios.post as any).mockResolvedValue({ data: { id: 99, label: 'Celebration' } })
+    ;(axios.delete as any).mockResolvedValue({ data: {} })
+
+    const wrapper = mount(Dashboard)
+    await flushPromises()
+
+    // Switch to Question Manager tab
+    const tabs = wrapper.findAll('.tab-btn')
+    const qmTab = tabs.find((t) => t.text().includes('Question Manager'))
+    expect(qmTab).toBeDefined()
+    await qmTab!.trigger('click')
+    await flushPromises()
+
+    // Section 2 Questions should display the dynamic dimensions
+    expect(wrapper.text()).toContain('Evaluation Dimensions / Rows (2):')
+    expect(wrapper.text()).toContain('Comfort')
+    expect(wrapper.text()).toContain('Energy')
+    expect(wrapper.text()).toContain('Rainy')
+
+    // Edit Question button should be present
+    expect(wrapper.text()).toContain('✏️ Edit Question')
+
+    // Add Dimension button should be present
+    expect(wrapper.text()).toContain('+ Add Dimension')
+
+    // Test opening dimension modal and adding a dimension
+    const vm = wrapper.vm as any
+    const firstQ = vm.section2EvaluationQuestions[0]
+    await vm.openAddDimensionModal(firstQ)
+    expect(vm.showDimensionModal).toBe(true)
+    expect(vm.dimensionForm.questionId).toBe(1)
+
+    vm.dimensionForm.label = 'Celebration'
+    vm.dimensionForm.sub = '(Wants something festive)'
+    await vm.saveDimension()
+
+    expect(axios.post).toHaveBeenCalledWith(
+      '/api/admin/questions/1/options',
+      expect.objectContaining({
+        label: 'Celebration',
+        sub: '(Wants something festive)',
+      }),
+    )
+
+    // Test deleting a dimension
+    const rowToDelete = firstQ.rows[0]
+    vm.confirmDeleteDimension(firstQ, rowToDelete)
+    expect(vm.showDeleteDimensionModal).toBe(true)
+    expect(vm.dimensionToDelete.id).toBe(10)
+
+    await vm.executeDeleteDimension()
+    expect(axios.delete).toHaveBeenCalledWith('/api/admin/options/10')
+  })
 })

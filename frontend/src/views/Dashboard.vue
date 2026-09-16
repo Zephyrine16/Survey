@@ -934,7 +934,17 @@
                       </div>
                     </div>
                   </div>
-                  <span class="fixed-indicator-badge">Live in Survey</span>
+                  <div class="q-actions-row">
+                    <span class="fixed-indicator-badge">Live in Survey</span>
+                    <button
+                      type="button"
+                      class="action-btn edit-btn"
+                      @click="openEditEvaluationQuestionModal(q)"
+                      title="Edit question text / prompt"
+                    >
+                      ✏️ Edit Question
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Rating scale strip -->
@@ -954,18 +964,54 @@
 
                 <!-- Evaluation rows -->
                 <div class="q-card-options-row">
-                  <p class="section-label mb-2">
-                    Evaluation Dimensions / Rows ({{ q.rows.length }}):
-                  </p>
+                  <div style="display: flex; justify-content: space-between; align-items: center;" class="mb-2">
+                    <p class="section-label mb-0">
+                      Evaluation Dimensions / Rows ({{ q.rows.length }}):
+                    </p>
+                    <button
+                      type="button"
+                      class="nav-btn orange-outline add-dim-btn"
+                      @click="openAddDimensionModal(q)"
+                      style="font-size: 0.8rem; padding: 4px 10px;"
+                    >
+                      + Add Dimension
+                    </button>
+                  </div>
                   <div class="options-pills-row">
                     <span
                       v-for="(row, rIdx) in q.rows"
                       :key="row.id"
                       class="f-pill pill-matrix-dim"
+                      style="display: inline-flex; align-items: center; gap: 6px;"
                     >
                       <span class="opt-num-orange">{{ rIdx + 1 }}.</span>
+                      <span v-if="row.icon">{{ row.icon }}</span>
                       <span>{{ row.label }}</span>
+                      <button
+                        type="button"
+                        class="edit-dim-btn"
+                        @click.stop="openEditDimensionModal(q, row)"
+                        title="Edit dimension"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        type="button"
+                        class="del-opt-btn"
+                        @click.stop="confirmDeleteDimension(q, row)"
+                        title="Delete dimension"
+                      >
+                        ✕
+                      </button>
                     </span>
+                    <button
+                      type="button"
+                      class="f-pill"
+                      @click="openAddDimensionModal(q)"
+                      style="border: 1px dashed #ea580c; background: rgba(234, 88, 12, 0.05); color: #ea580c; cursor: pointer; font-weight: 600;"
+                    >
+                      + Add Dimension
+                    </button>
                   </div>
                   <p class="grid-req-note mt-2">
                     <span class="req-asterisk">*</span> {{ q.requiredNote }}
@@ -1240,6 +1286,7 @@
                 <select v-model="editingQuestion.type" required class="form-input">
                   <option value="RADIO">🔘 Multiple Choice (Radio Buttons)</option>
                   <option value="TEXT">💬 Open-ended (Text Area)</option>
+                  <option value="MATRIX">📊 Rating Matrix (1–5 Likert Scale)</option>
                 </select>
               </div>
 
@@ -1332,6 +1379,102 @@
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div v-if="showDimensionModal" class="modal-overlay">
+          <div class="modal-card form-card">
+            <h2>{{ dimensionForm.id ? 'Edit Evaluation Dimension' : 'Add Evaluation Dimension' }}</h2>
+            <p class="section-subtext mb-4">
+              {{ dimensionForm.id ? 'Update this dimension/row for the evaluation question.' : 'Add a new dimension/row for respondents to rate in the survey matrix.' }}
+            </p>
+
+            <form @submit.prevent="saveDimension" class="edit-form">
+              <div class="form-group">
+                <label>Dimension Name / Label *</label>
+                <input
+                  type="text"
+                  v-model="dimensionForm.label"
+                  required
+                  placeholder="e.g. Energy, Comfort, Refreshing, Late Night"
+                  class="form-input"
+                />
+              </div>
+
+              <div class="form-group">
+                <label>Description / Subtitle (Optional)</label>
+                <input
+                  type="text"
+                  v-model="dimensionForm.sub"
+                  placeholder="e.g. (Wants something energizing)"
+                  class="form-input"
+                />
+              </div>
+
+              <div class="form-group">
+                <label>Emoji Icon (Optional)</label>
+                <div class="emoji-picker-container">
+                  <div class="selected-emoji-preview">
+                    {{ dimensionForm.icon || '—' }}
+                  </div>
+                  <div class="emoji-grid">
+                    <button
+                      type="button"
+                      v-for="emo in quickEmojis"
+                      :key="emo"
+                      @click="dimensionForm.icon = emo"
+                      class="emo-btn"
+                      :class="{ 'active-emo': dimensionForm.icon === emo }"
+                    >
+                      {{ emo }}
+                    </button>
+                    <button
+                      type="button"
+                      @click="dimensionForm.icon = ''"
+                      class="emo-btn text-red"
+                      title="Clear Emoji"
+                    >
+                      🚫
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="modal-actions mt-4">
+                <button type="button" class="nav-btn secondary" @click="showDimensionModal = false">
+                  Cancel
+                </button>
+                <button type="submit" class="nav-btn orange-solid" :disabled="isSavingDimension">
+                  {{ isSavingDimension ? 'Saving...' : '💾 Save Dimension' }}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </Teleport>
+
+      <Teleport to="body">
+        <div v-if="showDeleteDimensionModal" class="modal-overlay">
+          <div class="modal-card danger-card" style="text-align: center; max-width: 400px">
+            <div class="modal-icon text-red" style="font-size: 3rem; margin-bottom: 15px">🚨</div>
+            <h2 style="color: #0f172a">Delete Dimension?</h2>
+            <p class="section-subtext mb-2" style="font-style: italic; color: #64748b">
+              "{{ dimensionToDelete?.label }}"
+            </p>
+            <p class="section-subtext mb-4">
+              Are you sure you want to delete this dimension? It will no longer appear in the survey rating matrix.
+            </p>
+
+            <div class="modal-actions" style="justify-content: center; margin-top: 25px">
+              <button class="nav-btn secondary" @click="showDeleteDimensionModal = false">
+                Cancel
+              </button>
+              <button class="nav-btn danger-solid" @click="executeDeleteDimension">
+                Yes, Delete
+              </button>
+            </div>
           </div>
         </div>
       </Teleport>
@@ -1685,7 +1828,50 @@ const fetchMenuItems = async () => {
 
 const demographicQuestions = ref(SECTION_1_DEMOGRAPHIC_QUESTIONS)
 const dynamicQuestions = ref<any[]>([])
-const section2EvaluationQuestions = ref(SECTION_2_EVALUATION_QUESTIONS)
+const section2EvaluationQuestions = computed(() => {
+  return SECTION_2_EVALUATION_QUESTIONS.map((baseQ) => {
+    const dbQ = dynamicQuestions.value.find((q: any) => {
+      const t = (q.text || '').toLowerCase()
+      if (baseQ.id === 'sec2_mood') return t.includes('mood') || t.includes('emotion')
+      if (baseQ.id === 'sec2_weather') return t.includes('weather')
+      return false
+    })
+
+    let title = baseQ.title
+    let prompt = baseQ.prompt
+    if (dbQ?.text) {
+      if (dbQ.text.includes(':')) {
+        const parts = dbQ.text.split(':')
+        title = parts[0].trim()
+        prompt = parts[1].trim()
+      } else {
+        prompt = dbQ.text.trim()
+      }
+    }
+
+    let rows: any[] = [...baseQ.rows]
+    if (dbQ?.options && dbQ.options.length > 0) {
+      rows = dbQ.options.map((opt: any) => ({
+        id: opt.id,
+        dbId: opt.id,
+        label: opt.sub ? `${opt.label} ${opt.sub}` : (opt.icon ? `${opt.icon} ${opt.label}` : opt.label),
+        rawLabel: opt.label,
+        short: opt.label,
+        sub: opt.sub || '',
+        icon: opt.icon || '',
+      }))
+    }
+
+    return {
+      ...baseQ,
+      dbId: dbQ?.id ?? null,
+      dbQuestion: dbQ ?? null,
+      title,
+      prompt,
+      rows,
+    }
+  })
+})
 
 const customQuestions = computed(() => {
   return dynamicQuestions.value.filter((q: any) => {
@@ -2276,6 +2462,31 @@ const openEditQuestionModal = (q: any) => {
   showQuestionModal.value = true
 }
 
+const openEditEvaluationQuestionModal = async (q: any) => {
+  let targetQId = q.dbId
+  if (!targetQId) {
+    try {
+      const res = await axios.post('/api/admin/questions', {
+        text: `${q.title}: ${q.prompt}`,
+        type: 'MATRIX',
+      })
+      targetQId = res.data.id
+      await fetchQuestions()
+    } catch (e) {
+      console.error('Failed to initialize evaluation question in DB:', e)
+      alert('Could not initialize question in database.')
+      return
+    }
+  }
+
+  editingQuestion.value = {
+    id: targetQId,
+    text: q.dbQuestion?.text || `${q.title}: ${q.prompt}`,
+    type: 'MATRIX',
+  }
+  showQuestionModal.value = true
+}
+
 const saveQuestion = async () => {
   isSavingQuestion.value = true
   try {
@@ -2429,6 +2640,147 @@ const executeDeleteOption = async () => {
   } catch (error) {
     console.error('Failed to delete option:', error)
     alert('Could not delete option.')
+  }
+}
+
+// --- EVALUATION DIMENSIONS CRUD ---
+const showDimensionModal = ref(false)
+const isSavingDimension = ref(false)
+const dimensionForm = ref({
+  id: null as number | null,
+  questionId: null as number | null,
+  label: '',
+  sub: '',
+  icon: '',
+})
+
+const openAddDimensionModal = async (q: any) => {
+  let targetQId = q.dbId
+  if (!targetQId) {
+    try {
+      const payload = {
+        text: `${q.title}: ${q.prompt}`,
+        type: 'MATRIX',
+      }
+      const res = await axios.post('/api/admin/questions', payload)
+      targetQId = res.data.id
+      await fetchQuestions()
+    } catch (e) {
+      console.error('Failed to create evaluation question in DB:', e)
+      alert('Could not initialize question in database.')
+      return
+    }
+  }
+
+  dimensionForm.value = {
+    id: null,
+    questionId: targetQId,
+    label: '',
+    sub: '',
+    icon: '',
+  }
+  showDimensionModal.value = true
+}
+
+const openEditDimensionModal = async (q: any, row: any) => {
+  let targetQId = q.dbId
+  let rowDbId = row.dbId || (typeof row.id === 'number' ? row.id : null)
+
+  if (!targetQId || !rowDbId) {
+    try {
+      if (!targetQId) {
+        const res = await axios.post('/api/admin/questions', {
+          text: `${q.title}: ${q.prompt}`,
+          type: 'MATRIX',
+        })
+        targetQId = res.data.id
+      }
+      if (!rowDbId) {
+        for (const r of q.rows) {
+          const optRes = await axios.post(`/api/admin/questions/${targetQId}/options`, {
+            label: r.short || r.rawLabel || r.label,
+            sub: r.sub || (r.label.includes('(') ? r.label.substring(r.label.indexOf('(')) : ''),
+            icon: r.icon || null,
+          })
+          if (r.id === row.id) {
+            rowDbId = optRes.data.id
+          }
+        }
+        await fetchQuestions()
+      }
+    } catch (e) {
+      console.error('Failed to sync options to DB:', e)
+      alert('Could not sync dimensions to database.')
+      return
+    }
+  }
+
+  dimensionForm.value = {
+    id: rowDbId,
+    questionId: targetQId,
+    label: row.rawLabel || row.short || row.label.replace(/\s*\(.*?\)/, '').trim(),
+    sub: row.sub || (row.label.includes('(') ? row.label.substring(row.label.indexOf('(')) : ''),
+    icon: row.icon || '',
+  }
+  showDimensionModal.value = true
+}
+
+const saveDimension = async () => {
+  if (!dimensionForm.value.label.trim()) return
+  isSavingDimension.value = true
+  try {
+    const payload = {
+      label: dimensionForm.value.label.trim(),
+      sub: dimensionForm.value.sub.trim() || null,
+      icon: dimensionForm.value.icon.trim() || null,
+    }
+
+    if (dimensionForm.value.id) {
+      await axios.put(`/api/admin/options/${dimensionForm.value.id}`, payload)
+      showToast('Dimension updated successfully!')
+    } else {
+      await axios.post(`/api/admin/questions/${dimensionForm.value.questionId}/options`, payload)
+      showToast('New dimension added successfully!')
+    }
+
+    await fetchQuestions()
+    showDimensionModal.value = false
+  } catch (error) {
+    console.error('Failed to save dimension:', error)
+    alert('Failed to save dimension.')
+  } finally {
+    isSavingDimension.value = false
+  }
+}
+
+const showDeleteDimensionModal = ref(false)
+const dimensionToDelete = ref<{ id: number | null; label: string; questionId: number | null } | null>(null)
+
+const confirmDeleteDimension = (q: any, row: any) => {
+  const rowDbId = row.dbId || (typeof row.id === 'number' ? row.id : null)
+  dimensionToDelete.value = {
+    id: rowDbId,
+    label: row.label,
+    questionId: q.dbId,
+  }
+  showDeleteDimensionModal.value = true
+}
+
+const executeDeleteDimension = async () => {
+  if (!dimensionToDelete.value) return
+  try {
+    if (dimensionToDelete.value.id) {
+      await axios.delete(`/api/admin/options/${dimensionToDelete.value.id}`)
+      showToast(`Deleted dimension "${dimensionToDelete.value.label}".`)
+      await fetchQuestions()
+    } else {
+      showToast('Dimension removed.')
+    }
+    showDeleteDimensionModal.value = false
+    dimensionToDelete.value = null
+  } catch (error) {
+    console.error('Failed to delete dimension:', error)
+    alert('Could not delete dimension.')
   }
 }
 
@@ -4617,6 +4969,18 @@ onUnmounted(() => {
 }
 .del-opt-btn:hover {
   color: #b91c1c;
+}
+.edit-dim-btn {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0 2px;
+  transition: color 0.15s ease;
+}
+.edit-dim-btn:hover {
+  color: #ea580c;
 }
 .menu-q-num {
   position: static !important;

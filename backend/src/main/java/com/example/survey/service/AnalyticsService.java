@@ -5,16 +5,22 @@ import com.example.survey.repository.AnswerRepository;
 import com.example.survey.repository.QuestionRepository;
 import com.example.survey.repository.QuestionSummaryProjection;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import com.example.survey.model.Option;
+import com.example.survey.model.Question;
 
 import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AnalyticsService {
+
+    private record QuestionDefinitionHolder(String title, String prompt, List<RowDef> definitions) {}
 
     private static final List<String> STOP_WORDS = Arrays.asList(
             "the", "and", "is", "it", "to", "a", "of", "for", "in", "on", "this", "but",
@@ -169,21 +175,33 @@ public class AnalyticsService {
     }
 
     public GridQuestionAnalyticsDTO buildMoodAnalytics(Long menuItemId) {
-        return buildGridAnalytics(
-                menuItemId,
+        QuestionDefinitionHolder holder = resolveQuestionDefinitions(
+                "mood",
                 "Question 1 — Mood Association",
                 "How suitable is this item for each of the following moods?",
-                MOOD_DEFINITIONS,
+                MOOD_DEFINITIONS
+        );
+        return buildGridAnalytics(
+                menuItemId,
+                holder.title(),
+                holder.prompt(),
+                holder.definitions(),
                 this::matchesRow
         );
     }
 
     public GridQuestionAnalyticsDTO buildWeatherAnalytics(Long menuItemId) {
-        return buildGridAnalytics(
-                menuItemId,
+        QuestionDefinitionHolder holder = resolveQuestionDefinitions(
+                "weather",
                 "Question 2 — Weather Association",
                 "How suitable is this item for each of the following weather conditions?",
-                WEATHER_DEFINITIONS,
+                WEATHER_DEFINITIONS
+        );
+        return buildGridAnalytics(
+                menuItemId,
+                holder.title(),
+                holder.prompt(),
+                holder.definitions(),
                 this::matchesWeatherRow
         );
     }
@@ -297,14 +315,18 @@ public class AnalyticsService {
         List<Object[]> allAnswers = answerRepository.findAllAnswersForMenuItem(menuItemId);
         Map<String, SurveyResponseDetailDTO> userMap = new LinkedHashMap<>();
 
+        List<RowDef> moodDefs = resolveQuestionDefinitions("mood", "", "", MOOD_DEFINITIONS).definitions();
+        List<RowDef> weatherDefs = resolveQuestionDefinitions("weather", "", "", WEATHER_DEFINITIONS).definitions();
+
         for (Object[] row : allAnswers) {
-            String userId = row[1] == null ? "Anonymous" : row[1].toString();
+            String userId = row[1] == null ? null : row[1].toString();
             String response = row[2] == null ? null : row[2].toString();
             if (response == null || response.isBlank()) continue;
 
-            SurveyResponseDetailDTO detail = userMap.computeIfAbsent(userId, id ->
-                    SurveyResponseDetailDTO.builder()
-                            .userId(id)
+            SurveyResponseDetailDTO detail = userMap.computeIfAbsent(
+                    userId != null ? userId : "Anonymous",
+                    uid -> SurveyResponseDetailDTO.builder()
+                            .userId(uid)
                             .moodRatings(new LinkedHashMap<>())
                             .weatherRatings(new LinkedHashMap<>())
                             .build()
@@ -315,7 +337,7 @@ public class AnalyticsService {
                 String rowLabelPart = matcher.group(1).trim().toLowerCase();
                 int rating = Integer.parseInt(matcher.group(2));
                 boolean matched = false;
-                for (RowDef def : MOOD_DEFINITIONS) {
+                for (RowDef def : moodDefs) {
                     if (matchesRow(rowLabelPart, def)) {
                         detail.getMoodRatings().put(def.shortLabel(), rating);
                         matched = true;
@@ -323,7 +345,7 @@ public class AnalyticsService {
                     }
                 }
                 if (!matched) {
-                    for (RowDef def : WEATHER_DEFINITIONS) {
+                    for (RowDef def : weatherDefs) {
                         if (matchesWeatherRow(rowLabelPart, def)) {
                             detail.getWeatherRatings().put(def.shortLabel(), rating);
                             break;
@@ -340,10 +362,57 @@ public class AnalyticsService {
         return list;
     }
 
+    private QuestionDefinitionHolder resolveQuestionDefinitions(
+            String keyword,
+            String defaultTitle,
+            String defaultPrompt,
+            List<RowDef> fallbackDefinitions
+    ) {
+        try {
+            List<Question> questions = questionRepository.findAllWithOptions();
+            if (questions != null) {
+                for (Question q : questions) {
+                    String text = q.getText() != null ? q.getText().trim() : "";
+                    String lower = text.toLowerCase();
+                    boolean matchesKeyword = lower.contains(keyword) || ("mood".equals(keyword) && lower.contains("emotion"));
+                    if (matchesKeyword) {
+                        String title = defaultTitle;
+                        String prompt = defaultPrompt;
+                        if (text.contains(":")) {
+                            String[] parts = text.split(":", 2);
+                            title = parts[0].trim();
+                            prompt = parts[1].trim();
+                        } else if (!text.isBlank()) {
+                            prompt = text;
+                        }
+
+                        List<RowDef> defs = fallbackDefinitions;
+                        if (q.getOptions() != null && !q.getOptions().isEmpty()) {
+                            defs = new ArrayList<>();
+                            for (Option opt : q.getOptions()) {
+                                String id = String.valueOf(opt.getId());
+                                String label = opt.getSubDescription() != null && !opt.getSubDescription().isBlank()
+                                        ? opt.getLabel() + " " + opt.getSubDescription()
+                                        : opt.getLabel();
+                                String shortLabel = opt.getLabel();
+                                defs.add(new RowDef(id, label, shortLabel));
+                            }
+                        }
+                        return new QuestionDefinitionHolder(title, prompt, defs);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to dynamically load question definitions for {}: {}", keyword, e.getMessage());
+        }
+        return new QuestionDefinitionHolder(defaultTitle, defaultPrompt, fallbackDefinitions);
+    }
+
     private boolean matchesRow(String text, RowDef def) {
         String lowerShort = def.shortLabel().toLowerCase();
         String lowerId = def.id().toLowerCase();
-        return text.startsWith(lowerShort) || text.contains(lowerId) || text.contains(def.label().toLowerCase());
+        String lowerLabel = def.label().toLowerCase();
+        return text.startsWith(lowerShort) || text.contains(lowerId) || text.contains(lowerLabel) || lowerLabel.contains(text);
     }
 
     private boolean matchesWeatherRow(String text, RowDef def) {
@@ -352,7 +421,9 @@ public class AnalyticsService {
         if ("hot_humid".equals(id)) return text.contains("humid");
         if ("rainy".equals(id)) return text.contains("rain");
         if ("cool_dry".equals(id)) return text.contains("cool") || text.contains("dry");
-        return text.contains(def.shortLabel().toLowerCase());
+        String lowerShort = def.shortLabel().toLowerCase();
+        String lowerLabel = def.label().toLowerCase();
+        return text.startsWith(lowerShort) || text.contains(lowerShort) || text.contains(lowerLabel) || lowerLabel.contains(text);
     }
 
     private static class GridRowAccumulator {

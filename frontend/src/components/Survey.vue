@@ -352,12 +352,15 @@
                     <span v-else>1</span>
                   </div>
                   <div>
-                    <h4>Question 1 — Mood Association</h4>
+                    <h4>{{ moodQuestionTitle }}</h4>
                   </div>
                 </div>
 
-                <p class="grid-prompt-text">
-                  How suitable is <strong>{{ currentItem?.name }}</strong> for each of the following moods?
+                <p class="grid-prompt-text" v-if="moodQuestionPrompt.includes('this item')">
+                  {{ moodQuestionPrompt.split('this item')[0] }}<strong>{{ currentItem?.name }}</strong>{{ moodQuestionPrompt.split('this item')[1] }}
+                </p>
+                <p class="grid-prompt-text" v-else>
+                  <strong>{{ currentItem?.name }}</strong>: {{ moodQuestionPrompt }}
                 </p>
 
                 <div class="matrix-wrapper">
@@ -413,12 +416,15 @@
                     <span v-else>2</span>
                   </div>
                   <div>
-                    <h4>Question 2 — Weather Association</h4>
+                    <h4>{{ weatherQuestionTitle }}</h4>
                   </div>
                 </div>
 
-                <p class="grid-prompt-text">
-                  How suitable is <strong>{{ currentItem?.name }}</strong> for each of the following weather conditions?
+                <p class="grid-prompt-text" v-if="weatherQuestionPrompt.includes('this item')">
+                  {{ weatherQuestionPrompt.split('this item')[0] }}<strong>{{ currentItem?.name }}</strong>{{ weatherQuestionPrompt.split('this item')[1] }}
+                </p>
+                <p class="grid-prompt-text" v-else>
+                  <strong>{{ currentItem?.name }}</strong>: {{ weatherQuestionPrompt }}
                 </p>
 
                 <div class="matrix-wrapper">
@@ -765,8 +771,10 @@ const sessionId = ref(crypto.randomUUID())
 const ageGroupOptions = AGE_GROUP_OPTIONS
 const diningFrequencyOptions = DINING_FREQUENCY_OPTIONS
 
-const moodRows = SECTION_2_MOOD_ROWS
-const weatherRows = SECTION_2_WEATHER_ROWS
+const moodQuestion = ref<any>(null)
+const weatherQuestion = ref<any>(null)
+const moodRows = ref<any[]>([...SECTION_2_MOOD_ROWS])
+const weatherRows = ref<any[]>([...SECTION_2_WEATHER_ROWS])
 const ratingLevels = RATING_SCALE_LEVELS
 
 const currentSection = ref(1)
@@ -847,6 +855,38 @@ const fetchQuestions = async () => {
   try {
     const response = await axios.get('/questions/all')
     questions.value = response.data ?? []
+
+    const mQ = questions.value.find((q: any) => {
+      const txt = (q.text || '').toLowerCase()
+      return txt.includes('mood') || txt.includes('emotion')
+    })
+    if (mQ) {
+      moodQuestion.value = mQ
+      if (mQ.options && mQ.options.length > 0) {
+        moodRows.value = mQ.options.map((opt: any) => ({
+          id: String(opt.id),
+          label: opt.sub ? `${opt.label} ${opt.sub}` : opt.label,
+          short: opt.label,
+          dbOptionId: opt.id,
+        }))
+      }
+    }
+
+    const wQ = questions.value.find((q: any) => {
+      const txt = (q.text || '').toLowerCase()
+      return txt.includes('weather')
+    })
+    if (wQ) {
+      weatherQuestion.value = wQ
+      if (wQ.options && wQ.options.length > 0) {
+        weatherRows.value = wQ.options.map((opt: any) => ({
+          id: String(opt.id),
+          label: opt.sub ? `${opt.label} ${opt.sub}` : (opt.icon ? `${opt.icon} ${opt.label}` : opt.label),
+          short: opt.label,
+          dbOptionId: opt.id,
+        }))
+      }
+    }
   } catch (error: any) {
     console.error('Error fetching dynamic questions:', error)
   }
@@ -896,7 +936,7 @@ const setWeatherAnswer = (itemId: number | undefined, weatherId: string, rating:
 const isMoodComplete = (itemId: number | undefined): boolean => {
   if (!itemId || !answers.value[itemId] || !answers.value[itemId].moods) return false
   const itemMoods = answers.value[itemId].moods!
-  return moodRows.every(
+  return moodRows.value.every(
     (row) => itemMoods[row.id] !== undefined && itemMoods[row.id] !== null,
   )
 }
@@ -904,7 +944,7 @@ const isMoodComplete = (itemId: number | undefined): boolean => {
 const isWeatherComplete = (itemId: number | undefined): boolean => {
   if (!itemId || !answers.value[itemId] || !answers.value[itemId].weather) return false
   const itemWeather = answers.value[itemId].weather!
-  return weatherRows.every(
+  return weatherRows.value.every(
     (row) => itemWeather[row.id] !== undefined && itemWeather[row.id] !== null,
   )
 }
@@ -913,6 +953,34 @@ const isCurrentItemComplete = computed(() => {
   if (!currentItem.value) return false
   const itemId = currentItem.value.id
   return isMoodComplete(itemId) && isWeatherComplete(itemId)
+})
+
+const moodQuestionTitle = computed(() => {
+  if (moodQuestion.value?.text && moodQuestion.value.text.includes(':')) {
+    return moodQuestion.value.text.split(':')[0].trim()
+  }
+  return 'Question 1 — Mood Association'
+})
+
+const moodQuestionPrompt = computed(() => {
+  if (moodQuestion.value?.text && moodQuestion.value.text.includes(':')) {
+    return moodQuestion.value.text.split(':')[1].trim()
+  }
+  return 'How suitable is this item for each of the following moods?'
+})
+
+const weatherQuestionTitle = computed(() => {
+  if (weatherQuestion.value?.text && weatherQuestion.value.text.includes(':')) {
+    return weatherQuestion.value.text.split(':')[0].trim()
+  }
+  return 'Question 2 — Weather Association'
+})
+
+const weatherQuestionPrompt = computed(() => {
+  if (weatherQuestion.value?.text && weatherQuestion.value.text.includes(':')) {
+    return weatherQuestion.value.text.split(':')[1].trim()
+  }
+  return 'How suitable is this item for each of the following weather conditions?'
 })
 
 const completedItemsCount = computed(() => {
@@ -1046,13 +1114,13 @@ const executeFinalSubmit = async () => {
       const itemAnswers = answers.value[item.id]
       if (itemAnswers) {
         if (itemAnswers.moods) {
-          moodRows.forEach((row) => {
+          moodRows.value.forEach((row) => {
             const val = itemAnswers.moods?.[row.id]
             if (val !== undefined && val !== null) {
               payload.push({
                 menuItemId: item.id,
-                questionId: moodQId,
-                selectedOptionId: null,
+                questionId: moodQuestion.value?.id || moodQId,
+                selectedOptionId: row.dbOptionId ?? null,
                 textResponse: `${row.label}: ${val} (${getScaleLabel(val)})`.slice(
                   0,
                   SURVEY_TEXT_MAX_LENGTH,
@@ -1063,13 +1131,13 @@ const executeFinalSubmit = async () => {
         }
 
         if (itemAnswers.weather) {
-          weatherRows.forEach((row) => {
+          weatherRows.value.forEach((row) => {
             const val = itemAnswers.weather?.[row.id]
             if (val !== undefined && val !== null) {
               payload.push({
                 menuItemId: item.id,
-                questionId: weatherQId,
-                selectedOptionId: null,
+                questionId: weatherQuestion.value?.id || weatherQId,
+                selectedOptionId: row.dbOptionId ?? null,
                 textResponse: `${row.label}: ${val} (${getScaleLabel(val)})`.slice(
                   0,
                   SURVEY_TEXT_MAX_LENGTH,
