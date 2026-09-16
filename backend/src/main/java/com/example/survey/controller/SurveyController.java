@@ -335,6 +335,26 @@ public class SurveyController {
         return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(savedOption);
     }
 
+    @PutMapping("/api/admin/options/{optionId}")
+    public ResponseEntity<com.example.survey.model.Option> updateOption(
+            @PathVariable Long optionId,
+            @Valid @RequestBody OptionRequest updatedData) {
+
+        java.util.Optional<com.example.survey.model.Option> existingOption = optionRepository.findById(optionId);
+
+        if (existingOption.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        com.example.survey.model.Option option = existingOption.get();
+        option.setLabel(updatedData.getLabel().trim());
+        option.setIcon(updatedData.getIcon());
+        option.setSubDescription(updatedData.getSub());
+
+        com.example.survey.model.Option savedOption = optionRepository.save(option);
+        return ResponseEntity.ok(savedOption);
+    }
+
     @DeleteMapping("/api/admin/options/{optionId}")
     public ResponseEntity<Void> deleteOption(@PathVariable Long optionId) {
         if (!optionRepository.existsById(optionId)) {

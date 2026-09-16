@@ -12,6 +12,6 @@ public class QuestionRequest {
     private String text;
 
     @NotBlank(message = "type is required")
-    @Pattern(regexp = "RADIO|TEXT", message = "type must be RADIO or TEXT")
+    @Pattern(regexp = "RADIO|TEXT|MATRIX", message = "type must be RADIO, TEXT, or MATRIX")
     private String type;
 }

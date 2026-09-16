@@ -406,4 +406,57 @@ describe('Survey.vue', () => {
     const successHeading = document.body.querySelector('.modal-card h2')
     expect(successHeading?.textContent).toBe('Amazing Job!')
   })
+
+  it('dynamically renders custom evaluation dimensions fetched from backend options', async () => {
+    const customQuestions = [
+      {
+        id: 1,
+        text: 'Question 1 — Mood Association: How suitable is this item for each mood?',
+        questionType: 'MATRIX',
+        options: [
+          { id: 101, label: 'Late Night Snack', sub: '(For midnight cravings)' },
+          { id: 102, label: 'Post-Workout', sub: '(To refuel after exercise)' },
+        ],
+      },
+      {
+        id: 2,
+        text: 'Question 2 — Weather Association: How suitable is this item in this weather?',
+        questionType: 'MATRIX',
+        options: [
+          { id: 201, label: 'Tropical Storm', icon: '⛈️' },
+        ],
+      },
+    ]
+
+    ;(axios.get as any).mockImplementation((url: string) => {
+      if (url === '/menu-items') return Promise.resolve({ data: [mockMenuItems[0]] })
+      if (url === '/questions/all') return Promise.resolve({ data: customQuestions })
+      if (url === '/api/stats/survey-status') return Promise.resolve({ data: { isFull: false } })
+      return Promise.resolve({ data: [] })
+    })
+
+    const wrapper = mount(Survey)
+    await flushPromises()
+
+    // Start survey & accept privacy
+    await wrapper.find('.primary-btn.pulse').trigger('click')
+    await wrapper.find('.consent-card').trigger('click')
+    await wrapper.find('.privacy-proceed-btn').trigger('click')
+
+    // Fill demographics and go to Section 3
+    const demoButtons = wrapper.findAll('.demo-opt-btn')
+    await demoButtons[0].trigger('click')
+    await demoButtons[5].trigger('click')
+    await wrapper.find('.demo-proceed-btn').trigger('click')
+    ;(wrapper.vm as any).showInstructionsModal = false
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+
+    // Check that custom dimension labels appear in the rendered matrix table
+    expect(wrapper.find('.rating-view').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Late Night Snack')
+    expect(wrapper.text()).toContain('Post-Workout')
+    expect(wrapper.text()).toContain('Tropical Storm')
+    expect(wrapper.text()).toContain('⛈️')
+  })
 })
