@@ -1468,11 +1468,11 @@
             </p>
 
             <div class="modal-actions" style="justify-content: center; margin-top: 25px">
-              <button class="nav-btn secondary" @click="showDeleteDimensionModal = false">
+              <button class="nav-btn secondary" :disabled="isDeletingDimension" @click="showDeleteDimensionModal = false">
                 Cancel
               </button>
-              <button class="nav-btn danger-solid" @click="executeDeleteDimension">
-                Yes, Delete
+              <button class="nav-btn danger-solid" :disabled="isDeletingDimension" @click="executeDeleteDimension">
+                {{ isDeletingDimension ? 'Deleting...' : 'Yes, Delete' }}
               </button>
             </div>
           </div>
@@ -1828,12 +1828,24 @@ const fetchMenuItems = async () => {
 
 const demographicQuestions = ref(SECTION_1_DEMOGRAPHIC_QUESTIONS)
 const dynamicQuestions = ref<any[]>([])
+const persistedEvaluationQuestionIds = ref<Set<number>>(new Set())
+
+const hasPersistedOptions = (dbQ: any): boolean => {
+  if (!dbQ || !dbQ.id) return false
+  if (persistedEvaluationQuestionIds.value.has(dbQ.id)) return true
+  if (Array.isArray(dbQ.options) && dbQ.options.length > 0) {
+    persistedEvaluationQuestionIds.value.add(dbQ.id)
+    return true
+  }
+  return false
+}
+
 const section2EvaluationQuestions = computed(() => {
   return SECTION_2_EVALUATION_QUESTIONS.map((baseQ) => {
     const dbQ = dynamicQuestions.value.find((q: any) => {
       const t = (q.text || '').toLowerCase()
-      if (baseQ.id === 'sec2_mood') return t.includes('mood') || t.includes('emotion')
-      if (baseQ.id === 'sec2_weather') return t.includes('weather')
+      if (baseQ.id === 'sec2_mood') return t.includes('mood') || t.includes('emotion') || t.includes('question 1')
+      if (baseQ.id === 'sec2_weather') return t.includes('weather') || t.includes('question 2')
       return false
     })
 
@@ -1849,9 +1861,9 @@ const section2EvaluationQuestions = computed(() => {
       }
     }
 
-    let rows: any[] = [...baseQ.rows]
-    if (dbQ?.options && dbQ.options.length > 0) {
-      rows = dbQ.options.map((opt: any) => ({
+    let rows: any[] = []
+    if (hasPersistedOptions(dbQ)) {
+      rows = (dbQ.options || []).map((opt: any) => ({
         id: opt.id,
         dbId: opt.id,
         label: opt.sub ? `${opt.label} ${opt.sub}` : (opt.icon ? `${opt.icon} ${opt.label}` : opt.label),
@@ -1860,6 +1872,8 @@ const section2EvaluationQuestions = computed(() => {
         sub: opt.sub || '',
         icon: opt.icon || '',
       }))
+    } else {
+      rows = [...baseQ.rows]
     }
 
     return {
@@ -2656,20 +2670,40 @@ const dimensionForm = ref({
 
 const openAddDimensionModal = async (q: any) => {
   let targetQId = q.dbId
-  if (!targetQId) {
+  const hasUnpersistedRows = q.rows && q.rows.some((r: any) => !r.dbId)
+
+  if (!targetQId || hasUnpersistedRows) {
     try {
-      const payload = {
-        text: `${q.title}: ${q.prompt}`,
-        type: 'MATRIX',
+      if (!targetQId) {
+        const payload = {
+          text: `${q.title}: ${q.prompt}`,
+          type: 'MATRIX',
+        }
+        const res = await axios.post('/api/admin/questions', payload)
+        targetQId = res.data.id
       }
-      const res = await axios.post('/api/admin/questions', payload)
-      targetQId = res.data.id
+      if (hasUnpersistedRows) {
+        for (const r of q.rows) {
+          if (!r.dbId) {
+            await axios.post(`/api/admin/questions/${targetQId}/options`, {
+              label: r.short || r.rawLabel || r.label,
+              sub: r.sub || (r.label.includes('(') ? r.label.substring(r.label.indexOf('(')) : ''),
+              icon: r.icon || null,
+            })
+          }
+        }
+      }
+      if (targetQId) {
+        persistedEvaluationQuestionIds.value.add(targetQId)
+      }
       await fetchQuestions()
     } catch (e) {
       console.error('Failed to create evaluation question in DB:', e)
       alert('Could not initialize question in database.')
       return
     }
+  } else if (targetQId) {
+    persistedEvaluationQuestionIds.value.add(targetQId)
   }
 
   dimensionForm.value = {
@@ -2715,6 +2749,10 @@ const openEditDimensionModal = async (q: any, row: any) => {
     }
   }
 
+  if (targetQId) {
+    persistedEvaluationQuestionIds.value.add(targetQId)
+  }
+
   dimensionForm.value = {
     id: rowDbId,
     questionId: targetQId,
@@ -2743,6 +2781,10 @@ const saveDimension = async () => {
       showToast('New dimension added successfully!')
     }
 
+    if (dimensionForm.value.questionId) {
+      persistedEvaluationQuestionIds.value.add(dimensionForm.value.questionId)
+    }
+
     await fetchQuestions()
     showDimensionModal.value = false
   } catch (error) {
@@ -2754,33 +2796,75 @@ const saveDimension = async () => {
 }
 
 const showDeleteDimensionModal = ref(false)
-const dimensionToDelete = ref<{ id: number | null; label: string; questionId: number | null } | null>(null)
+const isDeletingDimension = ref(false)
+const dimensionToDelete = ref<{
+  id: number | null
+  rawId: string | number
+  label: string
+  questionId: number | null
+  q: any
+  row: any
+} | null>(null)
 
 const confirmDeleteDimension = (q: any, row: any) => {
   const rowDbId = row.dbId || (typeof row.id === 'number' ? row.id : null)
   dimensionToDelete.value = {
     id: rowDbId,
-    label: row.label,
+    rawId: row.id,
+    label: row.rawLabel || row.short || row.label,
     questionId: q.dbId,
+    q,
+    row,
   }
   showDeleteDimensionModal.value = true
 }
 
 const executeDeleteDimension = async () => {
   if (!dimensionToDelete.value) return
+  isDeletingDimension.value = true
   try {
-    if (dimensionToDelete.value.id) {
-      await axios.delete(`/api/admin/options/${dimensionToDelete.value.id}`)
-      showToast(`Deleted dimension "${dimensionToDelete.value.label}".`)
+    const { id, q, row, label } = dimensionToDelete.value
+    let targetQId = q?.dbId
+
+    if (id) {
+      await axios.delete(`/api/admin/options/${id}`)
+      if (targetQId) {
+        persistedEvaluationQuestionIds.value.add(targetQId)
+      }
+      showToast(`Deleted dimension "${label}".`)
       await fetchQuestions()
     } else {
-      showToast('Dimension removed.')
+      if (!targetQId) {
+        const qRes = await axios.post('/api/admin/questions', {
+          text: `${q.title}: ${q.prompt}`,
+          type: 'MATRIX',
+        })
+        targetQId = qRes.data.id
+      }
+
+      for (const r of q.rows) {
+        if (r.id === row.id) continue
+        await axios.post(`/api/admin/questions/${targetQId}/options`, {
+          label: r.short || r.rawLabel || r.label,
+          sub: r.sub || (r.label.includes('(') ? r.label.substring(r.label.indexOf('(')) : ''),
+          icon: r.icon || null,
+        })
+      }
+
+      if (targetQId) {
+        persistedEvaluationQuestionIds.value.add(targetQId)
+      }
+      showToast(`Deleted dimension "${label}".`)
+      await fetchQuestions()
     }
+
     showDeleteDimensionModal.value = false
     dimensionToDelete.value = null
   } catch (error) {
     console.error('Failed to delete dimension:', error)
     alert('Could not delete dimension.')
+  } finally {
+    isDeletingDimension.value = false
   }
 }
 

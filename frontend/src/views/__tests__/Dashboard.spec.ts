@@ -467,4 +467,67 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     await vm.executeDeleteDimension()
     expect(axios.delete).toHaveBeenCalledWith('/api/admin/options/10')
   })
+
+  it('allows deleting an unpersisted default evaluation dimension by saving remaining rows to DB', async () => {
+    localStorage.setItem('admin_token', 'persisted-jwt-token')
+
+    // Questions list has NO evaluation questions yet (fresh or unpersisted)
+    ;(axios.get as any).mockImplementation((url: string) => {
+      if (url === '/menu-items') return Promise.resolve({ data: mockMenuItems })
+      if (url === '/questions/all') return Promise.resolve({ data: [] })
+      if (url === '/api/stats/baseline') return Promise.resolve({ data: 10 })
+      if (url === '/analytics/demographics') return Promise.resolve({ data: mockDemographics })
+      if (url.startsWith('/analytics/combined/')) {
+        return Promise.resolve({
+          data: {
+            ...mockCombinedAnalytics,
+            demographics: mockDemographics,
+          },
+        })
+      }
+      return Promise.resolve({ data: {} })
+    })
+
+    ;(axios.post as any).mockImplementation((url: string, payload: any) => {
+      if (url === '/api/admin/questions') {
+        return Promise.resolve({ data: { id: 501, text: payload.text, type: 'MATRIX' } })
+      }
+      if (url.includes('/options')) {
+        return Promise.resolve({ data: { id: Math.floor(Math.random() * 1000), ...payload } })
+      }
+      return Promise.resolve({ data: {} })
+    })
+
+    const wrapper = mount(Dashboard)
+    await flushPromises()
+
+    const vm = wrapper.vm as any
+    const firstQ = vm.section2EvaluationQuestions[0]
+    // Default mood rows are loaded (9 rows)
+    expect(firstQ.rows.length).toBe(9)
+    const rowToDelete = firstQ.rows[0] // e.g. "Energy"
+
+    // Confirm delete on unpersisted row
+    vm.confirmDeleteDimension(firstQ, rowToDelete)
+    expect(vm.showDeleteDimensionModal).toBe(true)
+    expect(vm.dimensionToDelete.id).toBeNull()
+    expect(vm.dimensionToDelete.label).toContain('Energy')
+
+    await vm.executeDeleteDimension()
+
+    // It should have initialized the question in DB
+    expect(axios.post).toHaveBeenCalledWith(
+      '/api/admin/questions',
+      expect.objectContaining({ type: 'MATRIX' }),
+    )
+
+    // It should have saved the remaining 8 rows (and NOT the deleted row)
+    const optionPostCalls = (axios.post as any).mock.calls.filter(([url]: [string]) =>
+      url.includes('/options'),
+    )
+    expect(optionPostCalls.length).toBe(8)
+    const labelsPosted = optionPostCalls.map((call: any) => call[1].label)
+    expect(labelsPosted).not.toContain('Energy')
+    expect(labelsPosted).toContain('Comfort')
+  })
 })

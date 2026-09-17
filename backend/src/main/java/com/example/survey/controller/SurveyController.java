@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
@@ -356,10 +357,12 @@ public class SurveyController {
     }
 
     @DeleteMapping("/api/admin/options/{optionId}")
+    @Transactional
     public ResponseEntity<Void> deleteOption(@PathVariable Long optionId) {
         if (!optionRepository.existsById(optionId)) {
             return ResponseEntity.notFound().build();
         }
+        answerRepository.clearOptionReferences(optionId);
         optionRepository.deleteById(optionId);
         return ResponseEntity.noContent().build();
     }
