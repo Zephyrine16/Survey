@@ -1680,7 +1680,8 @@ const handleLogin = async () => {
 
     const token = response.data.token
     adminToken.value = token
-    localStorage.setItem('admin_token', token)
+    // Token is kept in memory only for the active session. It is intentionally NOT persisted
+    // to localStorage so that the admin login screen always gates access on page load/refresh.
 
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
 
@@ -1698,7 +1699,6 @@ const handleLogin = async () => {
 const handleLogout = async () => {
   showLogoutModal.value = false
 
-  localStorage.removeItem('admin_token')
   adminToken.value = null
   delete axios.defaults.headers.common['Authorization']
   isAuthenticated.value = false
@@ -2882,7 +2882,6 @@ onMounted(async () => {
         isDeleteAll
       if (!skipRedirect && error.response && (error.response.status === 401 || error.response.status === 403)) {
         console.warn('Session expired! Returning to login screen...')
-        localStorage.removeItem('admin_token')
         adminToken.value = null
 
         delete axios.defaults.headers.common['Authorization']
@@ -2892,28 +2891,14 @@ onMounted(async () => {
     },
   )
 
-  // On page refresh: restore session only after the saved token is validated by the backend.
-  // isAuthenticated is NOT set to true until all authenticated API calls succeed — this prevents
-  // auto-login when navigating from the survey page with a stale or expired token.
-  const savedToken = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null
-  if (savedToken) {
-    adminToken.value = savedToken
-    axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`
-    try {
-      await fetchMenuItems()
-      await fetchQuestions()
-      await fetchStats()
-      // Only grant access once the backend confirms the token is valid
-      isAuthenticated.value = true
-    } catch (e) {
-      // Token is expired or invalid — clear it and require a fresh login
-      console.warn('Saved admin token is invalid or expired. Requiring fresh login.')
-      localStorage.removeItem('admin_token')
-      adminToken.value = null
-      delete axios.defaults.headers.common['Authorization']
-      isAuthenticated.value = false
-    }
+  // No session restore on load. The admin token is intentionally never persisted, so every
+  // page load / refresh starts unauthenticated and must pass through the admin login screen.
+  // This prevents any auto-login regardless of survey data being loaded or a cold-started backend.
+  // Clean up any legacy token that may have been persisted by an older build.
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('admin_token')
   }
+  isAuthenticated.value = false
 })
 
 onUnmounted(() => {

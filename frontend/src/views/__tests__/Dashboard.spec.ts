@@ -357,27 +357,37 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     expect(wrapper.text()).toContain('60%')
   })
 
-  it('restores authenticated session on page refresh and syncs analytics results', async () => {
+  it('never auto-logs-in on page load, even with a legacy persisted token, and clears it', async () => {
+    // Simulate a token left behind by an older build.
     localStorage.setItem('admin_token', 'persisted-jwt-token')
 
     const wrapper = mount(Dashboard)
     await flushPromises()
 
-    // Does not display login wrapper
-    expect(wrapper.find('.login-wrapper').exists()).toBe(false)
+    // The admin login screen must gate access — no auto-login from a stored token.
+    expect(wrapper.find('.login-wrapper').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('Analytics View')
 
-    // Displays dashboard with synced analytics
+    // The legacy token is proactively cleared and never applied as an auth header.
+    expect(localStorage.getItem('admin_token')).toBeNull()
+    expect(axios.defaults.headers.common['Authorization']).toBeUndefined()
+
+    // A fresh login is still required and works.
+    await wrapper.find('input[type="text"]').setValue('admin')
+    await wrapper.find('input[type="password"]').setValue('password')
+    await wrapper.find('form.login-form').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.find('.login-wrapper').exists()).toBe(false)
     expect(wrapper.text()).toContain('Analytics View')
     expect(wrapper.text()).toContain('Chicken Alfredo')
     expect(wrapper.text()).toContain('SECTION 1 — Survey Respondent Profile')
-
-    // Authorization header was automatically configured with stored token
-    expect(axios.defaults.headers.common['Authorization']).toBe('Bearer persisted-jwt-token')
+    // Token stays in memory for the session but is not persisted.
+    expect(axios.defaults.headers.common['Authorization']).toBe('Bearer mock-jwt-token')
+    expect(localStorage.getItem('admin_token')).toBeNull()
   })
 
   it('allows adding, editing and deleting evaluation dimensions in Question Manager', async () => {
-    localStorage.setItem('admin_token', 'persisted-jwt-token')
-
     const mockEvaluationQuestions = [
       {
         id: 1,
@@ -414,10 +424,21 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
       return Promise.resolve({ data: {} })
     })
 
-    ;(axios.post as any).mockResolvedValue({ data: { id: 99, label: 'Celebration' } })
+    ;(axios.post as any).mockImplementation((url: string) => {
+      if (url === '/api/admin/login') {
+        return Promise.resolve({ data: { token: 'mock-jwt-token' } })
+      }
+      return Promise.resolve({ data: { id: 99, label: 'Celebration' } })
+    })
     ;(axios.delete as any).mockResolvedValue({ data: {} })
 
     const wrapper = mount(Dashboard)
+    await flushPromises()
+
+    // Authenticate via the admin login screen (no auto-login on load)
+    await wrapper.find('input[type="text"]').setValue('admin')
+    await wrapper.find('input[type="password"]').setValue('password')
+    await wrapper.find('form.login-form').trigger('submit')
     await flushPromises()
 
     // Switch to Question Manager tab
@@ -469,8 +490,6 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
   })
 
   it('allows deleting an unpersisted default evaluation dimension by saving remaining rows to DB', async () => {
-    localStorage.setItem('admin_token', 'persisted-jwt-token')
-
     // Questions list has NO evaluation questions yet (fresh or unpersisted)
     ;(axios.get as any).mockImplementation((url: string) => {
       if (url === '/menu-items') return Promise.resolve({ data: mockMenuItems })
@@ -489,6 +508,9 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     })
 
     ;(axios.post as any).mockImplementation((url: string, payload: any) => {
+      if (url === '/api/admin/login') {
+        return Promise.resolve({ data: { token: 'mock-jwt-token' } })
+      }
       if (url === '/api/admin/questions') {
         return Promise.resolve({ data: { id: 501, text: payload.text, type: 'MATRIX' } })
       }
@@ -499,6 +521,12 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     })
 
     const wrapper = mount(Dashboard)
+    await flushPromises()
+
+    // Authenticate via the admin login screen (no auto-login on load)
+    await wrapper.find('input[type="text"]').setValue('admin')
+    await wrapper.find('input[type="password"]').setValue('password')
+    await wrapper.find('form.login-form').trigger('submit')
     await flushPromises()
 
     const vm = wrapper.vm as any
