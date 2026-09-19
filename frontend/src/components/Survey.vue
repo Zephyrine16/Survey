@@ -3158,4 +3158,236 @@ onMounted(() => {
   font-weight: 500 !important;
   font-style: italic;
 }
+
+/* ========================================================= */
+/* CONSOLIDATED MOBILE RESPONSIVENESS                        */
+/* Keeps the survey UI compact and aligned on phones instead */
+/* of scattered / overflowing.                               */
+/* ========================================================= */
+@media (max-width: 768px) {
+  .nav-content {
+    padding: 12px 16px;
+    gap: 12px;
+  }
+  .logo {
+    gap: 8px;
+    min-width: 0;
+  }
+  .logo h1 {
+    font-size: 1rem;
+    line-height: 1.25;
+  }
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+  .header-actions {
+    text-align: right;
+  }
+  .main-content {
+    margin: 24px auto;
+    padding: 0 14px;
+  }
+  .privacy-view,
+  .demographic-view {
+    max-width: 100%;
+  }
+  .privacy-card,
+  .demographic-card {
+    padding: 24px 18px;
+    border-radius: 18px;
+  }
+  .section-banner {
+    margin-bottom: 24px;
+    padding-bottom: 18px;
+  }
+  .section-banner h2 {
+    font-size: 1.3rem;
+  }
+  .question-card,
+  .grid-question-card,
+  .demo-card {
+    padding: 20px 16px;
+  }
+  .q-header {
+    margin-bottom: 18px;
+    gap: 12px;
+  }
+  .q-header h4 {
+    font-size: 1.02rem;
+  }
+  .cover-img {
+    height: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-content {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .logo h1 {
+    font-size: 0.9rem;
+  }
+  .header-actions {
+    gap: 4px;
+  }
+  .global-progress {
+    font-size: 0.8rem;
+  }
+  .section-indicator-badge {
+    font-size: 0.68rem;
+    margin-right: 4px;
+  }
+  .section-badge-label {
+    font-size: 0.78rem;
+  }
+  .header-finish-btn {
+    padding: 8px 14px;
+    font-size: 0.82rem;
+  }
+
+  /* Welcome screen */
+  .welcome-card {
+    padding: 34px 22px;
+  }
+  .welcome-icon {
+    width: 58px;
+    height: 58px;
+    font-size: 2rem;
+  }
+  .welcome-card h1 {
+    font-size: 1.6rem;
+  }
+  .welcome-card p {
+    font-size: 1rem;
+    margin-bottom: 26px;
+  }
+  .primary-btn {
+    padding: 14px 24px;
+    font-size: 1rem;
+  }
+
+  /* Section cards */
+  .privacy-card,
+  .demographic-card {
+    padding: 20px 14px;
+    border-radius: 14px;
+  }
+  .section-banner h2 {
+    font-size: 1.15rem;
+  }
+  .section-desc {
+    font-size: 0.88rem;
+  }
+  .privacy-callout {
+    padding: 16px;
+    gap: 12px;
+  }
+  .privacy-callout-text h3 {
+    font-size: 1.05rem;
+  }
+  .pillar-card {
+    padding: 16px;
+  }
+  .consent-card {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+  .question-card,
+  .grid-question-card,
+  .demo-card {
+    padding: 16px 14px;
+    border-radius: 14px;
+  }
+  .grid-prompt-text {
+    font-size: 0.92rem;
+    margin-bottom: 14px;
+  }
+
+  /* Section switch + pane headers */
+  .section-switch-header,
+  .pane-header {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Allow the grid/flex children to shrink below their content size so the  */
+  /* matrix can scroll INSIDE its wrapper instead of stretching the whole    */
+  /* page wider than the viewport.                                           */
+  .rating-view,
+  .left-pane,
+  .right-pane,
+  .questions-list,
+  .question-card,
+  .grid-question-card {
+    min-width: 0;
+  }
+  .matrix-wrapper {
+    max-width: 100%;
+  }
+
+  /* Rating matrix — give columns real width and let the wrapper scroll     */
+  /* horizontally instead of crushing the label column (which caused the    */
+  /* row labels to overflow / overlap the rating circles on narrow phones). */
+  .matrix-table {
+    font-size: 0.85rem;
+    min-width: 360px;
+  }
+  .col-corner {
+    width: 130px;
+    min-width: 130px;
+    padding-left: 12px !important;
+    font-size: 0.7rem;
+  }
+  .col-scale {
+    width: 46px;
+    min-width: 46px;
+    padding: 8px 2px;
+  }
+  .scale-header-hint {
+    display: none;
+  }
+  .scale-header-num {
+    font-size: 0.95rem;
+  }
+  .matrix-row-title {
+    padding: 12px;
+    font-size: 0.85rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  .row-text {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .matrix-td {
+    padding: 12px 2px;
+  }
+  .grid-radio-circle {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Modals */
+  .modal-card {
+    padding: 28px 22px;
+  }
+  .modal-icon {
+    font-size: 3.4rem;
+  }
+  .modal-card h2 {
+    font-size: 1.4rem;
+  }
+  .modal-card p {
+    font-size: 0.98rem;
+  }
+  .modal-actions {
+    flex-direction: column;
+  }
+}
 </style>
