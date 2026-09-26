@@ -36,22 +36,19 @@ public class AnalyticsService {
     public record RowDef(String id, String label, String shortLabel) {}
 
     public static final List<RowDef> MOOD_DEFINITIONS = List.of(
-            new RowDef("energy", "Energy (Wants something energizing)", "Energy"),
-            new RowDef("comfort", "Comfort (Wants something warm or familiar)", "Comfort"),
-            new RowDef("refreshing", "Refreshing (Wants something light or cooling)", "Refreshing"),
-            new RowDef("healthy", "Healthy (Wants a healthier choice)", "Healthy"),
-            new RowDef("treat", "Treat (Wants something enjoyable or indulgent)", "Treat"),
-            new RowDef("focused", "Focused (Wants to concentrate or study)", "Focused"),
-            new RowDef("familiar", "Familiar (Wants a safe, familiar choice)", "Familiar"),
-            new RowDef("adventurous", "Adventurous (Wants to try something new)", "Adventurous"),
-            new RowDef("quick", "Quick (Wants something convenient)", "Quick")
+            new RowDef("relaxation", "Relaxation (Wants to unwind, destress, or enjoy a calm and peaceful moment)", "Relaxation"),
+            new RowDef("focus", "Focus (Wants to concentrate, study, work, or stay mentally alert)", "Focus"),
+            new RowDef("celebrate", "Celebrate (Marking a milestone, special occasion, reward, or personal achievement)", "Celebrate"),
+            new RowDef("comfort", "Comfort (Seeking warmth, familiar flavors, emotional solace, or a cozy feel)", "Comfort"),
+            new RowDef("welcoming", "Welcoming (Feeling invited, at ease, warmly received, or creating a hospitable atmosphere)", "Welcoming"),
+            new RowDef("socialize", "Socialize (Sharing meals, gathering with friends, family, or colleagues for conversation)", "Socialize"),
+            new RowDef("enjoyment", "Enjoyment (Savoring pure taste, indulgence, pleasure, and culinary satisfaction)", "Enjoyment")
     );
 
     public static final List<RowDef> WEATHER_DEFINITIONS = List.of(
-            new RowDef("hot_sunny", "Hot/Sunny", "Hot/Sunny"),
-            new RowDef("hot_humid", "Hot/Humid", "Hot/Humid"),
-            new RowDef("rainy", "Rainy", "Rainy"),
-            new RowDef("cool_dry", "Cool Dry (Note: Even in tropical climates, \"cool dry\" exists: breezy December–February days, air-conditioned spaces, or cool hill stations/evening breezes.)", "Cool Dry")
+            new RowDef("rainy", "Rainy (Wet, gloomy, or rainy days; craving something warming, cozy, or comforting)", "Rainy"),
+            new RowDef("hot_dry", "Hot Dry (High daytime heat with low humidity; craving refreshing, thirst-quenching options)", "Hot Dry"),
+            new RowDef("cool_dry", "Cool Dry (Breezy, mild weather, air-conditioned spaces, or cool evening breezes)", "Cool Dry")
     );
 
     private final AnswerRepository answerRepository;
@@ -417,10 +414,9 @@ public class AnalyticsService {
 
     private boolean matchesWeatherRow(String text, RowDef def) {
         String id = def.id();
-        if ("hot_sunny".equals(id)) return text.contains("sunny");
-        if ("hot_humid".equals(id)) return text.contains("humid");
         if ("rainy".equals(id)) return text.contains("rain");
-        if ("cool_dry".equals(id)) return text.contains("cool") || text.contains("dry");
+        if ("hot_dry".equals(id)) return (text.contains("hot") && text.contains("dry")) || text.contains("hot/dry");
+        if ("cool_dry".equals(id)) return text.contains("cool") || (text.contains("dry") && !text.contains("hot"));
         String lowerShort = def.shortLabel().toLowerCase();
         String lowerLabel = def.label().toLowerCase();
         return text.startsWith(lowerShort) || text.contains(lowerShort) || text.contains(lowerLabel) || lowerLabel.contains(text);

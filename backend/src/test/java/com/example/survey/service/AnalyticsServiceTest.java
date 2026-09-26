@@ -32,10 +32,10 @@ class AnalyticsServiceTest {
         Long menuItemId = 101L;
         List<Object[]> answers = new ArrayList<>();
         // Row format: [questionId, userId, response]
-        answers.add(new Object[]{1L, "user1", "Comfort (Wants something warm or familiar): 5 (Very Suitable)"});
-        answers.add(new Object[]{1L, "user1", "Treat (Wants something enjoyable or indulgent): 4 (Suitable)"});
-        answers.add(new Object[]{1L, "user2", "Comfort (Wants something warm or familiar): 4 (Suitable)"});
-        answers.add(new Object[]{1L, "user2", "Energy (Wants something energizing): 2 (Slightly Suitable)"});
+        answers.add(new Object[]{1L, "user1", "Comfort (Seeking warmth, familiar flavors, emotional solace, or a cozy feel): 5 (Very Suitable)"});
+        answers.add(new Object[]{1L, "user1", "Relaxation (Wants to unwind, destress, or enjoy a calm and peaceful moment): 4 (Suitable)"});
+        answers.add(new Object[]{1L, "user2", "Comfort (Seeking warmth, familiar flavors, emotional solace, or a cozy feel): 4 (Suitable)"});
+        answers.add(new Object[]{1L, "user2", "Focus (Wants to concentrate, study, work, or stay mentally alert): 2 (Slightly Suitable)"});
 
         when(answerRepository.findAllAnswersForMenuItem(menuItemId)).thenReturn(answers);
 
@@ -46,7 +46,7 @@ class AnalyticsServiceTest {
         assertEquals("Comfort", moodAnalytics.getTopRowLabel());
         assertEquals(4.5, moodAnalytics.getTopRowScore());
         assertEquals(2, moodAnalytics.getTotalEvaluators());
-        assertEquals(9, moodAnalytics.getRows().size());
+        assertEquals(7, moodAnalytics.getRows().size());
 
         GridRowStatDTO comfortRow = moodAnalytics.getRows().stream()
                 .filter(r -> "comfort".equals(r.getId()))
@@ -64,7 +64,7 @@ class AnalyticsServiceTest {
         List<Object[]> answers = new ArrayList<>();
         answers.add(new Object[]{2L, "user1", "Rainy: 5 (Very Suitable)"});
         answers.add(new Object[]{2L, "user2", "Rainy: 4 (Suitable)"});
-        answers.add(new Object[]{2L, "user1", "Hot/Sunny: 2 (Slightly Suitable)"});
+        answers.add(new Object[]{2L, "user1", "Hot Dry: 2 (Slightly Suitable)"});
 
         when(answerRepository.findAllAnswersForMenuItem(menuItemId)).thenReturn(answers);
 
@@ -75,7 +75,7 @@ class AnalyticsServiceTest {
         assertEquals("Rainy", weatherAnalytics.getTopRowLabel());
         assertEquals(4.5, weatherAnalytics.getTopRowScore());
         assertEquals(2, weatherAnalytics.getTotalEvaluators());
-        assertEquals(4, weatherAnalytics.getRows().size());
+        assertEquals(3, weatherAnalytics.getRows().size());
     }
 
     @Test

@@ -132,7 +132,7 @@ describe('Survey.vue', () => {
 
     expect(starterText).toContain('SECTION 3 — Menu Item Evaluation')
     expect(starterText).toContain('Instructions')
-    expect(starterText).toContain('You will be asked to evaluate 10 menu items.')
+    expect(starterText).toContain('You will be asked to evaluate 15 menu items.')
     expect(starterText).toContain(
       'For each menu item, rate how suitable you think the item is for each mood and weather condition.',
     )
@@ -228,15 +228,13 @@ describe('Survey.vue', () => {
     )
 
     const moodLabels = [
-      'Energy (Wants something energizing)',
-      'Comfort (Wants something warm or familiar)',
-      'Refreshing (Wants something light or cooling)',
-      'Healthy (Wants a healthier choice)',
-      'Treat (Wants something enjoyable or indulgent)',
-      'Focused (Wants to concentrate or study)',
-      'Familiar (Wants a safe, familiar choice)',
-      'Adventurous (Wants to try something new)',
-      'Quick (Wants something convenient)',
+      'Relaxation (Wants to unwind, destress, or enjoy a calm and peaceful moment)',
+      'Focus (Wants to concentrate, study, work, or stay mentally alert)',
+      'Celebrate (Marking a milestone, special occasion, reward, or personal achievement)',
+      'Comfort (Seeking warmth, familiar flavors, emotional solace, or a cozy feel)',
+      'Welcoming (Feeling invited, at ease, warmly received, or creating a hospitable atmosphere)',
+      'Socialize (Sharing meals, gathering with friends, family, or colleagues for conversation)',
+      'Enjoyment (Savoring pure taste, indulgence, pleasure, and culinary satisfaction)',
     ]
 
     moodLabels.forEach((mood) => {
@@ -250,10 +248,9 @@ describe('Survey.vue', () => {
     )
 
     const weatherLabels = [
-      'Hot/Sunny',
-      'Hot/Humid',
-      'Rainy',
-      'Cool Dry (Note: Even in tropical climates, "cool dry" exists: breezy December–February days, air-conditioned spaces, or cool hill stations/evening breezes.)',
+      'Rainy (Wet, gloomy, or rainy days; craving something warming, cozy, or comforting)',
+      'Hot Dry (High daytime heat with low humidity; craving refreshing, thirst-quenching options)',
+      'Cool Dry (Breezy, mild weather, air-conditioned spaces, or cool evening breezes)',
     ]
 
     weatherLabels.forEach((weather) => {
@@ -287,12 +284,12 @@ describe('Survey.vue', () => {
     await wrapper.vm.$nextTick()
     await flushPromises()
 
-    // Answer all 9 mood rows on Item 1 (Chicken Alfredo)
+    // Answer all 7 mood rows on Item 1 (Chicken Alfredo)
     const tables = wrapper.findAll('.matrix-table')
     expect(tables.length).toBe(2)
 
     const moodRows = tables[0].findAll('tbody tr')
-    expect(moodRows.length).toBe(9)
+    expect(moodRows.length).toBe(7)
     for (const row of moodRows) {
       const cells = row.findAll('.matrix-td')
       await cells[3].trigger('click') // Select rating 4 (Suitable)
@@ -302,9 +299,9 @@ describe('Survey.vue', () => {
     const nextBtn = wrapper.find('.nav-btn.primary')
     expect(nextBtn.attributes('disabled')).toBeDefined()
 
-    // Answer all 4 weather rows on Item 1
+    // Answer all 3 weather rows on Item 1
     const weatherRows = tables[1].findAll('tbody tr')
-    expect(weatherRows.length).toBe(4)
+    expect(weatherRows.length).toBe(3)
     for (const row of weatherRows) {
       const cells = row.findAll('.matrix-td')
       await cells[4].trigger('click') // Select rating 5 (Very Suitable)
@@ -332,7 +329,7 @@ describe('Survey.vue', () => {
 
     // Jump to last item index to test submission flow
     const totalItems = (wrapper.vm as any).menuItems.length
-    expect(totalItems).toBe(10)
+    expect(totalItems).toBe(15)
     ;(wrapper.vm as any).currentItemIndex = totalItems - 1
     await flushPromises()
 
@@ -390,13 +387,15 @@ describe('Survey.vue', () => {
             menuItemId: 101,
             questionId: expect.any(Number),
             textResponse: expect.stringContaining(
-              'Energy (Wants something energizing): 4 (Suitable)',
+              'Relaxation (Wants to unwind, destress, or enjoy a calm and peaceful moment): 4 (Suitable)',
             ),
           }),
           expect.objectContaining({
             menuItemId: 101,
             questionId: expect.any(Number),
-            textResponse: expect.stringContaining('Hot/Sunny: 5 (Very Suitable)'),
+            textResponse: expect.stringContaining(
+              'Rainy (Wet, gloomy, or rainy days; craving something warming, cozy, or comforting): 5 (Very Suitable)',
+            ),
           }),
         ]),
       }),

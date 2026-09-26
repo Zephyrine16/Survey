@@ -48,7 +48,6 @@ public class DataSeeder implements CommandLineRunner {
                 "SELECT COUNT(*) FROM seed_metadata WHERE seed_key = ?",
                 Integer.class, SEED_KEY);
         if (alreadySeeded != null && alreadySeeded > 0) {
-            ensureEvaluationOptionsIfMissing();
             log.info("Survey questions already seeded previously. Skipping.");
             return;
         }

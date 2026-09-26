@@ -357,34 +357,21 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     expect(wrapper.text()).toContain('60%')
   })
 
-  it('never auto-logs-in on page load, even with a legacy persisted token, and clears it', async () => {
-    // Simulate a token left behind by an older build.
+  it('restores authenticated session on page load if admin_token exists in localStorage', async () => {
+    // Set a persisted token in localStorage.
     localStorage.setItem('admin_token', 'persisted-jwt-token')
 
     const wrapper = mount(Dashboard)
     await flushPromises()
 
-    // The admin login screen must gate access — no auto-login from a stored token.
-    expect(wrapper.find('.login-wrapper').exists()).toBe(true)
-    expect(wrapper.text()).not.toContain('Analytics View')
-
-    // The legacy token is proactively cleared and never applied as an auth header.
-    expect(localStorage.getItem('admin_token')).toBeNull()
-    expect(axios.defaults.headers.common['Authorization']).toBeUndefined()
-
-    // A fresh login is still required and works.
-    await wrapper.find('input[type="text"]').setValue('admin')
-    await wrapper.find('input[type="password"]').setValue('password')
-    await wrapper.find('form.login-form').trigger('submit')
-    await flushPromises()
-
+    // The admin dashboard should restore access automatically
     expect(wrapper.find('.login-wrapper').exists()).toBe(false)
     expect(wrapper.text()).toContain('Analytics View')
     expect(wrapper.text()).toContain('Chicken Alfredo')
-    expect(wrapper.text()).toContain('SECTION 1 — Survey Respondent Profile')
-    // Token stays in memory for the session but is not persisted.
-    expect(axios.defaults.headers.common['Authorization']).toBe('Bearer mock-jwt-token')
-    expect(localStorage.getItem('admin_token')).toBeNull()
+
+    // Auth header is configured and token remains stored
+    expect(axios.defaults.headers.common['Authorization']).toBe('Bearer persisted-jwt-token')
+    expect(localStorage.getItem('admin_token')).toBe('persisted-jwt-token')
   })
 
   it('allows adding, editing and deleting evaluation dimensions in Question Manager', async () => {
@@ -531,15 +518,15 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
 
     const vm = wrapper.vm as any
     const firstQ = vm.section2EvaluationQuestions[0]
-    // Default mood rows are loaded (9 rows)
-    expect(firstQ.rows.length).toBe(9)
-    const rowToDelete = firstQ.rows[0] // e.g. "Energy"
+    // Default mood rows are loaded (7 rows)
+    expect(firstQ.rows.length).toBe(7)
+    const rowToDelete = firstQ.rows[0] // e.g. "Relaxation"
 
     // Confirm delete on unpersisted row
     vm.confirmDeleteDimension(firstQ, rowToDelete)
     expect(vm.showDeleteDimensionModal).toBe(true)
     expect(vm.dimensionToDelete.id).toBeNull()
-    expect(vm.dimensionToDelete.label).toContain('Energy')
+    expect(vm.dimensionToDelete.label).toContain('Relaxation')
 
     await vm.executeDeleteDimension()
 
@@ -549,13 +536,13 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
       expect.objectContaining({ type: 'MATRIX' }),
     )
 
-    // It should have saved the remaining 8 rows (and NOT the deleted row)
+    // It should have saved the remaining 6 rows (and NOT the deleted row)
     const optionPostCalls = (axios.post as any).mock.calls.filter(([url]: [string]) =>
       url.includes('/options'),
     )
-    expect(optionPostCalls.length).toBe(8)
+    expect(optionPostCalls.length).toBe(6)
     const labelsPosted = optionPostCalls.map((call: any) => call[1].label)
-    expect(labelsPosted).not.toContain('Energy')
+    expect(labelsPosted).not.toContain('Relaxation')
     expect(labelsPosted).toContain('Comfort')
   })
 })

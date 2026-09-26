@@ -982,6 +982,7 @@
                       v-for="(row, rIdx) in q.rows"
                       :key="row.id"
                       class="f-pill pill-matrix-dim"
+                      :id="`dimension-pill-${row.id}`"
                       style="display: inline-flex; align-items: center; gap: 6px;"
                     >
                       <span class="opt-num-orange">{{ rIdx + 1 }}.</span>
@@ -990,16 +991,20 @@
                       <button
                         type="button"
                         class="edit-dim-btn"
+                        :id="`edit-dim-btn-${row.id}`"
                         @click.stop="openEditDimensionModal(q, row)"
                         title="Edit dimension"
+                        aria-label="Edit dimension"
                       >
                         ✏️
                       </button>
                       <button
                         type="button"
                         class="del-opt-btn"
+                        :id="`del-dim-btn-${row.id}`"
                         @click.stop="confirmDeleteDimension(q, row)"
                         title="Delete dimension"
+                        aria-label="Delete dimension"
                       >
                         ✕
                       </button>
@@ -1442,13 +1447,25 @@
                 </div>
               </div>
 
-              <div class="modal-actions mt-4">
-                <button type="button" class="nav-btn secondary" @click="showDimensionModal = false">
-                  Cancel
+              <div class="modal-actions mt-4" style="display: flex; justify-content: space-between; align-items: center;">
+                <button
+                  v-if="dimensionForm.id || dimensionForm.rawRow"
+                  type="button"
+                  id="btn-delete-dim-from-edit-modal"
+                  class="nav-btn danger-outline"
+                  @click="deleteDimensionFromModal"
+                  style="margin-right: auto;"
+                >
+                  🗑️ Delete
                 </button>
-                <button type="submit" class="nav-btn orange-solid" :disabled="isSavingDimension">
-                  {{ isSavingDimension ? 'Saving...' : '💾 Save Dimension' }}
-                </button>
+                <div style="display: flex; gap: 10px; margin-left: auto;">
+                  <button type="button" class="nav-btn secondary" @click="showDimensionModal = false">
+                    Cancel
+                  </button>
+                  <button type="submit" class="nav-btn orange-solid" :disabled="isSavingDimension">
+                    {{ isSavingDimension ? 'Saving...' : '💾 Save Dimension' }}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -1471,7 +1488,12 @@
               <button class="nav-btn secondary" :disabled="isDeletingDimension" @click="showDeleteDimensionModal = false">
                 Cancel
               </button>
-              <button class="nav-btn danger-solid" :disabled="isDeletingDimension" @click="executeDeleteDimension">
+              <button
+                id="btn-confirm-delete-dimension"
+                class="nav-btn danger-solid"
+                :disabled="isDeletingDimension"
+                @click="executeDeleteDimension"
+              >
                 {{ isDeletingDimension ? 'Deleting...' : 'Yes, Delete' }}
               </button>
             </div>
@@ -1680,8 +1702,9 @@ const handleLogin = async () => {
 
     const token = response.data.token
     adminToken.value = token
-    // Token is kept in memory only for the active session. It is intentionally NOT persisted
-    // to localStorage so that the admin login screen always gates access on page load/refresh.
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('admin_token', token)
+    }
 
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
 
@@ -1700,6 +1723,9 @@ const handleLogout = async () => {
   showLogoutModal.value = false
 
   adminToken.value = null
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('admin_token')
+  }
   delete axios.defaults.headers.common['Authorization']
   isAuthenticated.value = false
 
@@ -1831,13 +1857,7 @@ const dynamicQuestions = ref<any[]>([])
 const persistedEvaluationQuestionIds = ref<Set<number>>(new Set())
 
 const hasPersistedOptions = (dbQ: any): boolean => {
-  if (!dbQ || !dbQ.id) return false
-  if (persistedEvaluationQuestionIds.value.has(dbQ.id)) return true
-  if (Array.isArray(dbQ.options) && dbQ.options.length > 0) {
-    persistedEvaluationQuestionIds.value.add(dbQ.id)
-    return true
-  }
-  return false
+  return !!(dbQ && dbQ.id != null)
 }
 
 const section2EvaluationQuestions = computed(() => {
@@ -1862,7 +1882,7 @@ const section2EvaluationQuestions = computed(() => {
     }
 
     let rows: any[] = []
-    if (hasPersistedOptions(dbQ)) {
+    if (dbQ && dbQ.id != null) {
       rows = (dbQ.options || []).map((opt: any) => ({
         id: opt.id,
         dbId: opt.id,
@@ -2666,7 +2686,20 @@ const dimensionForm = ref({
   label: '',
   sub: '',
   icon: '',
+  q: null as any,
+  rawRow: null as any,
 })
+
+const deleteDimensionFromModal = () => {
+  if (!dimensionForm.value) return
+  const q = dimensionForm.value.q
+  const rawRow = dimensionForm.value.rawRow || {
+    id: dimensionForm.value.id,
+    label: dimensionForm.value.label,
+  }
+  showDimensionModal.value = false
+  confirmDeleteDimension(q, rawRow)
+}
 
 const openAddDimensionModal = async (q: any) => {
   let targetQId = q.dbId
@@ -2712,6 +2745,8 @@ const openAddDimensionModal = async (q: any) => {
     label: '',
     sub: '',
     icon: '',
+    q,
+    rawRow: null,
   }
   showDimensionModal.value = true
 }
@@ -2759,6 +2794,8 @@ const openEditDimensionModal = async (q: any, row: any) => {
     label: row.rawLabel || row.short || row.label.replace(/\s*\(.*?\)/, '').trim(),
     sub: row.sub || (row.label.includes('(') ? row.label.substring(row.label.indexOf('(')) : ''),
     icon: row.icon || '',
+    q,
+    rawRow: row,
   }
   showDimensionModal.value = true
 }
@@ -2824,7 +2861,7 @@ const executeDeleteDimension = async () => {
   isDeletingDimension.value = true
   try {
     const { id, q, row, label } = dimensionToDelete.value
-    let targetQId = q?.dbId
+    let targetQId = q?.dbId || q?.dbQuestion?.id || (typeof q?.id === 'number' ? q.id : null)
 
     if (id) {
       await axios.delete(`/api/admin/options/${id}`)
@@ -2883,7 +2920,9 @@ onMounted(async () => {
       if (!skipRedirect && error.response && (error.response.status === 401 || error.response.status === 403)) {
         console.warn('Session expired! Returning to login screen...')
         adminToken.value = null
-
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('admin_token')
+        }
         delete axios.defaults.headers.common['Authorization']
         isAuthenticated.value = false
       }
@@ -2891,14 +2930,22 @@ onMounted(async () => {
     },
   )
 
-  // No session restore on load. The admin token is intentionally never persisted, so every
-  // page load / refresh starts unauthenticated and must pass through the admin login screen.
-  // This prevents any auto-login regardless of survey data being loaded or a cold-started backend.
-  // Clean up any legacy token that may have been persisted by an older build.
+  // Restore authenticated session from localStorage if present
   if (typeof window !== 'undefined') {
-    localStorage.removeItem('admin_token')
+    const savedToken = localStorage.getItem('admin_token')
+    if (savedToken) {
+      adminToken.value = savedToken
+      axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`
+      isAuthenticated.value = true
+      try {
+        await Promise.all([fetchMenuItems(), fetchQuestions(), fetchStats()])
+      } catch (err) {
+        console.warn('Failed to load initial admin data with saved token:', err)
+      }
+    } else {
+      isAuthenticated.value = false
+    }
   }
-  isAuthenticated.value = false
 })
 
 onUnmounted(() => {
@@ -5037,27 +5084,55 @@ onUnmounted(() => {
   font-size: 0.8rem;
 }
 .del-opt-btn {
-  background: none;
+  background: transparent;
   border: none;
   color: #ef4444;
   cursor: pointer;
   font-weight: bold;
-  padding: 0 2px;
+  font-size: 0.85rem;
+  line-height: 1;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 2px;
+  padding: 0;
+  transition: all 0.15s ease;
+  pointer-events: auto;
+  position: relative;
+  z-index: 2;
 }
 .del-opt-btn:hover {
-  color: #b91c1c;
+  background: #fee2e2;
+  color: #dc2626;
+  transform: scale(1.15);
 }
 .edit-dim-btn {
-  background: none;
+  background: transparent;
   border: none;
   color: #64748b;
   cursor: pointer;
-  font-size: 0.75rem;
-  padding: 0 2px;
-  transition: color 0.15s ease;
+  font-size: 0.8rem;
+  line-height: 1;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  padding: 0;
+  transition: all 0.15s ease;
+  pointer-events: auto;
+  position: relative;
+  z-index: 2;
 }
 .edit-dim-btn:hover {
+  background: #ffedd5;
   color: #ea580c;
+  transform: scale(1.15);
 }
 .menu-q-num {
   position: static !important;
@@ -5105,7 +5180,7 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  pointer-events: none;
+  pointer-events: auto;
 }
 .opt-num-orange {
   font-weight: 800;

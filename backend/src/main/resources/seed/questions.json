@@ -3,25 +3,22 @@
     "text": "Question 1 — Mood Association: How suitable is this item for each of the following moods?",
     "questionType": "TEXT",
     "options": [
-      { "label": "Energy", "sub": "(Wants something energizing)" },
-      { "label": "Comfort", "sub": "(Wants something warm or familiar)" },
-      { "label": "Refreshing", "sub": "(Wants something light or cooling)" },
-      { "label": "Healthy", "sub": "(Wants a healthier choice)" },
-      { "label": "Treat", "sub": "(Wants something enjoyable or indulgent)" },
-      { "label": "Focused", "sub": "(Wants to concentrate or study)" },
-      { "label": "Familiar", "sub": "(Wants a safe, familiar choice)" },
-      { "label": "Adventurous", "sub": "(Wants to try something new)" },
-      { "label": "Quick", "sub": "(Wants something convenient)" }
+      { "label": "Relaxation", "sub": "(Wants to unwind, destress, or enjoy a calm and peaceful moment)" },
+      { "label": "Focus", "sub": "(Wants to concentrate, study, work, or stay mentally alert)" },
+      { "label": "Celebrate", "sub": "(Marking a milestone, special occasion, reward, or personal achievement)" },
+      { "label": "Comfort", "sub": "(Seeking warmth, familiar flavors, emotional solace, or a cozy feel)" },
+      { "label": "Welcoming", "sub": "(Feeling invited, at ease, warmly received, or creating a hospitable atmosphere)" },
+      { "label": "Socialize", "sub": "(Sharing meals, gathering with friends, family, or colleagues for conversation)" },
+      { "label": "Enjoyment", "sub": "(Savoring pure taste, indulgence, pleasure, and culinary satisfaction)" }
     ]
   },
   {
     "text": "Question 2 — Weather Association: How suitable is this item for each of the following weather conditions?",
     "questionType": "TEXT",
     "options": [
-      { "label": "Hot/Sunny", "icon": "☀️" },
-      { "label": "Hot/Humid", "icon": "🌤️" },
-      { "label": "Rainy", "icon": "🌧️" },
-      { "label": "Cool Dry", "sub": "(Breezy, air-conditioned, cool evening weather)", "icon": "⛅" }
+      { "label": "Rainy", "sub": "(Wet, gloomy, or rainy days; craving something warming, cozy, or comforting)", "icon": "🌧️" },
+      { "label": "Hot Dry", "sub": "(High daytime heat with low humidity; craving refreshing, thirst-quenching options)", "icon": "☀️" },
+      { "label": "Cool Dry", "sub": "(Breezy, mild weather, air-conditioned spaces, or cool evening breezes)", "icon": "⛅" }
     ]
   }
 ]
