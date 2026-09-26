@@ -1,17 +1,15 @@
 package com.example.survey.controller;
 
 import com.example.survey.repository.MenuItemRepository;
+import com.example.survey.repository.UploadedImageRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,16 +17,14 @@ import static org.junit.jupiter.api.Assertions.*;
 class MenuItemImageControllerTest {
 
     private MenuItemRepository menuItemRepository;
+    private UploadedImageRepository uploadedImageRepository;
     private MenuItemImageController controller;
-
-    @TempDir
-    Path tempUploadDir;
 
     @BeforeEach
     void setUp() {
         menuItemRepository = Mockito.mock(MenuItemRepository.class);
-        controller = new MenuItemImageController(menuItemRepository);
-        ReflectionTestUtils.setField(controller, "uploadDir", tempUploadDir.toString());
+        uploadedImageRepository = Mockito.mock(UploadedImageRepository.class);
+        controller = new MenuItemImageController(menuItemRepository, uploadedImageRepository);
     }
 
     @Test
@@ -43,6 +39,9 @@ class MenuItemImageControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertTrue(((Map<?, ?>) response.getBody()).containsKey("imageName"));
+        String filename = (String) ((Map<?, ?>) response.getBody()).get("imageName");
+        assertTrue(filename.matches("[a-f0-9]{32}\\.png"));
+        Mockito.verify(uploadedImageRepository).save(filename, "image/png", pngBytes);
     }
 
     @Test
@@ -57,6 +56,8 @@ class MenuItemImageControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertTrue(((Map<?, ?>) response.getBody()).containsKey("imageName"));
+        String filename = (String) ((Map<?, ?>) response.getBody()).get("imageName");
+        Mockito.verify(uploadedImageRepository).save(filename, "image/jpeg", jpegBytes);
     }
 
     @Test
@@ -71,6 +72,8 @@ class MenuItemImageControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertTrue(((Map<?, ?>) response.getBody()).containsKey("imageName"));
+        String filename = (String) ((Map<?, ?>) response.getBody()).get("imageName");
+        Mockito.verify(uploadedImageRepository).save(filename, "image/webp", webpBytes);
     }
 
     @Test
@@ -84,6 +87,7 @@ class MenuItemImageControllerTest {
         assertNotNull(response.getBody());
         assertTrue(((Map<?, ?>) response.getBody()).containsKey("error"));
         assertEquals("File content does not match a valid image signature", ((Map<?, ?>) response.getBody()).get("error"));
+        Mockito.verifyNoInteractions(uploadedImageRepository);
     }
 
     @Test
@@ -103,5 +107,18 @@ class MenuItemImageControllerTest {
 
         ResponseEntity<?> response = controller.uploadImage(file);
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    }
+
+    @Test
+    void testImageSignatureMustMatchDeclaredMimeType() throws IOException {
+        byte[] pngBytes = new byte[] {
+                (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D
+        };
+        MockMultipartFile file = new MockMultipartFile("file", "wrong.jpg", "image/jpeg", pngBytes);
+
+        ResponseEntity<?> response = controller.uploadImage(file);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        Mockito.verifyNoInteractions(uploadedImageRepository);
     }
 }
