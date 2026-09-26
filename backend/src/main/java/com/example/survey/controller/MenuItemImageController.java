@@ -1,18 +1,14 @@
 package com.example.survey.controller;
 
 import com.example.survey.repository.MenuItemRepository;
+import com.example.survey.repository.UploadedImageRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -22,10 +18,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MenuItemImageController {
 
-    @Value("${app.upload.dir:./uploads}")
-    private String uploadDir;
-
     private final MenuItemRepository menuItemRepository;
+    private final UploadedImageRepository uploadedImageRepository;
 
     private static final Set<String> ALLOWED_TYPES = Set.of("image/jpeg", "image/png", "image/webp", "image/jpg");
     private static final long MAX_SIZE = 5 * 1024 * 1024;
@@ -63,63 +57,43 @@ public class MenuItemImageController {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid file type. Use JPG, PNG or WEBP"));
         }
 
-        byte[] header = new byte[12];
-        try (java.io.InputStream is = file.getInputStream()) {
-            int read = is.readNBytes(header, 0, 12);
-            if (read < 12 || !isValidImageSignature(header)) {
-                return ResponseEntity.badRequest().body(Map.of("error", "File content does not match a valid image signature"));
-            }
+        byte[] content = file.getBytes();
+        String detectedContentType = detectImageContentType(content);
+        if (detectedContentType == null || !detectedContentType.equals(
+                "image/jpg".equalsIgnoreCase(contentType) ? "image/jpeg" : contentType.toLowerCase())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "File content does not match a valid image signature"));
         }
 
-        String ext = resolveExtension(file.getOriginalFilename(), contentType);
-
-        Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
-        Files.createDirectories(uploadPath);
+        String ext = switch (detectedContentType) {
+            case "image/png" -> ".png";
+            case "image/webp" -> ".webp";
+            default -> ".jpg";
+        };
 
         String filename = UUID.randomUUID().toString().replace("-", "") + ext;
-        Path target = uploadPath.resolve(filename).normalize();
-        if (!target.startsWith(uploadPath)) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Invalid path"));
-        }
-
-        try (java.io.InputStream is = file.getInputStream()) {
-            Files.copy(is, target, StandardCopyOption.REPLACE_EXISTING);
-        }
+        uploadedImageRepository.save(filename, detectedContentType, content);
 
         return ResponseEntity.ok(Map.of("imageName", filename, "url", "/uploads/" + filename));
     }
 
-    private String resolveExtension(String original, String contentType) {
-        if (original != null && original.contains(".")) {
-            String candidate = original.substring(original.lastIndexOf('.')).toLowerCase();
-            if (Set.of(".jpg", ".jpeg", ".png", ".webp").contains(candidate)) {
-                return candidate.equals(".jpeg") ? ".jpg" : candidate;
-            }
-        }
-        if ("image/png".equalsIgnoreCase(contentType)) {
-            return ".png";
-        }
-        if ("image/jpeg".equalsIgnoreCase(contentType)) {
-            return ".jpg";
-        }
-        return ".webp";
-    }
-
-    private static boolean isValidImageSignature(byte[] header) {
+    private static String detectImageContentType(byte[] header) {
         if (header == null || header.length < 12) {
-            return false;
+            return null;
         }
         // JPEG: FF D8 FF
         if ((header[0] & 0xFF) == 0xFF && (header[1] & 0xFF) == 0xD8 && (header[2] & 0xFF) == 0xFF) {
-            return true;
+            return "image/jpeg";
         }
         // PNG: 89 50 4E 47 0D 0A 1A 0A
         if ((header[0] & 0xFF) == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47
                 && header[4] == 0x0D && header[5] == 0x0A && header[6] == 0x1A && header[7] == 0x0A) {
-            return true;
+            return "image/png";
         }
         // WEBP: 'RIFF' .... 'WEBP'
-        return header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F'
-                && header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P';
+        if (header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F'
+                && header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P') {
+            return "image/webp";
+        }
+        return null;
     }
 }

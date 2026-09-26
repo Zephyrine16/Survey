@@ -217,4 +217,6 @@ Browser
 
 Data is persisted across container restarts using named Docker volumes:
 - `postgres_data` — database files
-- `backend_uploads` — user-uploaded files
+- `backend_uploads` — legacy image files uploaded before database-backed storage was introduced
+
+New image uploads are saved in PostgreSQL and served by the backend at `/uploads/{filename}`. In production, this keeps images available after a Render restart or redeploy. Images previously saved only on a temporary filesystem cannot be recovered if that filesystem has already been replaced; upload those images again in the admin dashboard.
