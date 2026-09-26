@@ -164,26 +164,71 @@ export const RATING_SCALE_LEVELS = [
 ] as const
 
 export const SECTION_2_MOOD_ROWS = [
-  { id: 'energy', label: 'Energy (Wants something energizing)', short: 'Energy' },
-  { id: 'comfort', label: 'Comfort (Wants something warm or familiar)', short: 'Comfort' },
-  { id: 'refreshing', label: 'Refreshing (Wants something light or cooling)', short: 'Refreshing' },
-  { id: 'healthy', label: 'Healthy (Wants a healthier choice)', short: 'Healthy' },
-  { id: 'treat', label: 'Treat (Wants something enjoyable or indulgent)', short: 'Treat' },
-  { id: 'focused', label: 'Focused (Wants to concentrate or study)', short: 'Focused' },
-  { id: 'familiar', label: 'Familiar (Wants a safe, familiar choice)', short: 'Familiar' },
-  { id: 'adventurous', label: 'Adventurous (Wants to try something new)', short: 'Adventurous' },
-  { id: 'quick', label: 'Quick (Wants something convenient)', short: 'Quick' },
+  {
+    id: 'relaxation',
+    label: 'Relaxation (Wants to unwind, destress, or enjoy a calm and peaceful moment)',
+    short: 'Relaxation',
+    sub: '(Wants to unwind, destress, or enjoy a calm and peaceful moment)',
+  },
+  {
+    id: 'focus',
+    label: 'Focus (Wants to concentrate, study, work, or stay mentally alert)',
+    short: 'Focus',
+    sub: '(Wants to concentrate, study, work, or stay mentally alert)',
+  },
+  {
+    id: 'celebrate',
+    label: 'Celebrate (Marking a milestone, special occasion, reward, or personal achievement)',
+    short: 'Celebrate',
+    sub: '(Marking a milestone, special occasion, reward, or personal achievement)',
+  },
+  {
+    id: 'comfort',
+    label: 'Comfort (Seeking warmth, familiar flavors, emotional solace, or a cozy feel)',
+    short: 'Comfort',
+    sub: '(Seeking warmth, familiar flavors, emotional solace, or a cozy feel)',
+  },
+  {
+    id: 'welcoming',
+    label: 'Welcoming (Feeling invited, at ease, warmly received, or creating a hospitable atmosphere)',
+    short: 'Welcoming',
+    sub: '(Feeling invited, at ease, warmly received, or creating a hospitable atmosphere)',
+  },
+  {
+    id: 'socialize',
+    label: 'Socialize (Sharing meals, gathering with friends, family, or colleagues for conversation)',
+    short: 'Socialize',
+    sub: '(Sharing meals, gathering with friends, family, or colleagues for conversation)',
+  },
+  {
+    id: 'enjoyment',
+    label: 'Enjoyment (Savoring pure taste, indulgence, pleasure, and culinary satisfaction)',
+    short: 'Enjoyment',
+    sub: '(Savoring pure taste, indulgence, pleasure, and culinary satisfaction)',
+  },
 ] as const
 
 export const SECTION_2_WEATHER_ROWS = [
-  { id: 'hot_sunny', label: 'Hot/Sunny', short: 'Hot/Sunny' },
-  { id: 'hot_humid', label: 'Hot/Humid', short: 'Hot/Humid' },
-  { id: 'rainy', label: 'Rainy', short: 'Rainy' },
+  {
+    id: 'rainy',
+    label: 'Rainy (Wet, gloomy, or rainy days; craving something warming, cozy, or comforting)',
+    short: 'Rainy',
+    sub: '(Wet, gloomy, or rainy days; craving something warming, cozy, or comforting)',
+    icon: '🌧️',
+  },
+  {
+    id: 'hot_dry',
+    label: 'Hot Dry (High daytime heat with low humidity; craving refreshing, thirst-quenching options)',
+    short: 'Hot Dry',
+    sub: '(High daytime heat with low humidity; craving refreshing, thirst-quenching options)',
+    icon: '☀️',
+  },
   {
     id: 'cool_dry',
-    label:
-      'Cool Dry (Note: Even in tropical climates, "cool dry" exists: breezy December–February days, air-conditioned spaces, or cool hill stations/evening breezes.)',
+    label: 'Cool Dry (Breezy, mild weather, air-conditioned spaces, or cool evening breezes)',
     short: 'Cool Dry',
+    sub: '(Breezy, mild weather, air-conditioned spaces, or cool evening breezes)',
+    icon: '⛅',
   },
 ] as const
 

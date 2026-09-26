@@ -862,11 +862,13 @@ const fetchQuestions = async () => {
     })
     if (mQ) {
       moodQuestion.value = mQ
-      if (mQ.options && mQ.options.length > 0) {
+      if (Array.isArray(mQ.options)) {
         moodRows.value = mQ.options.map((opt: any) => ({
           id: String(opt.id),
-          label: opt.sub ? `${opt.label} ${opt.sub}` : opt.label,
+          label: opt.sub ? `${opt.label} ${opt.sub}` : (opt.icon ? `${opt.icon} ${opt.label}` : opt.label),
           short: opt.label,
+          sub: opt.sub || '',
+          icon: opt.icon || '',
           dbOptionId: opt.id,
         }))
       }
@@ -878,11 +880,13 @@ const fetchQuestions = async () => {
     })
     if (wQ) {
       weatherQuestion.value = wQ
-      if (wQ.options && wQ.options.length > 0) {
+      if (Array.isArray(wQ.options)) {
         weatherRows.value = wQ.options.map((opt: any) => ({
           id: String(opt.id),
           label: opt.sub ? `${opt.label} ${opt.sub}` : (opt.icon ? `${opt.icon} ${opt.label}` : opt.label),
           short: opt.label,
+          sub: opt.sub || '',
+          icon: opt.icon || '',
           dbOptionId: opt.id,
         }))
       }

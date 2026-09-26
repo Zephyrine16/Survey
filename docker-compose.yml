@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -28,7 +28,7 @@ services:
       - ./backend/.env
     environment:
       - DATABASE_URL=jdbc:postgresql://postgres-db:5432/postgres
-      - CORS_ALLOWED_ORIGINS=http://localhost,http://localhost:5173
+      - CORS_ALLOWED_ORIGINS=http://localhost,http://localhost:80,http://localhost:5173,http://admin.localhost,http://survey.localhost,http://*.localhost,https://*.vercel.app
     volumes:
       - backend_uploads:/app/uploads
 
