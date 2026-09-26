@@ -1,7 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { mount, enableAutoUnmount } from '@vue/test-utils'
 import axios from 'axios'
 import Survey from '../Survey.vue'
+
+enableAutoUnmount(afterEach)
 
 vi.mock('axios')
 
@@ -458,4 +460,100 @@ describe('Survey.vue', () => {
     expect(wrapper.text()).toContain('Tropical Storm')
     expect(wrapper.text()).toContain('⛈️')
   })
+
+  it('allows unchecking/deselecting radio buttons by clicking them again', async () => {
+    const wrapper = mount(Survey)
+    await flushPromises()
+
+    // Start Survey -> Section 1
+    await wrapper.find('.primary-btn.pulse').trigger('click')
+    await wrapper.find('.consent-card').trigger('click')
+    await wrapper.find('.privacy-proceed-btn').trigger('click')
+
+    // In Section 2 (Demographics), click an age group option
+    const demoButtons = wrapper.findAll('.demo-opt-btn')
+    expect((wrapper.vm as any).demographicAnswers.ageGroup).toBe('')
+    await demoButtons[0].trigger('click')
+    expect((wrapper.vm as any).demographicAnswers.ageGroup).not.toBe('')
+    // Click same age group option again -> should uncheck / clear
+    await demoButtons[0].trigger('click')
+    expect((wrapper.vm as any).demographicAnswers.ageGroup).toBe('')
+
+    // Select demographics to proceed to Section 3
+    await demoButtons[0].trigger('click')
+    await demoButtons[5].trigger('click')
+    await wrapper.find('.demo-proceed-btn').trigger('click')
+    ;(wrapper.vm as any).showInstructionsModal = false
+    await wrapper.vm.$nextTick()
+    await flushPromises()
+
+    const tables = wrapper.findAll('.matrix-table')
+    const firstMoodRow = tables[0].find('tbody tr')
+    const cells = firstMoodRow.findAll('.matrix-td')
+
+    // Click rating 1 (scale index 0)
+    await cells[0].trigger('click')
+    const radioCircle = cells[0].find('.grid-radio-circle')
+    expect(radioCircle.classes()).toContain('active')
+    expect(firstMoodRow.classes()).toContain('row-answered')
+
+    // Click rating 1 again -> should uncheck it!
+    await cells[0].trigger('click')
+    expect(radioCircle.classes()).not.toContain('active')
+    expect(firstMoodRow.classes()).not.toContain('row-answered')
+
+    // Click rating 2 (scale index 1)
+    await cells[1].trigger('click')
+    expect(cells[1].find('.grid-radio-circle').classes()).toContain('active')
+    expect(firstMoodRow.classes()).toContain('row-answered')
+
+    // Now test Weather table
+    const firstWeatherRow = tables[1].find('tbody tr')
+    const weatherCells = firstWeatherRow.findAll('.matrix-td')
+    await weatherCells[2].trigger('click')
+    expect(weatherCells[2].find('.grid-radio-circle').classes()).toContain('active')
+
+    // Click rating 3 on Weather row again -> should uncheck it!
+    await weatherCells[2].trigger('click')
+    expect(weatherCells[2].find('.grid-radio-circle').classes()).not.toContain('active')
+    expect(firstWeatherRow.classes()).not.toContain('row-answered')
+  })
+
+  it('warns user before closing/reloading when survey is in progress', async () => {
+    const wrapper = mount(Survey)
+    await flushPromises()
+
+    // 1. Initially on welcome screen -> beforeunload does NOT trigger
+    const initialEvent = new Event('beforeunload') as BeforeUnloadEvent
+    initialEvent.preventDefault = vi.fn()
+    window.dispatchEvent(initialEvent)
+    expect(initialEvent.preventDefault).not.toHaveBeenCalled()
+
+    // 2. Start survey & consent to privacy -> beforeunload triggers
+    await wrapper.find('.primary-btn.pulse').trigger('click')
+    await wrapper.find('.consent-card').trigger('click')
+
+    const inProgressEvent = new Event('beforeunload') as BeforeUnloadEvent
+    inProgressEvent.preventDefault = vi.fn()
+    window.dispatchEvent(inProgressEvent)
+    expect(inProgressEvent.preventDefault).toHaveBeenCalled()
+
+    // 3. Complete survey -> beforeunload does NOT trigger
+    ;(wrapper.vm as any).showSuccessModal = true
+    await wrapper.vm.$nextTick()
+
+    const submittedEvent = new Event('beforeunload') as BeforeUnloadEvent
+    submittedEvent.preventDefault = vi.fn()
+    window.dispatchEvent(submittedEvent)
+    expect(submittedEvent.preventDefault).not.toHaveBeenCalled()
+
+    // 4. Clean up on unmount
+    wrapper.unmount()
+    const afterUnmountEvent = new Event('beforeunload') as BeforeUnloadEvent
+    afterUnmountEvent.preventDefault = vi.fn()
+    window.dispatchEvent(afterUnmountEvent)
+    expect(afterUnmountEvent.preventDefault).not.toHaveBeenCalled()
+  })
 })
+
+
