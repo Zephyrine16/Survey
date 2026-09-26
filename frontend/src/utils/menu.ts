@@ -31,6 +31,27 @@ export const getCategoryStyles = (category?: string) => {
   return CATEGORY_THEME_STYLES[cleanCategory] || DEFAULT_CATEGORY_STYLE
 }
 
+const BUNDLED_IMAGE_ALIASES: Record<string, string> = {
+  'chicken-creamy-mushroom-n-aglio-olio-rice.webp': 'chicken-creamy-mushroom-n-aglio-olio.webp',
+  'hungarian-sausage-n-aglio-olio-rice.webp': 'hungarian-sausage-n-aglio-olio.webp',
+  'white-chocolate.webp': 'white-choco.webp',
+  'biscoff.webp': 'biscoff-latte.webp',
+  'chocolate-chip-cream.webp': 'choco-chip-cream.webp',
+  'caramel-oreo.webp': 'caramel-oreo-frappe.webp',
+  'avocado-creamcheese.webp': 'avocado-cream-chesse.webp',
+  'chocolate-float.webp': 'choco-float.webp',
+  'salted-caramel-float.webp': 'salted-caramel.webp',
+}
+
+const PHOTOS_NOT_BUNDLED = new Set([
+  'crispy-chicken-fingers-n-aglio-olio-rice.webp',
+  'mango-cheesecake.webp',
+  'caramel-float-cereal.webp',
+  'mocha-float.webp',
+  'cheese-cake.webp',
+  'peach-soda.webp',
+])
+
 export const getImagePath = (item?: { imageName?: string | null }) => {
   const imageName = item?.imageName?.trim()
   if (!imageName) return ''
@@ -45,11 +66,12 @@ export const getImagePath = (item?: { imageName?: string | null }) => {
     return imageName
   }
   const base = (import.meta.env.VITE_API_BASE_URL ?? '').toString().replace(/\/$/, '')
-  const encoded = encodeURIComponent(imageName)
-  if (base) {
-    return `${base}/uploads/${encoded}`
+  // New and legacy uploads use a generated 32-character filename. Seeded images ship with the frontend.
+  if (/^[a-f0-9]{32}\.(?:jpg|jpeg|png|webp)$/i.test(imageName)) {
+    return `${base}/uploads/${encodeURIComponent(imageName)}`
   }
-  return `/uploads/${encoded}`
+  if (PHOTOS_NOT_BUNDLED.has(imageName)) return '/items/photo-unavailable.svg'
+  return `/items/${encodeURIComponent(BUNDLED_IMAGE_ALIASES[imageName] ?? imageName)}`
 }
 
 export const getItemDescription = (item?: { name?: string; description?: string } | null): string => {
