@@ -212,7 +212,7 @@
                     type="button"
                     class="opt-btn-vertical demo-opt-btn"
                     :class="{ selected: demographicAnswers.ageGroup === opt }"
-                    @click="demographicAnswers.ageGroup = opt"
+                    @click="demographicAnswers.ageGroup = demographicAnswers.ageGroup === opt ? '' : opt"
                   >
                     <span
                       class="custom-radio-circle"
@@ -245,7 +245,7 @@
                     type="button"
                     class="opt-btn-vertical demo-opt-btn"
                     :class="{ selected: demographicAnswers.diningFrequency === opt }"
-                    @click="demographicAnswers.diningFrequency = opt"
+                    @click="demographicAnswers.diningFrequency = demographicAnswers.diningFrequency === opt ? '' : opt"
                   >
                     <span
                       class="custom-radio-circle"
@@ -747,7 +747,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import axios from 'axios'
 import {
   AGE_GROUP_OPTIONS,
@@ -918,7 +918,11 @@ const setMoodAnswer = (itemId: number | undefined, moodId: string, rating: numbe
   if (!answers.value[itemId].moods) {
     answers.value[itemId].moods = {}
   }
-  answers.value[itemId].moods[moodId] = rating
+  if (answers.value[itemId].moods[moodId] === rating) {
+    delete answers.value[itemId].moods[moodId]
+  } else {
+    answers.value[itemId].moods[moodId] = rating
+  }
 }
 
 const getWeatherAnswer = (itemId: number | undefined, weatherId: string): number | null => {
@@ -934,7 +938,11 @@ const setWeatherAnswer = (itemId: number | undefined, weatherId: string, rating:
   if (!answers.value[itemId].weather) {
     answers.value[itemId].weather = {}
   }
-  answers.value[itemId].weather[weatherId] = rating
+  if (answers.value[itemId].weather[weatherId] === rating) {
+    delete answers.value[itemId].weather[weatherId]
+  } else {
+    answers.value[itemId].weather[weatherId] = rating
+  }
 }
 
 const isMoodComplete = (itemId: number | undefined): boolean => {
@@ -1224,7 +1232,29 @@ const resetSessionState = () => {
   sessionId.value = crypto.randomUUID()
 }
 
+const isSurveyInProgress = computed(() => {
+  if (!hasStarted.value || showSuccessModal.value || showLimitModal.value) {
+    return false
+  }
+  return (
+    hasAgreedToPrivacy.value ||
+    demographicAnswers.value.ageGroup.trim() !== '' ||
+    demographicAnswers.value.diningFrequency.trim() !== '' ||
+    Object.keys(answers.value).length > 0
+  )
+})
+
+const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+  if (isSurveyInProgress.value) {
+    event.preventDefault()
+    event.returnValue = ''
+    return ''
+  }
+}
+
 onMounted(() => {
+  window.addEventListener('beforeunload', handleBeforeUnload)
+
   // Every open starts a new session: discard any unfinished answers left
   // behind by a previous visit instead of restoring them.
   resetSessionState()
@@ -1233,6 +1263,10 @@ onMounted(() => {
   checkSurveyLimit()
   fetchMenuItems()
   fetchQuestions()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 </script>
 
