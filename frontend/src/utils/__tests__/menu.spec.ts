@@ -1,10 +1,23 @@
 /// <reference types="node" />
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { existsSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import axios from 'axios'
 import { getImagePath } from '../menu'
 
 describe('getImagePath', () => {
+  const TEST_BASE = 'http://localhost:8080'
+  let savedBaseURL: string | undefined
+
+  beforeEach(() => {
+    savedBaseURL = axios.defaults.baseURL
+    axios.defaults.baseURL = TEST_BASE
+  })
+
+  afterEach(() => {
+    axios.defaults.baseURL = savedBaseURL
+  })
+
   it('serves bundled menu photos from the frontend', () => {
     expect(getImagePath({ imageName: 'chicken-alfredo.webp' })).toBe('/items/chicken-alfredo.webp')
     expect(getImagePath({ imageName: 'white-chocolate.webp' })).toBe('/items/white-choco.webp')
@@ -12,13 +25,11 @@ describe('getImagePath', () => {
 
   it('serves uploaded photos from the backend after a refresh', () => {
     const filename = '0123456789abcdef0123456789abcdef.png'
-    const base = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
-    expect(getImagePath({ imageName: filename })).toBe(`${base}/uploads/${filename}`)
+    expect(getImagePath({ imageName: filename })).toBe(`${TEST_BASE}/uploads/${filename}`)
   })
 
   it('supports absolute upload paths and remote image URLs', () => {
-    const base = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
-    expect(getImagePath({ imageName: '/uploads/photo.png' })).toBe(`${base}/uploads/photo.png`)
+    expect(getImagePath({ imageName: '/uploads/photo.png' })).toBe(`${TEST_BASE}/uploads/photo.png`)
     expect(getImagePath({ imageName: 'https://example.com/photo.png' })).toBe(
       'https://example.com/photo.png',
     )

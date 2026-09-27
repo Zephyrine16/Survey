@@ -6,6 +6,7 @@ import {
   FOOD_SUBCATEGORIES,
   MENU_ITEM_DESCRIPTIONS,
 } from '../config/constants'
+import axios from 'axios'
 
 const normalizeCategory = (category?: string) => (category ?? '').trim().toLowerCase()
 
@@ -52,6 +53,13 @@ const PHOTOS_NOT_BUNDLED = new Set([
   'peach-soda.webp',
 ])
 
+/**
+ * Returns the runtime API base URL. Uses axios.defaults.baseURL (set once in
+ * main.ts at boot) so the value is always the *runtime* config, not the
+ * build-time VITE_API_BASE_URL that Vite bakes into the bundle.
+ */
+const getApiBase = () => (axios.defaults.baseURL ?? '').toString().replace(/\/$/, '')
+
 export const getImagePath = (item?: { imageName?: string | null }) => {
   const imageName = item?.imageName?.trim()
   if (!imageName) return ''
@@ -59,16 +67,16 @@ export const getImagePath = (item?: { imageName?: string | null }) => {
     return imageName
   }
   if (imageName.startsWith('/')) {
-    const base = (import.meta.env.VITE_API_BASE_URL ?? '').toString().replace(/\/$/, '')
+    const base = getApiBase()
     if (/^\/uploads\//i.test(imageName) && base) {
       return `${base}${imageName}`
     }
     return imageName
   }
-  const base = (import.meta.env.VITE_API_BASE_URL ?? '').toString().replace(/\/$/, '')
+  const base = getApiBase()
   // New and legacy uploads use a generated 32-character filename. Seeded images ship with the frontend.
   if (/^[a-f0-9]{32}\.(?:jpg|jpeg|png|webp)$/i.test(imageName)) {
-    return `${base}/uploads/${encodeURIComponent(imageName)}`
+    return base ? `${base}/uploads/${imageName}` : `/uploads/${imageName}`
   }
   if (PHOTOS_NOT_BUNDLED.has(imageName)) return '/items/photo-unavailable.svg'
   return `/items/${encodeURIComponent(BUNDLED_IMAGE_ALIASES[imageName] ?? imageName)}`

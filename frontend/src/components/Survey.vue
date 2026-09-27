@@ -313,14 +313,15 @@
               </div>
 
               <div class="item-cover">
-                <div
-                  class="cover-img"
-                  :style="
-                    currentItem?.imageName
-                      ? { backgroundImage: `url('${getImagePath(currentItem)}')` }
-                      : {}
-                  "
-                ></div>
+                <div class="cover-img">
+                  <img
+                    v-if="currentItem?.imageName"
+                    :src="getImagePath(currentItem)"
+                    :alt="currentItem?.name ?? 'Menu item'"
+                    class="cover-img-el"
+                    @error="($event.target as HTMLImageElement).style.display = 'none'"
+                  />
+                </div>
                 <div class="cover-info">
                   <span class="menu-item-sub-tag">MENU ITEM {{ currentItemIndex + 1 }}</span>
                   <h3>{{ currentItem?.name }}</h3>
@@ -1499,16 +1500,25 @@ onBeforeUnmount(() => {
 }
 .cover-img {
   height: 250px;
-  background-size: cover;
-  background-position: center;
-  /* UPDATE: Added gray fallback color */
+  overflow: hidden;
+  position: relative;
+  /* Gray fallback shown when no image or image fails to load */
   background-color: #e2e8f0;
+}
+.cover-img-el {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
 }
 .cover-img::before {
   content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent 70%);
+  z-index: 1;
+  pointer-events: none;
 }
 .cover-info {
   position: absolute;
