@@ -27,6 +27,10 @@
           <button type="submit" class="login-btn" :disabled="isLoggingIn">
             {{ isLoggingIn ? 'Authenticating...' : 'Sign In' }}
           </button>
+
+          <a href="/" class="login-return-btn">
+            &larr; Return to Public Survey
+          </a>
         </form>
       </div>
     </div>
@@ -45,6 +49,10 @@
         <div class="header-right">
           <span class="live-badge"><span class="dot"></span> Live</span>
 
+          <a href="/" class="view-survey-btn" title="View Public Survey">
+            🍴 Public Survey
+          </a>
+
           <button class="logout-btn" @click="showLogoutModal = true">🚪 Log Out</button>
 
           <button class="danger-btn" @click="showClearModal = true">🗑️ Clear Data</button>
@@ -61,21 +69,24 @@
           :class="{ active: activeAdminTab === 'analytics' }"
           @click="activeAdminTab = 'analytics'"
         >
-          📊 Analytics View
+          <span class="tab-btn-icon">📊</span>
+          <span class="tab-btn-text">Analytics View</span>
         </button>
         <button
           class="tab-btn"
           :class="{ active: activeAdminTab === 'manager' }"
           @click="activeAdminTab = 'manager'"
         >
-          ⚙️ Menu Manager
+          <span class="tab-btn-icon">⚙️</span>
+          <span class="tab-btn-text">Menu Manager</span>
         </button>
         <button
           class="tab-btn"
           :class="{ active: activeAdminTab === 'questions' }"
           @click="activeAdminTab = 'questions'"
         >
-          ❓ Question Manager
+          <span class="tab-btn-icon">❓</span>
+          <span class="tab-btn-text">Question Manager</span>
         </button>
       </div>
 
@@ -5897,6 +5908,347 @@ onUnmounted(() => {
   color: #334155;
   font-style: italic;
   line-height: 1.35;
+}
+
+/* ==========================================================================
+   📱 COMPREHENSIVE MOBILE RESPONSIVENESS FOR ADMIN DASHBOARD
+   ========================================================================== */
+
+/* RETURN & VIEW SURVEY BUTTONS */
+.login-return-btn {
+  display: inline-block;
+  margin-top: 12px;
+  color: #64748b;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+.login-return-btn:hover {
+  color: #ea580c;
+}
+
+.view-survey-btn {
+  background: white;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+.view-survey-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+@media (max-width: 992px) {
+  .dashboard-layout {
+    padding: 24px 20px;
+  }
+  .cards-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .kpi-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-layout {
+    padding: 16px 12px;
+  }
+
+  /* Login screen */
+  .login-card {
+    padding: 30px 22px;
+    border-radius: 16px;
+    width: 92%;
+  }
+  .login-card h2 {
+    font-size: 1.5rem;
+  }
+
+  /* Top Header */
+  .top-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .header-left {
+    gap: 12px;
+  }
+  .logo-icon {
+    width: 38px;
+    height: 38px;
+    font-size: 1.25rem;
+  }
+  .top-header h1 {
+    font-size: 1.25rem;
+    line-height: 1.25;
+  }
+  .subtitle {
+    font-size: 0.8rem;
+  }
+  .header-right {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+  }
+  .header-right button,
+  .header-right .view-survey-btn {
+    flex: 1 1 calc(50% - 6px);
+    justify-content: center;
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+  .live-badge {
+    flex: 1 1 100%;
+    justify-content: center;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
+  /* Admin Tabs */
+  .admin-tabs-container {
+    width: 100%;
+    margin-bottom: 20px;
+    padding: 4px;
+    box-sizing: border-box;
+  }
+  .tab-btn {
+    padding: 10px 4px;
+    font-size: 0.78rem;
+    gap: 4px;
+  }
+
+  /* KPI Grid */
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .global-card {
+    grid-column: span 2;
+  }
+  .new-kpi-card {
+    padding: 14px 14px;
+    border-radius: 12px;
+  }
+  .kpi-val {
+    font-size: 30px;
+  }
+  .kpi-name {
+    font-size: 10px;
+  }
+  .kpi-desc {
+    font-size: 11px;
+  }
+
+  /* Category & Item Filters */
+  .navigation-panel {
+    margin-bottom: 20px;
+    border-radius: 14px;
+  }
+  .filters-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+  .category-toggle {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .category-toggle button {
+    padding: 8px 12px;
+    font-size: 0.88rem;
+  }
+  .divider {
+    display: none;
+  }
+  .subcategory-pills {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .item-tabs-container {
+    padding: 10px 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .item-tab {
+    min-width: 80px;
+    padding: 6px;
+  }
+  .tab-thumb {
+    width: 38px;
+    height: 38px;
+  }
+  .tab-title {
+    font-size: 0.76rem;
+    max-width: 80px;
+  }
+
+  /* Item Summary Card */
+  .item-summary-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+    gap: 14px;
+    border-radius: 14px;
+  }
+  .summary-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: unset;
+  }
+  .summary-thumb {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+  }
+  .summary-title {
+    font-size: 1.2rem;
+  }
+  .summary-metrics {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .metric-pill-box {
+    min-width: unset;
+    padding: 8px 4px;
+    border-radius: 10px;
+  }
+  .metric-num {
+    font-size: 0.98rem;
+  }
+  .metric-lbl {
+    font-size: 0.65rem;
+  }
+
+  /* Section 2 Grid Evaluation Table (Scrollable on phones) */
+  .grid-card-container {
+    border-radius: 14px;
+  }
+  .grid-card-head {
+    padding: 14px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .head-title-wrap {
+    gap: 10px;
+  }
+  .head-title-wrap h3 {
+    font-size: 1.05rem;
+  }
+  .evaluator-pill {
+    align-self: flex-start;
+  }
+  .grid-card-content {
+    padding: 8px 12px 14px 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .grid-col-headers,
+  .grid-row-item {
+    min-width: 560px;
+  }
+
+  /* Responses Log */
+  .responses-log-section {
+    padding: 16px 14px;
+    border-radius: 14px;
+  }
+  .log-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .log-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Question Manager Mobile */
+  .qm-section-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px;
+  }
+  .qm-header-right {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+  .q-card-top-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 14px !important;
+  }
+  .q-card-options-row,
+  .q-card-scale-row {
+    padding: 0 14px 14px 14px !important;
+  }
+
+  /* Form & Confirmation Modals */
+  .modal-card {
+    padding: 26px 18px;
+    border-radius: 18px;
+  }
+  .modal-card h2 {
+    font-size: 1.4rem;
+  }
+  .modal-card p {
+    font-size: 0.95rem;
+  }
+  .modal-actions {
+    flex-direction: column-reverse;
+    gap: 10px;
+  }
+  .modal-actions button {
+    width: 100%;
+  }
+  .form-card {
+    max-width: 95%;
+    padding: 22px 16px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-layout {
+    padding: 12px 10px;
+  }
+  .top-header h1 {
+    font-size: 1.15rem;
+  }
+  .tab-btn {
+    font-size: 0.72rem;
+    padding: 8px 2px;
+  }
+  .kpi-val {
+    font-size: 26px;
+  }
+  .header-right button,
+  .header-right .view-survey-btn {
+    flex: 1 1 100%;
+  }
 }
 
 </style>
