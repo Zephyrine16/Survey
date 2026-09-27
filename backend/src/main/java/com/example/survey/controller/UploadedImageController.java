@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
 @RestController
 @RequiredArgsConstructor
 public class UploadedImageController {
-    private static final Pattern SAFE_FILENAME = Pattern.compile("[a-zA-Z0-9_-]+\\.(?:jpg|jpeg|png|webp)");
+    private static final Pattern SAFE_FILENAME = Pattern.compile("[a-zA-Z0-9_-]+\\.(?:jpg|jpeg|png|webp)", Pattern.CASE_INSENSITIVE);
 
     private final UploadedImageRepository uploadedImageRepository;
 
