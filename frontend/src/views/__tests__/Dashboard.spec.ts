@@ -357,21 +357,59 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     expect(wrapper.text()).toContain('60%')
   })
 
-  it('restores authenticated session on page load if admin_token exists in localStorage', async () => {
-    // Set a persisted token in localStorage.
+  it('requires login on a new visit and clears a token saved by an older release', async () => {
     localStorage.setItem('admin_token', 'persisted-jwt-token')
+    axios.defaults.headers.common['Authorization'] = 'Bearer persisted-jwt-token'
 
     const wrapper = mount(Dashboard)
     await flushPromises()
 
-    // The admin dashboard should restore access automatically
-    expect(wrapper.find('.login-wrapper').exists()).toBe(false)
-    expect(wrapper.text()).toContain('Analytics View')
-    expect(wrapper.text()).toContain('Chicken Alfredo')
+    expect(wrapper.find('.login-wrapper').exists()).toBe(true)
+    expect(wrapper.find('.dashboard-layout').exists()).toBe(false)
+    expect(axios.get).not.toHaveBeenCalled()
+    expect(axios.post).not.toHaveBeenCalled()
+    expect(axios.defaults.headers.common['Authorization']).toBeUndefined()
+    expect(localStorage.getItem('admin_token')).toBeNull()
+    wrapper.unmount()
+  })
 
-    // Auth header is configured and token remains stored
-    expect(axios.defaults.headers.common['Authorization']).toBe('Bearer persisted-jwt-token')
-    expect(localStorage.getItem('admin_token')).toBe('persisted-jwt-token')
+  it('requires login again after a page reload', async () => {
+    const firstVisit = mount(Dashboard)
+    await flushPromises()
+    await firstVisit.find('input[type="text"]').setValue('admin')
+    await firstVisit.find('input[type="password"]').setValue('password')
+    await firstVisit.find('form.login-form').trigger('submit')
+    await flushPromises()
+
+    expect(firstVisit.find('.dashboard-layout').exists()).toBe(true)
+    expect(axios.defaults.headers.common['Authorization']).toBe('Bearer mock-jwt-token')
+    expect(localStorage.getItem('admin_token')).toBeNull()
+    firstVisit.unmount()
+
+    const nextVisit = mount(Dashboard)
+    await flushPromises()
+
+    expect(nextVisit.find('.login-wrapper').exists()).toBe(true)
+    expect(nextVisit.find('.dashboard-layout').exists()).toBe(false)
+    expect(axios.defaults.headers.common['Authorization']).toBeUndefined()
+    nextVisit.unmount()
+  })
+
+  it('does not unlock the dashboard when login returns no token', async () => {
+    ;(axios.post as any).mockResolvedValue({ data: {} })
+    const wrapper = mount(Dashboard)
+    await flushPromises()
+
+    await wrapper.find('input[type="text"]').setValue('admin')
+    await wrapper.find('input[type="password"]').setValue('password')
+    await wrapper.find('form.login-form').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.find('.login-wrapper').exists()).toBe(true)
+    expect(wrapper.find('.dashboard-layout').exists()).toBe(false)
+    expect(axios.defaults.headers.common['Authorization']).toBeUndefined()
+    expect(axios.get).not.toHaveBeenCalled()
+    wrapper.unmount()
   })
 
   it('allows adding, editing and deleting evaluation dimensions in Question Manager', async () => {
