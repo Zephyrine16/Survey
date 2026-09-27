@@ -753,7 +753,7 @@
               Back to Survey
             </button>
             <button class="nav-btn primary" @click="executeFinalSubmit">
-              Confirm & Submit Data 💾
+              Confirm & Submit Data
             </button>
           </div>
         </div>
@@ -3807,6 +3807,285 @@ onBeforeUnmount(() => {
   }
   .modal-actions {
     flex-direction: column;
+  }
+}
+
+/* Phone layout: use the full reading width and make rating choices easy to tap. */
+@media (max-width: 600px) {
+  .survey-layout {
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+
+  .main-content {
+    width: 100%;
+    margin: 16px auto 28px;
+    padding: 0 12px;
+  }
+
+  .nav-content {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .logo {
+    gap: 7px;
+  }
+
+  .logo h1 {
+    font-size: clamp(0.9rem, 3.7vw, 1rem);
+    white-space: nowrap;
+  }
+
+  .header-actions {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .global-progress {
+    font-size: 0.78rem;
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+
+  .section-indicator-badge {
+    margin-right: 0;
+  }
+
+  .section-badge-label {
+    display: none;
+  }
+
+  .header-finish-btn {
+    min-height: 44px;
+    padding: 9px 12px;
+    white-space: nowrap;
+  }
+
+  .privacy-card,
+  .demographic-card {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+
+  .section-banner {
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+  }
+
+  .section-banner h2 {
+    font-size: clamp(1.15rem, 5vw, 1.35rem);
+    line-height: 1.3;
+  }
+
+  .section-desc {
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .questions-list {
+    gap: 18px;
+  }
+
+  .question-card,
+  .grid-question-card,
+  .demo-card {
+    padding: 20px 16px;
+    border-radius: 16px;
+  }
+
+  .q-header {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .q-header h4 {
+    font-size: 1.05rem;
+    line-height: 1.4;
+  }
+
+  .grid-prompt-text {
+    font-size: 1rem;
+    line-height: 1.55;
+    margin-bottom: 16px;
+  }
+
+  .cover-img {
+    height: clamp(180px, 55vw, 230px);
+  }
+
+  .mobile-sticky-reminder {
+    top: 58px;
+    min-height: 58px;
+    margin-bottom: 14px;
+    padding: 9px 12px;
+  }
+
+  .mobile-sticky-right .badge {
+    display: none;
+  }
+
+  /* Replace the horizontally scrolling matrix with a labeled, five-choice row. */
+  .matrix-wrapper {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .matrix-table {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    font-size: 0.9rem;
+  }
+
+  .matrix-table thead {
+    display: none;
+  }
+
+  .matrix-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .matrix-tr {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  .matrix-tr.row-answered {
+    background: #fffaf5;
+    border-color: #fed7aa;
+  }
+
+  .matrix-row-title {
+    grid-column: 1 / -1;
+    padding: 0 2px 4px;
+    font-size: 0.95rem;
+    font-weight: 650;
+    line-height: 1.35;
+  }
+
+  .matrix-td {
+    display: flex;
+    min-width: 0;
+    min-height: 48px;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 4px 2px;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    background: #f8fafc;
+    cursor: pointer;
+  }
+
+  .matrix-td:nth-child(2)::before { content: '1'; }
+  .matrix-td:nth-child(3)::before { content: '2'; }
+  .matrix-td:nth-child(4)::before { content: '3'; }
+  .matrix-td:nth-child(5)::before { content: '4'; }
+  .matrix-td:nth-child(6)::before { content: '5'; }
+
+  .matrix-td::before {
+    color: #475569;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .matrix-td:has(.grid-radio-circle.active) {
+    border-color: #f97316;
+    background: #fff7ed;
+  }
+
+  .grid-radio-circle {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+  }
+
+  .matrix-td:has(.grid-radio-circle.active)::before {
+    color: #c2410c;
+  }
+
+  .grid-req-footer {
+    align-items: flex-start;
+    margin-top: 12px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+
+  .action-footer {
+    align-items: stretch;
+    gap: 10px;
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+
+  .action-footer .nav-btn {
+    min-height: 48px;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .demo-footer-buttons {
+    width: 100%;
+    gap: 10px;
+  }
+
+  .demo-footer-buttons .nav-btn {
+    min-height: 48px;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .privacy-footer .nav-btn {
+    min-height: 48px;
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 360px) {
+  .main-content {
+    padding: 0 10px;
+  }
+
+  .logo h1 {
+    font-size: 0.84rem;
+  }
+
+  .global-progress {
+    font-size: 0.72rem;
+  }
+
+  .header-finish-btn {
+    padding-inline: 9px;
+    font-size: 0.76rem;
+  }
+
+  .matrix-tr {
+    gap: 4px;
+    padding: 8px;
+  }
+
+  .matrix-td {
+    min-height: 46px;
+    gap: 3px;
+  }
+
+  .grid-radio-circle {
+    width: 14px;
+    height: 14px;
+    flex-basis: 14px;
   }
 }
 </style>
