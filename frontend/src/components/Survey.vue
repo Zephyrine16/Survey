@@ -18,6 +18,11 @@
         <button class="primary-btn pulse" @click="hasStarted = true">
           Start the Survey &rarr;
         </button>
+        <div class="welcome-admin-box">
+          <a href="/admin" class="welcome-admin-link">
+            🔐 Admin Portal
+          </a>
+        </div>
       </div>
     </div>
 
@@ -27,6 +32,7 @@
           <div class="logo">
             <span class="logo-icon">🍴</span>
             <h1>Food Preference Survey</h1>
+            <a href="/admin" class="nav-admin-link" title="Admin Portal">🔐</a>
           </div>
 
           <div class="header-actions">
@@ -313,7 +319,24 @@
               </div>
 
               <div class="item-cover">
-                <div class="cover-img">
+                <!-- Dish Header (Clean, un-obscured title & category above photo) -->
+                <div class="cover-info">
+                  <div class="cover-info-top">
+                    <span class="menu-item-sub-tag">MENU ITEM {{ currentItemIndex + 1 }}</span>
+                    <span class="badge" :class="getCategoryPillClass(currentItem?.category)"
+                      >🍴 {{ currentItem?.category }}</span
+                    >
+                  </div>
+                  <h3>{{ currentItem?.name }}</h3>
+                </div>
+
+                <!-- Food Photography (100% visible, no dark gradient covering dish) -->
+                <div
+                  class="cover-img"
+                  :class="{ 'clickable-img': !!currentItem?.imageName }"
+                  @click="openZoomModal"
+                  :title="currentItem?.imageName ? 'Click to view full photo' : ''"
+                >
                   <img
                     v-if="currentItem?.imageName"
                     :src="getImagePath(currentItem)"
@@ -321,13 +344,10 @@
                     class="cover-img-el"
                     @error="($event.target as HTMLImageElement).style.display = 'none'"
                   />
-                </div>
-                <div class="cover-info">
-                  <span class="menu-item-sub-tag">MENU ITEM {{ currentItemIndex + 1 }}</span>
-                  <h3>{{ currentItem?.name }}</h3>
-                  <span class="badge" :class="getCategoryPillClass(currentItem?.category)"
-                    >🍴 {{ currentItem?.category }}</span
-                  >
+                  <div v-if="currentItem?.imageName" class="zoom-pill-overlay">
+                    <span class="zoom-pill-icon">🔍</span>
+                    <span class="zoom-pill-label">Tap to enlarge</span>
+                  </div>
                 </div>
               </div>
 
@@ -341,6 +361,32 @@
           </div>
 
           <div class="right-pane">
+            <!-- Mobile Sticky Context Strip (Appears on phones when scrolled so respondent never loses dish context) -->
+            <div
+              v-if="currentItem"
+              class="mobile-sticky-reminder"
+              @click="openZoomModal"
+              title="Tap to view photo"
+            >
+              <div class="mobile-sticky-left">
+                <img
+                  v-if="currentItem?.imageName"
+                  :src="getImagePath(currentItem)"
+                  :alt="currentItem?.name"
+                  class="mobile-sticky-thumb"
+                  @error="($event.target as HTMLImageElement).style.display = 'none'"
+                />
+                <div class="mobile-sticky-text">
+                  <span class="mobile-sticky-tag">ITEM {{ currentItemIndex + 1 }}</span>
+                  <strong class="mobile-sticky-name">{{ currentItem?.name }}</strong>
+                </div>
+              </div>
+              <div class="mobile-sticky-right">
+                <span class="badge" :class="getCategoryPillClass(currentItem?.category)">🍴 {{ currentItem?.category }}</span>
+                <span class="mobile-sticky-zoom-pill">🔍 Zoom</span>
+              </div>
+            </div>
+
             <div class="questions-list">
               <!-- Question 1 — Mood Association -->
               <div class="question-card grid-question-card">
@@ -739,6 +785,51 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Lightbox Zoom Modal for High-Resolution Food Photo Inspection -->
+    <Teleport to="body">
+      <div
+        v-if="showZoomModal"
+        class="modal-overlay zoom-modal-overlay"
+        @click.self="showZoomModal = false"
+      >
+        <div class="zoom-modal-card">
+          <button
+            type="button"
+            class="zoom-close-btn"
+            @click="showZoomModal = false"
+            aria-label="Close photo preview"
+          >
+            ✕
+          </button>
+
+          <div class="zoom-modal-img-container">
+            <img
+              v-if="currentItem?.imageName"
+              :src="getImagePath(currentItem)"
+              :alt="currentItem?.name ?? 'Menu item'"
+              class="zoom-modal-img"
+            />
+          </div>
+
+          <div class="zoom-modal-footer">
+            <div class="zoom-modal-meta">
+              <div class="zoom-modal-title-row">
+                <span class="menu-item-sub-tag">MENU ITEM {{ currentItemIndex + 1 }} OF {{ menuItems.length }}</span>
+                <span class="badge" :class="getCategoryPillClass(currentItem?.category)"
+                  >🍴 {{ currentItem?.category }}</span
+                >
+              </div>
+              <h3 class="zoom-modal-title">{{ currentItem?.name }}</h3>
+            </div>
+            <p v-if="getItemDescription(currentItem)" class="zoom-modal-desc">
+              {{ getItemDescription(currentItem) }}
+            </p>
+            <div class="image-disclaimer">* Image is for illustration purposes only.</div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 
   <div style="opacity: 0; position: absolute; top: -9999px; left: -9999px">
@@ -838,7 +929,14 @@ const showLimitModal = ref(false)
 const showConfirmModal = ref(false)
 const showSuccessModal = ref(false)
 const showReviewModal = ref(false)
+const showZoomModal = ref(false)
 const honeypotField = ref('')
+
+const openZoomModal = () => {
+  if (currentItem.value?.imageName) {
+    showZoomModal.value = true
+  }
+}
 
 const menuItems = ref<any[]>([])
 const currentItemIndex = ref(0)
@@ -1099,6 +1197,7 @@ const resetSurvey = () => {
   showReviewModal.value = false
   showLimitModal.value = false
   showInstructionsModal.value = false
+  showZoomModal.value = false
   hasStarted.value = false
   hasAgreedToPrivacy.value = false
   currentSection.value = 1
@@ -1221,6 +1320,7 @@ const resetSessionState = () => {
   hasAgreedToPrivacy.value = false
   currentSection.value = 1
   showInstructionsModal.value = false
+  showZoomModal.value = false
   currentItemIndex.value = 0
   demographicAnswers.value = { ageGroup: '', diningFrequency: '' }
   answers.value = {}
@@ -1253,8 +1353,15 @@ const handleBeforeUnload = (event: BeforeUnloadEvent) => {
   }
 }
 
+const handleKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape' && showZoomModal.value) {
+    showZoomModal.value = false
+  }
+}
+
 onMounted(() => {
   window.addEventListener('beforeunload', handleBeforeUnload)
+  window.addEventListener('keydown', handleKeydown)
 
   // Every open starts a new session: discard any unfinished answers left
   // behind by a previous visit instead of restoring them.
@@ -1268,6 +1375,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('beforeunload', handleBeforeUnload)
+  window.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
@@ -1401,6 +1509,48 @@ onBeforeUnmount(() => {
   color: #0f172a;
   font-weight: 700;
 }
+.nav-admin-link {
+  text-decoration: none;
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  color: #475569;
+}
+.nav-admin-link:hover {
+  background: #fff7ed;
+  border-color: #f97316;
+  color: #ea580c;
+}
+.welcome-admin-box {
+  margin-top: 18px;
+  text-align: center;
+}
+.welcome-admin-link {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  transition: all 0.2s ease;
+}
+.welcome-admin-link:hover {
+  background: rgba(15, 23, 42, 0.7);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.5);
+}
 
 /* HEADER ACTIONS */
 .header-actions {
@@ -1451,13 +1601,13 @@ onBeforeUnmount(() => {
 }
 .rating-view {
   display: grid;
-  grid-template-columns: 350px 1fr;
-  gap: 40px;
+  grid-template-columns: 440px 1fr;
+  gap: 36px;
   align-items: start;
 }
 .left-pane {
   position: sticky;
-  top: 140px;
+  top: 85px;
 }
 .sticky-card {
   background: white;
@@ -1497,13 +1647,43 @@ onBeforeUnmount(() => {
 }
 .item-cover {
   position: relative;
+  background: white;
+}
+.cover-info {
+  padding: 18px 22px 14px 22px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.cover-info-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 10px;
+}
+.cover-info h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.3;
 }
 .cover-img {
-  height: 250px;
+  height: 310px;
   overflow: hidden;
   position: relative;
-  /* Gray fallback shown when no image or image fails to load */
-  background-color: #e2e8f0;
+  /* Light neutral background shown when loading or fallback */
+  background-color: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cover-img.clickable-img {
+  cursor: pointer;
 }
 .cover-img-el {
   width: 100%;
@@ -1511,32 +1691,41 @@ onBeforeUnmount(() => {
   object-fit: cover;
   object-position: center;
   display: block;
+  transition: transform 0.35s ease;
 }
-.cover-img::before {
-  content: '';
+.cover-img.clickable-img:hover .cover-img-el {
+  transform: scale(1.03);
+}
+.zoom-pill-overlay {
   position: absolute;
-  inset: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent 70%);
-  z-index: 1;
-  pointer-events: none;
-}
-.cover-info {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-  right: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-}
-.cover-info h3 {
-  margin: 0;
-  color: white;
-  font-size: 1.4rem;
+  bottom: 12px;
+  right: 12px;
+  background: rgba(15, 23, 42, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #ffffff;
+  font-size: 0.76rem;
   font-weight: 700;
-  line-height: 1.2;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  padding: 5px 12px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.cover-img:hover .zoom-pill-overlay {
+  background: rgba(249, 115, 22, 0.95);
+  border-color: rgba(249, 115, 22, 1);
+  transform: translateY(-2px);
+}
+.zoom-pill-icon {
+  font-size: 0.82rem;
+}
+.zoom-pill-label {
+  letter-spacing: 0.02em;
 }
 .badge {
   padding: 4px 10px;
@@ -1834,6 +2023,17 @@ onBeforeUnmount(() => {
   }
 }
 
+@media (max-width: 1050px) and (min-width: 851px) {
+  .rating-view {
+    grid-template-columns: 380px 1fr;
+    gap: 24px;
+  }
+}
+
+.mobile-sticky-reminder {
+  display: none;
+}
+
 @media (max-width: 850px) {
   .rating-view {
     grid-template-columns: 1fr;
@@ -1844,7 +2044,13 @@ onBeforeUnmount(() => {
     top: 0;
   }
   .cover-img {
-    height: 180px;
+    height: 250px;
+  }
+  .cover-info {
+    padding: 14px 18px 12px 18px;
+  }
+  .cover-info h3 {
+    font-size: 1.25rem;
   }
   .grid-options {
     grid-template-columns: 1fr;
@@ -1865,6 +2071,190 @@ onBeforeUnmount(() => {
     flex-direction: column;
     gap: 5px;
     align-items: flex-end;
+  }
+
+  /* Mobile Sticky Context Strip */
+  .mobile-sticky-reminder {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #ffffff;
+    border: 1px solid #fed7aa;
+    border-radius: 12px;
+    margin-bottom: 18px;
+    position: sticky;
+    top: 56px;
+    z-index: 45;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.08);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .mobile-sticky-reminder:hover {
+    background: #fff7ed;
+    border-color: #f97316;
+  }
+  .mobile-sticky-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .mobile-sticky-thumb {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid #e2e8f0;
+  }
+  .mobile-sticky-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .mobile-sticky-tag {
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #ea580c;
+    letter-spacing: 0.05em;
+    line-height: 1.2;
+  }
+  .mobile-sticky-name {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+  .mobile-sticky-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .mobile-sticky-zoom-pill {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #ea580c;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+}
+
+/* --- ZOOM LIGHTBOX MODAL STYLES --- */
+.zoom-modal-overlay {
+  z-index: 10000;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.zoom-modal-card {
+  background: white;
+  border-radius: 20px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 92vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.5);
+  animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.zoom-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.75);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 20;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+.zoom-close-btn:hover {
+  background: #f97316;
+  border-color: #f97316;
+  transform: scale(1.08);
+}
+.zoom-modal-img-container {
+  width: 100%;
+  height: 52vh;
+  min-height: 250px;
+  max-height: 480px;
+  background: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.zoom-modal-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.zoom-modal-footer {
+  padding: 20px 24px;
+  background: white;
+  text-align: left;
+  border-top: 1px solid #e2e8f0;
+}
+.zoom-modal-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.zoom-modal-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.zoom-modal-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.3;
+}
+.zoom-modal-desc {
+  margin: 0 0 10px 0;
+  color: #475569;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+@media (max-width: 600px) {
+  .zoom-modal-card {
+    border-radius: 16px;
+    max-height: 94vh;
+  }
+  .zoom-modal-img-container {
+    height: 40vh;
+    min-height: 200px;
+  }
+  .zoom-modal-footer {
+    padding: 16px 18px;
+  }
+  .zoom-modal-title {
+    font-size: 1.15rem;
   }
 }
 
@@ -3267,11 +3657,14 @@ onBeforeUnmount(() => {
     font-size: 1.02rem;
   }
   .cover-img {
-    height: 200px;
+    height: 250px;
   }
 }
 
 @media (max-width: 480px) {
+  .cover-img {
+    height: 230px;
+  }
   .nav-content {
     padding: 10px 12px;
     gap: 10px;

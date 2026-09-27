@@ -553,6 +553,58 @@ describe('Survey.vue', () => {
     window.dispatchEvent(afterUnmountEvent)
     expect(afterUnmountEvent.preventDefault).not.toHaveBeenCalled()
   })
+
+  it('opens and closes high-resolution photo zoom modal upon clicking image or escape key', async () => {
+    const wrapper = mount(Survey)
+    await flushPromises()
+
+    // Start survey -> Section 1 -> Section 2 -> Section 3
+    await wrapper.find('.primary-btn.pulse').trigger('click')
+    await wrapper.find('.consent-card').trigger('click')
+    await wrapper.find('.privacy-proceed-btn').trigger('click')
+    const demoButtons = wrapper.findAll('.demo-opt-btn')
+    await demoButtons[0].trigger('click')
+    await demoButtons[5].trigger('click')
+    await wrapper.find('.demo-proceed-btn').trigger('click')
+    ;(wrapper.vm as any).showInstructionsModal = false
+    await wrapper.vm.$nextTick()
+    await flushPromises()
+
+    // Initially zoom modal is not open
+    expect(document.body.querySelector('.zoom-modal-card')).toBeNull()
+
+    // Click cover image to open zoom modal
+    const coverImg = wrapper.find('.cover-img')
+    expect(coverImg.exists()).toBe(true)
+    await coverImg.trigger('click')
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+
+    // Zoom modal should now be present in DOM
+    const zoomCard = document.body.querySelector('.zoom-modal-card')
+    expect(zoomCard).not.toBeNull()
+    expect(zoomCard?.textContent).toContain('Chicken Alfredo')
+
+    // Click close button
+    const closeBtn = document.body.querySelector('.zoom-close-btn') as HTMLButtonElement
+    expect(closeBtn).not.toBeNull()
+    closeBtn.click()
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+
+    expect(document.body.querySelector('.zoom-modal-card')).toBeNull()
+
+    // Reopen and test Escape key
+    await coverImg.trigger('click')
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+    expect(document.body.querySelector('.zoom-modal-card')).not.toBeNull()
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+    expect(document.body.querySelector('.zoom-modal-card')).toBeNull()
+  })
 })
 
 
