@@ -341,7 +341,6 @@
                     @error="($event.target as HTMLImageElement).style.display = 'none'"
                   />
                   <div v-if="currentItem?.imageName" class="zoom-pill-overlay">
-                    <span class="zoom-pill-icon">🔍</span>
                     <span class="zoom-pill-label">Tap to enlarge</span>
                   </div>
                 </div>
@@ -379,7 +378,7 @@
               </div>
               <div class="mobile-sticky-right">
                 <span class="badge" :class="getCategoryPillClass(currentItem?.category)">🍴 {{ currentItem?.category }}</span>
-                <span class="mobile-sticky-zoom-pill">🔍 Zoom</span>
+                <span class="mobile-sticky-zoom-pill">Zoom</span>
               </div>
             </div>
 
@@ -1001,7 +1000,11 @@ const fetchQuestions = async () => {
       if (Array.isArray(wQ.options)) {
         weatherRows.value = wQ.options.map((opt: any) => ({
           id: String(opt.id),
-          label: opt.sub ? `${opt.label} ${opt.sub}` : (opt.icon ? `${opt.icon} ${opt.label}` : opt.label),
+            label: opt.sub
+              ? `${opt.label} ${opt.sub}`
+              : opt.icon && !String(opt.label).trim().toLowerCase().startsWith('rainy')
+                ? `${opt.icon} ${opt.label}`
+                : opt.label,
           short: opt.label,
           sub: opt.sub || '',
           icon: opt.icon || '',
@@ -1698,9 +1701,6 @@ onBeforeUnmount(() => {
   background: rgba(249, 115, 22, 0.95);
   border-color: rgba(249, 115, 22, 1);
   transform: translateY(-2px);
-}
-.zoom-pill-icon {
-  font-size: 0.82rem;
 }
 .zoom-pill-label {
   letter-spacing: 0.02em;
@@ -3926,94 +3926,82 @@ onBeforeUnmount(() => {
     display: none;
   }
 
-  /* Replace the horizontally scrolling matrix with a labeled, five-choice row. */
+  /* Keep the matrix readable while bringing rating columns closer to each label. */
   .matrix-wrapper {
-    overflow: visible;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-    background: transparent;
+    overflow-x: hidden;
   }
 
   .matrix-table {
-    display: block;
+    display: table;
     width: 100%;
     min-width: 0;
-    font-size: 0.9rem;
+    table-layout: fixed;
+    font-size: 0.85rem;
   }
 
   .matrix-table thead {
-    display: none;
+    display: table-header-group;
   }
 
   .matrix-table tbody {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    display: table-row-group;
   }
 
   .matrix-tr {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 6px;
-    padding: 10px;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    background: #fff;
+    display: table-row;
   }
 
   .matrix-tr.row-answered {
-    background: #fffaf5;
-    border-color: #fed7aa;
+    background: #fff7ed;
   }
 
   .matrix-row-title {
-    grid-column: 1 / -1;
-    padding: 0 2px 4px;
-    font-size: 0.95rem;
-    font-weight: 650;
-    line-height: 1.35;
+    display: table-cell;
+    width: 32%;
+    min-width: 0;
+    padding: 10px 8px;
+    font-size: 0.83rem;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .col-corner {
+    width: 32%;
+    min-width: 0;
+    padding-left: 8px !important;
+    font-size: 0.66rem;
+  }
+
+  .col-scale {
+    width: 13.6%;
+    min-width: 0;
+    padding: 8px 1px;
+  }
+
+  .scale-header-hint {
+    display: none;
   }
 
   .matrix-td {
-    display: flex;
+    display: table-cell;
     min-width: 0;
-    min-height: 48px;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    padding: 4px 2px;
-    border: 1px solid #e2e8f0;
-    border-radius: 9px;
-    background: #f8fafc;
+    padding: 12px 0;
+    text-align: center;
+    vertical-align: middle;
     cursor: pointer;
   }
 
-  .matrix-td:nth-child(2)::before { content: '1'; }
-  .matrix-td:nth-child(3)::before { content: '2'; }
-  .matrix-td:nth-child(4)::before { content: '3'; }
-  .matrix-td:nth-child(5)::before { content: '4'; }
-  .matrix-td:nth-child(6)::before { content: '5'; }
-
   .matrix-td::before {
-    color: #475569;
-    font-size: 0.9rem;
-    font-weight: 700;
+    content: none;
   }
 
   .matrix-td:has(.grid-radio-circle.active) {
-    border-color: #f97316;
     background: #fff7ed;
   }
 
   .grid-radio-circle {
-    width: 16px;
-    height: 16px;
-    flex: 0 0 16px;
-  }
-
-  .matrix-td:has(.grid-radio-circle.active)::before {
-    color: #c2410c;
+    width: 20px;
+    height: 20px;
   }
 
   .grid-req-footer {
@@ -4073,19 +4061,17 @@ onBeforeUnmount(() => {
   }
 
   .matrix-tr {
-    gap: 4px;
-    padding: 8px;
+    padding: 0;
   }
 
   .matrix-td {
-    min-height: 46px;
-    gap: 3px;
+    padding: 12px 0;
   }
 
   .grid-radio-circle {
-    width: 14px;
-    height: 14px;
-    flex-basis: 14px;
+    width: 20px;
+    height: 20px;
+    flex-basis: 20px;
   }
 }
 </style>
