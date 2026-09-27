@@ -66,16 +66,21 @@ export const getImagePath = (item?: { imageName?: string | null }) => {
   if (/^(https?:\/\/|data:|blob:)/i.test(imageName)) {
     return imageName
   }
+  const base = getApiBase()
   if (imageName.startsWith('/')) {
-    const base = getApiBase()
     if (/^\/uploads\//i.test(imageName) && base) {
       return `${base}${imageName}`
     }
     return imageName
   }
-  const base = getApiBase()
-  // New and legacy uploads use a generated 32-character filename. Seeded images ship with the frontend.
-  if (/^[a-f0-9]{32}\.(?:jpg|jpeg|png|webp)$/i.test(imageName)) {
+  if (/^uploads\//i.test(imageName)) {
+    return base ? `${base}/${imageName}` : `/${imageName}`
+  }
+  // Uploaded images: generated 32-to-36 char UUIDs, or any jpg/png (all bundled assets are webp)
+  if (
+    /^[a-f0-9-]{32,36}\.(?:jpg|jpeg|png|webp)$/i.test(imageName) ||
+    /\.(?:jpg|jpeg|png)$/i.test(imageName)
+  ) {
     return base ? `${base}/uploads/${imageName}` : `/uploads/${imageName}`
   }
   if (PHOTOS_NOT_BUNDLED.has(imageName)) return '/items/photo-unavailable.svg'

@@ -1,5 +1,6 @@
 package com.example.survey.repository;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -14,9 +15,25 @@ public class UploadedImageRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    @PostConstruct
+    public void init() {
+        jdbcTemplate.execute("""
+            CREATE TABLE IF NOT EXISTS uploaded_images (
+                filename VARCHAR(255) PRIMARY KEY,
+                content_type VARCHAR(50) NOT NULL,
+                content BYTEA NOT NULL,
+                uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """);
+    }
+
     public void save(String filename, String contentType, byte[] content) {
-        jdbcTemplate.update(
-                "INSERT INTO uploaded_images (filename, content_type, content) VALUES (?, ?, ?)",
+        jdbcTemplate.update("""
+                INSERT INTO uploaded_images (filename, content_type, content)
+                VALUES (?, ?, ?)
+                ON CONFLICT (filename) DO UPDATE
+                SET content_type = EXCLUDED.content_type, content = EXCLUDED.content
+                """,
                 filename, contentType, content);
     }
 
