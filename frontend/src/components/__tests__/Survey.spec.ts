@@ -71,6 +71,52 @@ describe('Survey.vue', () => {
     expect(wrapper.find('.welcome-screen').exists()).toBe(true)
   })
 
+  it('preloads upcoming photos before moving to the next item', async () => {
+    const requested: string[] = []
+    const originalImage = globalThis.Image
+    vi.stubGlobal(
+      'Image',
+      class {
+        decoding = ''
+        onerror: (() => void) | null = null
+        decode = () => Promise.resolve()
+        set src(path: string) {
+          requested.push(path)
+        }
+      },
+    )
+    ;(axios.get as any).mockImplementation((url: string) =>
+      Promise.resolve({
+        data:
+          url === '/menu-items'
+            ? mockMenuItems
+                .slice(0, 5)
+                .map((item, index) => ({ ...item, imageName: `photo-${index}.webp` }))
+            : [],
+      }),
+    )
+
+    try {
+      const wrapper = mount(Survey)
+      await flushPromises()
+      expect(requested).toEqual([
+        '/items/previews/photo-0.webp',
+        '/items/previews/photo-1.webp',
+        '/items/previews/photo-2.webp',
+      ])
+
+      ;(wrapper.vm as any).nextItem()
+      expect(requested).toEqual([
+        '/items/previews/photo-0.webp',
+        '/items/previews/photo-1.webp',
+        '/items/previews/photo-2.webp',
+        '/items/previews/photo-3.webp',
+      ])
+    } finally {
+      vi.stubGlobal('Image', originalImage)
+    }
+  })
+
   it('starts survey when button is clicked and shows Section 1 Privacy Notice', async () => {
     const wrapper = mount(Survey)
     expect(wrapper.find('.welcome-screen').exists()).toBe(true)

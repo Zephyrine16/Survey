@@ -2,6 +2,10 @@
 
 This template should help get you started developing with Vue 3 in Vite.
 
+## Menu photo previews
+
+Survey cards use smaller WebP files from `public/items/previews/`; the zoom view uses the originals in `public/items/`. After adding or replacing bundled menu photos, run `npm run generate:item-previews` and commit the generated previews with the originals.
+
 ## Recommended IDE Setup
 
 [VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).

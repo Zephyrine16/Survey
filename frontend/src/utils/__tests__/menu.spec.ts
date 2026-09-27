@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { existsSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import axios from 'axios'
-import { getImagePath } from '../menu'
+import { getImagePath, getSurveyImagePath } from '../menu'
 
 describe('getImagePath', () => {
   const TEST_BASE = 'http://localhost:8080'
@@ -28,6 +28,15 @@ describe('getImagePath', () => {
     expect(getImagePath({ imageName: filename })).toBe(`${TEST_BASE}/uploads/${filename}`)
   })
 
+  it('uses compact previews for bundled survey photos and originals for uploaded photos', () => {
+    expect(getSurveyImagePath({ imageName: 'mango-waffle.webp' })).toBe(
+      '/items/previews/mango-waffle.webp',
+    )
+    expect(getSurveyImagePath({ imageName: '0123456789abcdef0123456789abcdef.png' })).toBe(
+      `${TEST_BASE}/uploads/0123456789abcdef0123456789abcdef.png`,
+    )
+  })
+
   it('supports absolute upload paths and remote image URLs', () => {
     expect(getImagePath({ imageName: '/uploads/photo.png' })).toBe(`${TEST_BASE}/uploads/photo.png`)
     expect(getImagePath({ imageName: 'https://example.com/photo.png' })).toBe(
@@ -49,6 +58,10 @@ describe('getImagePath', () => {
       const imagePath = getImagePath({ imageName })
       expect(imagePath, item.name).toMatch(/^\/items\//)
       expect(existsSync(join(publicPath, imagePath.slice(1))), item.name).toBe(true)
+      const previewPath = getSurveyImagePath({ imageName })
+      if (previewPath.endsWith('.webp')) {
+        expect(existsSync(join(publicPath, previewPath.slice(1))), item.name).toBe(true)
+      }
     }
   })
 })
