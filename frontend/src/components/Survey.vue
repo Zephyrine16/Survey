@@ -18,11 +18,6 @@
         <button class="primary-btn pulse" @click="hasStarted = true">
           Start the Survey &rarr;
         </button>
-        <div class="welcome-admin-box">
-          <a href="/admin" class="welcome-admin-link">
-            🔐 Admin Portal
-          </a>
-        </div>
       </div>
     </div>
 
@@ -32,7 +27,6 @@
           <div class="logo">
             <span class="logo-icon">🍴</span>
             <h1>Food Preference Survey</h1>
-            <a href="/admin" class="nav-admin-link" title="Admin Portal">🔐</a>
           </div>
 
           <div class="header-actions">
@@ -1509,49 +1503,6 @@ onBeforeUnmount(() => {
   color: #0f172a;
   font-weight: 700;
 }
-.nav-admin-link {
-  text-decoration: none;
-  font-size: 0.85rem;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  color: #475569;
-}
-.nav-admin-link:hover {
-  background: #fff7ed;
-  border-color: #f97316;
-  color: #ea580c;
-}
-.welcome-admin-box {
-  margin-top: 18px;
-  text-align: center;
-}
-.welcome-admin-link {
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  background: rgba(15, 23, 42, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  transition: all 0.2s ease;
-}
-.welcome-admin-link:hover {
-  background: rgba(15, 23, 42, 0.7);
-  color: white;
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
 /* HEADER ACTIONS */
 .header-actions {
   display: flex;
