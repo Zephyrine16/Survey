@@ -333,9 +333,11 @@
                 >
                   <img
                     v-if="currentItem?.imageName"
-                    :src="getImagePath(currentItem)"
+                    :src="getSurveyImagePath(currentItem)"
                     :alt="currentItem?.name ?? 'Menu item'"
                     class="cover-img-el"
+                    loading="eager"
+                    fetchpriority="high"
                     @error="($event.target as HTMLImageElement).style.display = 'none'"
                   />
                   <div v-if="currentItem?.imageName" class="zoom-pill-overlay">
@@ -365,7 +367,7 @@
               <div class="mobile-sticky-left">
                 <img
                   v-if="currentItem?.imageName"
-                  :src="getImagePath(currentItem)"
+                  :src="getSurveyImagePath(currentItem)"
                   :alt="currentItem?.name"
                   class="mobile-sticky-thumb"
                   @error="($event.target as HTMLImageElement).style.display = 'none'"
@@ -844,7 +846,7 @@ import {
   SECTION_2_WEATHER_ROWS,
   RATING_SCALE_LEVELS,
 } from '../config/constants'
-import { getCategoryPillClass, getImagePath, getItemDescription } from '../utils/menu'
+import { getCategoryPillClass, getImagePath, getSurveyImagePath, getItemDescription } from '../utils/menu'
 
 // --- State ---
 const hasStarted = ref(false)
@@ -934,6 +936,29 @@ const openZoomModal = () => {
 
 const menuItems = ref<any[]>([])
 const currentItemIndex = ref(0)
+const preloadedPhotoPaths = new Set<string>()
+
+const preloadItemPhotos = (startIndex: number, count = 3) => {
+  for (
+    let index = startIndex;
+    index < Math.min(startIndex + count, menuItems.value.length);
+    index++
+  ) {
+    const path = getSurveyImagePath(menuItems.value[index])
+    if (!path || preloadedPhotoPaths.has(path)) continue
+
+    const photo = new Image()
+    photo.decoding = 'async'
+    photo.fetchPriority = index === 0 && startIndex === 0 ? 'high' : 'low'
+    photo.onerror = () => preloadedPhotoPaths.delete(path)
+    preloadedPhotoPaths.add(path)
+    photo.src = path
+    // Fetch and decode before the item is shown, so switching items needs no image work.
+    if (typeof photo.decode === 'function') {
+      void photo.decode().catch(() => preloadedPhotoPaths.delete(path))
+    }
+  }
+}
 
 // Answers Dictionary: { itemId: { moods: { moodId: rating }, weather: { weatherId: rating } } }
 const answers = ref<
@@ -1129,6 +1154,7 @@ const fetchMenuItems = async () => {
     const response = await axios.get('/menu-items')
     const allItems = shuffleArray(response.data ?? [])
     menuItems.value = allItems.slice(0, SURVEY_ITEM_LIMIT)
+    preloadItemPhotos(0)
   } catch (error) {
     console.error('Error fetching menu items:', error)
   }
@@ -1148,6 +1174,7 @@ const checkSurveyLimit = async () => {
 const nextItem = () => {
   if (currentItemIndex.value < menuItems.value.length - 1) {
     currentItemIndex.value++
+    preloadItemPhotos(currentItemIndex.value + 2, 1)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 }

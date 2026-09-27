@@ -87,6 +87,13 @@ export const getImagePath = (item?: { imageName?: string | null }) => {
   return `/items/${encodeURIComponent(BUNDLED_IMAGE_ALIASES[imageName] ?? imageName)}`
 }
 
+export const getSurveyImagePath = (item?: { imageName?: string | null }) => {
+  const path = getImagePath(item)
+  return path.startsWith('/items/') && path.endsWith('.webp')
+    ? path.replace('/items/', '/items/previews/')
+    : path
+}
+
 export const getItemDescription = (item?: { name?: string; description?: string } | null): string => {
   if (!item) return ''
   if (item.description && item.description.trim()) {
