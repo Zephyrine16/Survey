@@ -1684,7 +1684,6 @@ export interface SurveyResponseDetail {
 
 //Security State
 const isAuthenticated = ref(false)
-const adminToken = ref<string | null>(null)
 const username = ref('')
 const password = ref('')
 const loginError = ref('')
@@ -1700,15 +1699,15 @@ const handleLogin = async () => {
       password: password.value,
     })
 
-    const token = response.data.token
-    adminToken.value = token
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('admin_token', token)
+    const token = response.data?.token
+    if (typeof token !== 'string' || !token) {
+      throw new Error('Admin login did not return a token')
     }
 
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
 
     isAuthenticated.value = true
+    password.value = ''
     await fetchMenuItems()
     await fetchQuestions()
     await fetchStats()
@@ -1722,10 +1721,6 @@ const handleLogin = async () => {
 const handleLogout = async () => {
   showLogoutModal.value = false
 
-  adminToken.value = null
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('admin_token')
-  }
   delete axios.defaults.headers.common['Authorization']
   isAuthenticated.value = false
 
@@ -2905,7 +2900,7 @@ const executeDeleteDimension = async () => {
   }
 }
 
-onMounted(async () => {
+onMounted(() => {
   document.addEventListener('click', handleClickOutsideCategoryDropdown)
   securityInterceptor = axios.interceptors.response.use(
     (response) => response,
@@ -2919,10 +2914,6 @@ onMounted(async () => {
         isDeleteAll
       if (!skipRedirect && error.response && (error.response.status === 401 || error.response.status === 403)) {
         console.warn('Session expired! Returning to login screen...')
-        adminToken.value = null
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('admin_token')
-        }
         delete axios.defaults.headers.common['Authorization']
         isAuthenticated.value = false
       }
@@ -2930,26 +2921,20 @@ onMounted(async () => {
     },
   )
 
-  // Restore authenticated session from localStorage if present
+  // Require a fresh login after every page load. Remove tokens saved by older releases.
+  delete axios.defaults.headers.common['Authorization']
   if (typeof window !== 'undefined') {
-    const savedToken = localStorage.getItem('admin_token')
-    if (savedToken) {
-      adminToken.value = savedToken
-      axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`
-      isAuthenticated.value = true
-      try {
-        await Promise.all([fetchMenuItems(), fetchQuestions(), fetchStats()])
-      } catch (err) {
-        console.warn('Failed to load initial admin data with saved token:', err)
-      }
-    } else {
-      isAuthenticated.value = false
+    try {
+      localStorage.removeItem('admin_token')
+    } catch {
+      // Login still works when browser storage is unavailable.
     }
   }
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutsideCategoryDropdown)
+  delete axios.defaults.headers.common['Authorization']
   if (securityInterceptor != null) {
     axios.interceptors.response.eject(securityInterceptor)
   }
