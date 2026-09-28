@@ -23,7 +23,7 @@ public class SurveyProperties {
 
     @NotNull
     @PositiveOrZero
-    private Long itemRespondentLimit = 30L;
+    private Long itemRespondentLimit = 35L;
 
     @NotNull
     @Positive
