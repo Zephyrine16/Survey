@@ -443,7 +443,7 @@
                 </div>
 
                 <div class="grid-req-footer">
-                  <span class="req-asterisk">*</span> Require at least 1 response.
+                  <span class="req-asterisk">*</span> Require a response in each row.
                 </div>
               </div>
 
@@ -507,7 +507,7 @@
                 </div>
 
                 <div class="grid-req-footer">
-                  <span class="req-asterisk">*</span> Require at least 1 response.
+                  <span class="req-asterisk">*</span> Require a response in each row.
                 </div>
               </div>
 
@@ -1069,16 +1069,22 @@ const setWeatherAnswer = (itemId: number | undefined, weatherId: string, rating:
 const isMoodComplete = (itemId: number | undefined): boolean => {
   if (!itemId || !answers.value[itemId] || !answers.value[itemId].moods) return false
   const itemMoods = answers.value[itemId].moods!
-  return Object.values(itemMoods).some(
-    (val) => val !== undefined && val !== null,
+  return (
+    moodRows.value.length > 0 &&
+    moodRows.value.every(
+      (row) => itemMoods[row.id] !== undefined && itemMoods[row.id] !== null,
+    )
   )
 }
 
 const isWeatherComplete = (itemId: number | undefined): boolean => {
   if (!itemId || !answers.value[itemId] || !answers.value[itemId].weather) return false
   const itemWeather = answers.value[itemId].weather!
-  return Object.values(itemWeather).some(
-    (val) => val !== undefined && val !== null,
+  return (
+    weatherRows.value.length > 0 &&
+    weatherRows.value.every(
+      (row) => itemWeather[row.id] !== undefined && itemWeather[row.id] !== null,
+    )
   )
 }
 
