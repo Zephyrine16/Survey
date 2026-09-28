@@ -8,7 +8,14 @@ enableAutoUnmount(afterEach)
 vi.mock('axios')
 
 const mockMenuItems = [
-  { id: 101, name: 'Chicken Alfredo', category: 'PASTA', price: 220, imageName: 'chicken_alfredo.jpg' },
+  {
+    id: 101,
+    name: 'Chicken Alfredo',
+    category: 'PASTA',
+    price: 220,
+    imageName: 'chicken_alfredo.jpg',
+    description: 'Custom Chicken Alfredo description from the menu record.',
+  },
   { id: 102, name: 'Aglio e Olio', category: 'PASTA', price: 180, imageName: null },
   { id: 103, name: 'Carbonara', category: 'PASTA', price: 210, imageName: null },
   { id: 104, name: 'Spaghetti', category: 'PASTA', price: 190, imageName: null },
@@ -265,7 +272,7 @@ describe('Survey.vue', () => {
     expect(wrapper.find('.item-tag-pill').text()).toContain('MENU ITEM 1')
     expect(wrapper.text()).toContain('Chicken Alfredo')
     expect(wrapper.find('.desc-text').text()).toBe(
-      'Creamy pasta with chicken and Alfredo sauce.',
+      'Custom Chicken Alfredo description from the menu record.',
     )
 
     // Verify Question 1 — Mood Association
@@ -364,9 +371,8 @@ describe('Survey.vue', () => {
 
     expect(wrapper.find('.item-tag-pill').text()).toContain('MENU ITEM 2')
     expect(wrapper.text()).toContain('Aglio e Olio')
-    expect(wrapper.find('.desc-text').text()).toBe(
-      'Classic pasta tossed in sautéed garlic, extra virgin olive oil, and chili flakes.',
-    )
+    expect(wrapper.find('.desc-text').exists()).toBe(false)
+    expect(wrapper.find('.desc-tag').exists()).toBe(false)
     expect(wrapper.text()).toContain(
       'How suitable is Aglio e Olio for each of the following moods?',
     )
