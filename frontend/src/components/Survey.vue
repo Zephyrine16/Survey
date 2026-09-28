@@ -443,7 +443,7 @@
                 </div>
 
                 <div class="grid-req-footer">
-                  <span class="req-asterisk">*</span> Require a response in each row.
+                  <span class="req-asterisk">*</span> Require at least 1 response.
                 </div>
               </div>
 
@@ -507,7 +507,7 @@
                 </div>
 
                 <div class="grid-req-footer">
-                  <span class="req-asterisk">*</span> Require a response in each row.
+                  <span class="req-asterisk">*</span> Require at least 1 response.
                 </div>
               </div>
 
@@ -1069,16 +1069,16 @@ const setWeatherAnswer = (itemId: number | undefined, weatherId: string, rating:
 const isMoodComplete = (itemId: number | undefined): boolean => {
   if (!itemId || !answers.value[itemId] || !answers.value[itemId].moods) return false
   const itemMoods = answers.value[itemId].moods!
-  return moodRows.value.every(
-    (row) => itemMoods[row.id] !== undefined && itemMoods[row.id] !== null,
+  return Object.values(itemMoods).some(
+    (val) => val !== undefined && val !== null,
   )
 }
 
 const isWeatherComplete = (itemId: number | undefined): boolean => {
   if (!itemId || !answers.value[itemId] || !answers.value[itemId].weather) return false
   const itemWeather = answers.value[itemId].weather!
-  return weatherRows.value.every(
-    (row) => itemWeather[row.id] !== undefined && itemWeather[row.id] !== null,
+  return Object.values(itemWeather).some(
+    (val) => val !== undefined && val !== null,
   )
 }
 
@@ -1154,10 +1154,13 @@ const shuffleArray = <T>(items: T[]) => {
 
 const fetchMenuItems = async () => {
   try {
-    const response = await axios.get('/menu-items')
+    const response = await axios.get('/menu-items?availableOnly=true')
     const allItems = shuffleArray(response.data ?? [])
     menuItems.value = allItems.slice(0, SURVEY_ITEM_LIMIT)
     preloadItemPhotos(0)
+    if (menuItems.value.length === 0) {
+      showLimitModal.value = true
+    }
   } catch (error) {
     console.error('Error fetching menu items:', error)
   }

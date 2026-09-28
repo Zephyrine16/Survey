@@ -155,6 +155,14 @@ public class SurveyController {
         long limit = surveyProperties.getParticipantLimit();
         boolean isFull = limit > 0 && (totalParticipants != null && totalParticipants >= limit);
 
+        long itemLimit = surveyProperties.getItemRespondentLimit();
+        if (!isFull && itemLimit > 0 && menuItemRepository.count() > 0) {
+            long availableCount = menuItemRepository.countAvailableMenuItems(itemLimit);
+            if (availableCount == 0) {
+                isFull = true;
+            }
+        }
+
         return ResponseEntity.ok(java.util.Map.of(
                 "isFull", isFull,
                 "currentCount", totalParticipants != null ? totalParticipants : 0

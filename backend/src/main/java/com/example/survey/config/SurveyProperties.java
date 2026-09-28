@@ -22,6 +22,10 @@ public class SurveyProperties {
     private Long participantLimit;
 
     @NotNull
+    @PositiveOrZero
+    private Long itemRespondentLimit = 30L;
+
+    @NotNull
     @Positive
     private Integer textResponseMaxLength;
 
