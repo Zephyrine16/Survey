@@ -299,7 +299,7 @@
                   </span>
                 </div>
                 <h2 class="summary-title">{{ menuItem?.name }}</h2>
-                <p class="summary-desc">{{ getItemDescription(menuItem) }}</p>
+                <p v-if="getItemDescription(menuItem)" class="summary-desc">{{ getItemDescription(menuItem) }}</p>
               </div>
             </div>
             <div class="summary-metrics">
@@ -895,8 +895,8 @@
 
             <div class="description-preview">
               <span class="description-preview-label">SURVEY PREVIEW</span>
-              <p>{{ descriptionDraft.trim() || getItemDescription(descriptionItem) }}</p>
-              <span v-if="!descriptionDraft.trim()" class="description-fallback-note">Showing the current default description</span>
+              <p v-if="descriptionDraft.trim()">{{ descriptionDraft.trim() }}</p>
+              <span v-else class="description-fallback-note">No description will appear on the survey until you save one.</span>
             </div>
           </section>
 

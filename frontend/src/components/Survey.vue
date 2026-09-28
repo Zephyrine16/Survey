@@ -346,7 +346,7 @@
                 </div>
               </div>
 
-              <div class="item-desc-panel">
+              <div v-if="getItemDescription(currentItem)" class="item-desc-panel">
                 <span class="desc-tag">Description:</span>
                 <p class="desc-text">{{ getItemDescription(currentItem) }}</p>
               </div>
