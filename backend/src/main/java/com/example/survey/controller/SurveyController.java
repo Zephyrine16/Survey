@@ -3,6 +3,7 @@ package com.example.survey.controller;
 import com.example.survey.config.SurveyProperties;
 import com.example.survey.dto.CategorySubmissionDTO;
 import com.example.survey.dto.MenuItemRequest;
+import com.example.survey.dto.MenuItemDescriptionRequest;
 import com.example.survey.dto.OptionRequest;
 import com.example.survey.dto.QuestionRequest;
 import com.example.survey.dto.DashboardStatsDTO;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -276,6 +278,20 @@ public class SurveyController {
 
         com.example.survey.model.MenuItem savedItem = menuItemRepository.save(itemToUpdate);
         return ResponseEntity.ok(savedItem);
+    }
+
+    @PatchMapping("/api/admin/menu-items/{id}/description")
+    public ResponseEntity<com.example.survey.model.MenuItem> updateMenuItemDescription(
+            @PathVariable Long id,
+            @Valid @RequestBody MenuItemDescriptionRequest request) {
+        return menuItemRepository.findById(id)
+                .map(item -> {
+                    String description = request.getDescription();
+                    item.setDescription(description == null || description.isBlank() ? null : description.trim());
+                    item.setDescriptionUpdatedAt(LocalDateTime.now());
+                    return ResponseEntity.ok(menuItemRepository.save(item));
+                })
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
 

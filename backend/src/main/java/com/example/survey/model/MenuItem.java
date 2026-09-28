@@ -22,4 +22,10 @@ public class MenuItem {
 
     @Column(name = "image_name")
     private String imageName;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "description_updated_at")
+    private java.time.LocalDateTime descriptionUpdatedAt;
 }
