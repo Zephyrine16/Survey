@@ -311,11 +311,11 @@ describe('Survey.vue', () => {
       expect(wrapper.text()).toContain(weather)
     })
 
-    // Check "Require at least 1 response." notices
+    // Check "Require a response in each row." notices
     const reqFooters = wrapper.findAll('.grid-req-footer')
     expect(reqFooters.length).toBe(2)
-    expect(reqFooters[0].text()).toContain('Require at least 1 response.')
-    expect(reqFooters[1].text()).toContain('Require at least 1 response.')
+    expect(reqFooters[0].text()).toContain('Require a response in each row.')
+    expect(reqFooters[1].text()).toContain('Require a response in each row.')
 
     // Next item button should be disabled because not all rows are answered
     const nextBtn = wrapper.find('.nav-btn.primary')
@@ -658,7 +658,7 @@ describe('Survey.vue', () => {
     expect(document.body.querySelector('.zoom-modal-card')).toBeNull()
   })
 
-  it('unlocks Next Item button when at least 1 mood and 1 weather are answered without requiring all rows', async () => {
+  it('requires all mood and weather rows to be answered before unlocking Next Item button', async () => {
     const wrapper = mount(Survey)
     await flushPromises()
 
@@ -681,16 +681,29 @@ describe('Survey.vue', () => {
     expect(nextBtn.attributes('disabled')).toBeDefined()
 
     // Answer ONLY 1 mood row out of 7
-    const firstMoodRow = tables[0].findAll('tbody tr')[0]
-    await firstMoodRow.findAll('.matrix-td')[2].trigger('click')
+    const moodRows = tables[0].findAll('tbody tr')
+    await moodRows[0].findAll('.matrix-td')[2].trigger('click')
+    expect(nextBtn.attributes('disabled')).toBeDefined()
+
+    // Answer remaining mood rows (all 7 mood rows now answered)
+    for (let i = 1; i < moodRows.length; i++) {
+      await moodRows[i].findAll('.matrix-td')[2].trigger('click')
+    }
     // Still disabled because 0 weather rows answered
     expect(nextBtn.attributes('disabled')).toBeDefined()
 
     // Answer ONLY 1 weather row out of 3
-    const firstWeatherRow = tables[1].findAll('tbody tr')[0]
-    await firstWeatherRow.findAll('.matrix-td')[3].trigger('click')
+    const weatherRows = tables[1].findAll('tbody tr')
+    await weatherRows[0].findAll('.matrix-td')[3].trigger('click')
+    // Still disabled because not all weather rows are answered
+    expect(nextBtn.attributes('disabled')).toBeDefined()
 
-    // Now unlocked with only 1 mood and 1 weather answered!
+    // Answer remaining weather rows
+    for (let i = 1; i < weatherRows.length; i++) {
+      await weatherRows[i].findAll('.matrix-td')[3].trigger('click')
+    }
+
+    // Now unlocked because all mood and weather rows are answered!
     expect(nextBtn.attributes('disabled')).toBeUndefined()
   })
 
