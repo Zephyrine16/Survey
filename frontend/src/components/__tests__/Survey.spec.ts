@@ -47,7 +47,7 @@ describe('Survey.vue', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.99999)
 
     ;(axios.get as any).mockImplementation((url: string) => {
-      if (url === '/menu-items') {
+      if (url.startsWith('/menu-items')) {
         return Promise.resolve({ data: [...mockMenuItems] })
       }
       if (url === '/questions/all') {
@@ -88,7 +88,7 @@ describe('Survey.vue', () => {
     ;(axios.get as any).mockImplementation((url: string) =>
       Promise.resolve({
         data:
-          url === '/menu-items'
+          url.startsWith('/menu-items')
             ? mockMenuItems
                 .slice(0, 5)
                 .map((item, index) => ({ ...item, imageName: `photo-${index}.webp` }))
@@ -304,11 +304,11 @@ describe('Survey.vue', () => {
       expect(wrapper.text()).toContain(weather)
     })
 
-    // Check "Require a response in each row" notices
+    // Check "Require at least 1 response." notices
     const reqFooters = wrapper.findAll('.grid-req-footer')
     expect(reqFooters.length).toBe(2)
-    expect(reqFooters[0].text()).toContain('Require a response in each row.')
-    expect(reqFooters[1].text()).toContain('Require a response in each row.')
+    expect(reqFooters[0].text()).toContain('Require at least 1 response.')
+    expect(reqFooters[1].text()).toContain('Require at least 1 response.')
 
     // Next item button should be disabled because not all rows are answered
     const nextBtn = wrapper.find('.nav-btn.primary')
@@ -475,7 +475,7 @@ describe('Survey.vue', () => {
     ]
 
     ;(axios.get as any).mockImplementation((url: string) => {
-      if (url === '/menu-items') return Promise.resolve({ data: [mockMenuItems[0]] })
+      if (url.startsWith('/menu-items')) return Promise.resolve({ data: [mockMenuItems[0]] })
       if (url === '/questions/all') return Promise.resolve({ data: customQuestions })
       if (url === '/api/stats/survey-status') return Promise.resolve({ data: { isFull: false } })
       return Promise.resolve({ data: [] })
@@ -650,6 +650,56 @@ describe('Survey.vue', () => {
     await flushPromises()
     await wrapper.vm.$nextTick()
     expect(document.body.querySelector('.zoom-modal-card')).toBeNull()
+  })
+
+  it('unlocks Next Item button when at least 1 mood and 1 weather are answered without requiring all rows', async () => {
+    const wrapper = mount(Survey)
+    await flushPromises()
+
+    // Start Survey -> Section 1 -> Section 2 -> Section 3
+    await wrapper.find('.primary-btn.pulse').trigger('click')
+    await wrapper.find('.consent-card').trigger('click')
+    await wrapper.find('.privacy-proceed-btn').trigger('click')
+    const demoButtons = wrapper.findAll('.demo-opt-btn')
+    await demoButtons[0].trigger('click')
+    await demoButtons[5].trigger('click')
+    await wrapper.find('.demo-proceed-btn').trigger('click')
+    ;(wrapper.vm as any).showInstructionsModal = false
+    await wrapper.vm.$nextTick()
+    await flushPromises()
+
+    const tables = wrapper.findAll('.matrix-table')
+    const nextBtn = wrapper.find('.nav-btn.primary')
+
+    // Initially disabled
+    expect(nextBtn.attributes('disabled')).toBeDefined()
+
+    // Answer ONLY 1 mood row out of 7
+    const firstMoodRow = tables[0].findAll('tbody tr')[0]
+    await firstMoodRow.findAll('.matrix-td')[2].trigger('click')
+    // Still disabled because 0 weather rows answered
+    expect(nextBtn.attributes('disabled')).toBeDefined()
+
+    // Answer ONLY 1 weather row out of 3
+    const firstWeatherRow = tables[1].findAll('tbody tr')[0]
+    await firstWeatherRow.findAll('.matrix-td')[3].trigger('click')
+
+    // Now unlocked with only 1 mood and 1 weather answered!
+    expect(nextBtn.attributes('disabled')).toBeUndefined()
+  })
+
+  it('displays survey limit modal if no available menu items are returned', async () => {
+    ;(axios.get as any).mockImplementation((url: string) => {
+      if (url.startsWith('/menu-items')) {
+        return Promise.resolve({ data: [] })
+      }
+      return Promise.resolve({ data: [] })
+    })
+
+    const wrapper = mount(Survey)
+    await flushPromises()
+
+    expect((wrapper.vm as any).showLimitModal).toBe(true)
   })
 })
 

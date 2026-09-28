@@ -63,7 +63,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/ping").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/menu-items", "/questions/**", "/api/stats/survey-status").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/menu-items", "/menu-items/**", "/questions/**", "/api/stats/survey-status").permitAll()
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                         .requestMatchers(HttpMethod.HEAD, "/uploads/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/submit-category", "/api/admin/login").permitAll()
