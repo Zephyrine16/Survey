@@ -82,6 +82,14 @@
         </button>
         <button
           class="tab-btn"
+          :class="{ active: activeAdminTab === 'descriptions' }"
+          @click="activeAdminTab = 'descriptions'"
+        >
+          <span class="tab-btn-icon">✎</span>
+          <span class="tab-btn-text">Item Descriptions</span>
+        </button>
+        <button
+          class="tab-btn"
           :class="{ active: activeAdminTab === 'questions' }"
           @click="activeAdminTab = 'questions'"
         >
@@ -291,7 +299,7 @@
                   </span>
                 </div>
                 <h2 class="summary-title">{{ menuItem?.name }}</h2>
-                <p class="summary-desc">{{ getItemDescription(menuItem?.name) }}</p>
+                <p class="summary-desc">{{ getItemDescription(menuItem) }}</p>
               </div>
             </div>
             <div class="summary-metrics">
@@ -818,6 +826,81 @@
               Add your first item
             </button>
           </div>
+        </div>
+      </div>
+
+      <div v-if="activeAdminTab === 'descriptions'" class="manager-layout fade-in">
+        <div class="manager-header-row item-manager-header">
+          <div>
+            <h2>Item Descriptions</h2>
+            <p class="manager-description">Write the descriptions shown with each item in the public survey.</p>
+          </div>
+          <span class="result-count">{{ menuItems.length }} items</span>
+        </div>
+
+        <div class="description-editor-layout">
+          <aside class="description-item-list" aria-label="Menu items">
+            <label class="search-field description-search">
+              <span aria-hidden="true">⌕</span>
+              <span class="sr-only">Search items</span>
+              <input v-model="descriptionSearch" type="search" placeholder="Find an item" />
+            </label>
+            <button
+              v-for="item in filteredDescriptionItems"
+              :key="item.id"
+              type="button"
+              class="description-item-option"
+              :class="{ active: descriptionItem?.id === item.id }"
+              @click="descriptionItemId = item.id"
+            >
+              <span class="description-option-name">{{ item.name }}</span>
+              <span class="description-option-meta">{{ item.category }}</span>
+              <span class="description-status" :class="{ written: item.description?.trim() }">
+                {{ item.description?.trim() ? 'Custom description' : 'Using default' }}
+              </span>
+            </button>
+            <p v-if="filteredDescriptionItems.length === 0" class="description-list-empty">
+              No items match this search.
+            </p>
+          </aside>
+
+          <section v-if="descriptionItem" class="description-editor" aria-labelledby="description-editor-title">
+            <div class="description-editor-heading">
+              <div>
+                <span class="f-pill" :class="getPillClass(descriptionItem.category)">{{ descriptionItem.category }}</span>
+                <h3 id="description-editor-title">{{ descriptionItem.name }}</h3>
+                <p>Custom descriptions replace the default item copy on the survey.</p>
+              </div>
+              <span class="description-updated">
+                {{ descriptionItem.descriptionUpdatedAt ? `Updated ${new Date(descriptionItem.descriptionUpdatedAt).toLocaleString()}` : 'No saved edits yet' }}
+              </span>
+            </div>
+
+            <form class="description-form" @submit.prevent="saveItemDescription">
+              <label for="item-description">Description</label>
+              <textarea
+                id="item-description"
+                v-model="descriptionDraft"
+                maxlength="1000"
+                rows="7"
+                placeholder="Add a short description of the ingredients, flavor, or serving style. Leave blank to use the default description."
+              ></textarea>
+              <div class="description-form-footer">
+                <span>{{ descriptionDraft.length }} / 1000 characters</span>
+                <button type="submit" class="nav-btn orange-solid" :disabled="isSavingDescription">
+                  {{ isSavingDescription ? 'Saving…' : 'Save description' }}
+                </button>
+              </div>
+            </form>
+
+            <div class="description-preview">
+              <span class="description-preview-label">SURVEY PREVIEW</span>
+              <p>{{ descriptionDraft.trim() || getItemDescription(descriptionItem) }}</p>
+              <span v-if="!descriptionDraft.trim()" class="description-fallback-note">Showing the current default description</span>
+            </div>
+          </section>
+
+          <div v-else class="description-editor-empty">Add a menu item to start writing descriptions.</div>
         </div>
       </div>
 
@@ -1636,7 +1719,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import axios from 'axios'
 import {
   AGE_GROUP_OPTIONS,
@@ -1842,6 +1925,42 @@ const filteredManagerItems = computed(() => {
     return matchesCategory && matchesSearch
   })
 })
+
+const descriptionSearch = ref('')
+const descriptionItemId = ref<number | null>(null)
+const descriptionDraft = ref('')
+const isSavingDescription = ref(false)
+const filteredDescriptionItems = computed(() => {
+  const query = descriptionSearch.value.trim().toLowerCase()
+  return menuItems.value.filter((item) => !query || `${item.name} ${item.category}`.toLowerCase().includes(query))
+})
+const descriptionItem = computed(
+  () => menuItems.value.find((item) => item.id === descriptionItemId.value) || filteredDescriptionItems.value[0] || null,
+)
+
+watch(descriptionItem, (item) => {
+  descriptionDraft.value = item?.description || ''
+  if (item && descriptionItemId.value !== item.id) descriptionItemId.value = item.id
+}, { immediate: true })
+
+const saveItemDescription = async () => {
+  if (!descriptionItem.value) return
+  isSavingDescription.value = true
+  try {
+    const response = await axios.patch(
+      `/api/admin/menu-items/${descriptionItem.value.id}/description`,
+      { description: descriptionDraft.value },
+    )
+    const index = menuItems.value.findIndex((item) => item.id === response.data.id)
+    if (index !== -1) menuItems.value[index] = response.data
+    showToast('Item description saved.')
+  } catch (error) {
+    console.error('Failed to save item description:', error)
+    showToast('Could not save the description. Please try again.', 'error')
+  } finally {
+    isSavingDescription.value = false
+  }
+}
 
 const fetchMenuItems = async () => {
   try {
@@ -4060,7 +4179,7 @@ onUnmounted(() => {
 .admin-tabs-container {
   position: relative;
   display: inline-grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   background: #f8fafc;
   padding: 6px;
   border-radius: 12px;
@@ -4087,7 +4206,7 @@ onUnmounted(() => {
   top: 6px;
   bottom: 6px;
   left: 6px;
-  width: calc(33.333% - 4px);
+  width: calc(25% - 3px);
   background: #f97316;
   border-radius: 8px;
   transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
@@ -4099,8 +4218,197 @@ onUnmounted(() => {
 .sliding-highlight.manager {
   transform: translateX(100%);
 }
-.sliding-highlight.questions {
+.sliding-highlight.descriptions {
   transform: translateX(200%);
+}
+.sliding-highlight.questions {
+  transform: translateX(300%);
+}
+
+.description-editor-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.78fr) minmax(0, 1.7fr);
+  min-height: 520px;
+  border-top: 1px solid #e2e8f0;
+}
+.description-item-list {
+  max-height: 680px;
+  overflow-y: auto;
+  padding: 16px;
+  border-right: 1px solid #e2e8f0;
+  background: #fbfcfe;
+}
+.description-search {
+  margin-bottom: 12px;
+}
+.description-item-option {
+  display: grid;
+  width: 100%;
+  gap: 4px;
+  padding: 12px;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #334155;
+  cursor: pointer;
+}
+.description-item-option:hover {
+  background: #f1f5f9;
+}
+.description-item-option.active {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+.description-option-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+.description-option-meta,
+.description-status {
+  font-size: 0.76rem;
+  color: #64748b;
+}
+.description-status.written {
+  color: #15803d;
+}
+.description-list-empty {
+  padding: 18px 8px;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+.description-editor {
+  padding: 28px 32px;
+  min-width: 0;
+}
+.description-editor-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.description-editor-heading h3 {
+  margin: 12px 0 5px;
+  color: #0f172a;
+  font-size: 1.45rem;
+}
+.description-editor-heading p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+.description-updated {
+  color: #64748b;
+  font-size: 0.78rem;
+  text-align: right;
+  white-space: nowrap;
+}
+.description-form label {
+  display: block;
+  margin-bottom: 8px;
+  color: #334155;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+.description-form textarea {
+  display: block;
+  width: 100%;
+  min-height: 170px;
+  resize: vertical;
+  padding: 13px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  color: #1e293b;
+  font: inherit;
+  line-height: 1.55;
+  box-sizing: border-box;
+}
+.description-form textarea:focus {
+  outline: 3px solid rgba(249, 115, 22, 0.18);
+  border-color: #f97316;
+}
+.description-form-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-top: 10px;
+}
+.description-form-footer > span {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+.description-preview {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid #e2e8f0;
+}
+.description-preview-label {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.description-preview p {
+  max-width: 70ch;
+  margin: 8px 0 0;
+  color: #334155;
+  line-height: 1.6;
+}
+.description-fallback-note {
+  display: inline-block;
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 0.76rem;
+}
+.description-editor-empty {
+  grid-column: 1 / -1;
+  display: grid;
+  place-items: center;
+  min-height: 300px;
+  color: #64748b;
+}
+
+@media (max-width: 768px) {
+  .admin-tabs-container {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2px;
+  }
+  .tab-btn {
+    padding: 10px 4px;
+    font-size: 0.72rem;
+  }
+  .tab-btn-icon {
+    display: none;
+  }
+  .description-editor-layout {
+    grid-template-columns: 1fr;
+  }
+  .description-item-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    max-height: 300px;
+    border-right: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .description-search {
+    grid-column: 1 / -1;
+  }
+  .description-editor {
+    padding: 22px 18px;
+  }
+  .description-editor-heading {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .description-updated {
+    text-align: left;
+  }
 }
 
 .manager-layout {
