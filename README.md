@@ -8,7 +8,7 @@ A professional full-stack application designed for high-volume menu evaluation a
 
 ## 🌟 Project Highlights
 
-- **Dynamic Data Collection:** Custom-built survey engine with 84 curated items.
+- **Dynamic Data Collection:** Custom-built survey engine using the current menu and question options from the backend.
 - **Admin Analytics:** Real-time dashboard featuring data visualization of user sentiment.
 - **Enterprise Security:** Stateless JWT-based authentication for secure admin access.
 - **Cloud Native:** Fully containerized backend deployed on Render, frontend hosted on Vercel, with Neon.tech Serverless PostgreSQL persistence.
@@ -62,7 +62,7 @@ Before spinning up the containers, you need to set up your environment variables
    ```bash
    cp frontend/.env.example frontend/.env
    ```
-   *(Update any necessary Cloudinary or analytics variables in `frontend/.env`.)*
+   *(Set the API URL and any survey configuration variables in `frontend/.env`.)*
 
 ### 3️⃣ Run the Application
 
