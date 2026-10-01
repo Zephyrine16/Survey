@@ -8,9 +8,9 @@ Survey cards use smaller WebP files from `public/items/previews/`; the zoom view
 
 ## Instant menu snapshot
 
-`npm run build` fetches the currently available menu from `VITE_API_BASE_URL` and bundles it into the frontend. The build retries for up to three minutes if the backend is asleep. Set `VITE_API_BASE_URL` in the production frontend build environment. When it points to a live API, the build fails if it cannot fetch a current snapshot. Local builds without that variable use the checked-in snapshot.
+`npm run build` fetches the currently available menu and question options from `VITE_API_BASE_URL` and bundles both into the frontend. The build retries for up to three minutes if the backend is asleep. Set `VITE_API_BASE_URL` in the production frontend build environment. When it points to a live API, the build fails if it cannot fetch a current snapshot. Local builds without that variable use the checked-in snapshots.
 
-On page open, survey takers can rate bundled menu items immediately while the live API verifies availability. Submission waits for that verification. A successful live response refreshes the browser's saved menu for later visits and replaces unavailable items if needed.
+On page open, survey takers can rate bundled menu items with the bundled mood and weather rows immediately while the live API verifies availability. Submission waits for menu verification. A successful live response updates item details without a page reload and refreshes the browser's saved menu for later visits. Ratings remain attached to their original menu item ID if that item still exists, even if it has since reached its respondent limit. Unrated unavailable items are replaced. The row labels stay stable during the survey while live question IDs are refreshed in the background.
 
 
 ## Recommended IDE Setup
