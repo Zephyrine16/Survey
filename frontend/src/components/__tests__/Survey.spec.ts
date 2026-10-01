@@ -6,6 +6,7 @@ import Survey from '../Survey.vue'
 enableAutoUnmount(afterEach)
 
 vi.mock('axios')
+vi.mock('../../generated/menu-snapshot.json', () => ({ default: [] }))
 
 const mockMenuItems = [
   {
@@ -76,6 +77,141 @@ describe('Survey.vue', () => {
     const wrapper = mount(Survey)
     expect(wrapper.text()).toContain('Welcome to the Food Preference Survey!')
     expect(wrapper.find('.welcome-screen').exists()).toBe(true)
+  })
+
+  it('recovers from a sleeping backend without a page refresh', async () => {
+    vi.useFakeTimers()
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    let menuAttempts = 0
+    ;(axios.get as any).mockImplementation((url: string) => {
+      if (url.startsWith('/menu-items')) {
+        menuAttempts++
+        return menuAttempts === 1
+          ? Promise.reject(new Error('Render is waking up'))
+          : Promise.resolve({ data: [...mockMenuItems] })
+      }
+      if (url === '/api/stats/survey-status') {
+        return Promise.resolve({ data: { isFull: false } })
+      }
+      return Promise.resolve({ data: [...mockQuestions] })
+    })
+
+    try {
+      const wrapper = mount(Survey)
+      await Promise.resolve()
+      await wrapper.find('.primary-btn.pulse').trigger('click')
+      await wrapper.find('.consent-card').trigger('click')
+      await wrapper.find('.privacy-proceed-btn').trigger('click')
+      const demoButtons = wrapper.findAll('.demo-opt-btn')
+      await demoButtons[0].trigger('click')
+      await demoButtons[5].trigger('click')
+
+      expect(wrapper.find('.menu-load-status').text()).toContain('keep trying automatically')
+      expect(wrapper.find('.demo-proceed-btn').attributes('disabled')).toBeDefined()
+      expect((wrapper.vm as any).showLimitModal).toBe(false)
+
+      await vi.advanceTimersByTimeAsync(2000)
+      await wrapper.vm.$nextTick()
+
+      expect(menuAttempts).toBe(2)
+      expect(axios.get).toHaveBeenCalledWith('/questions/all')
+      expect(axios.get).toHaveBeenCalledWith('/api/stats/survey-status')
+      expect(wrapper.find('.menu-load-status').exists()).toBe(false)
+      expect(wrapper.find('.demo-proceed-btn').attributes('disabled')).toBeUndefined()
+      await wrapper.find('.demo-proceed-btn').trigger('click')
+      expect(wrapper.text()).toContain('Chicken Alfredo')
+      expect(wrapper.text()).toContain('Item 1 of 10')
+      wrapper.unmount()
+    } finally {
+      warning.mockRestore()
+      vi.useRealTimers()
+    }
+  })
+
+  it('shows a saved menu immediately and verifies it when the backend wakes', async () => {
+    localStorage.setItem('foodPreferenceSurvey_menu_v1', JSON.stringify({
+      apiBase: String(axios.defaults?.baseURL ?? ''),
+      savedAt: Date.now(),
+      items: [...mockMenuItems],
+    }))
+    let resolveMenu!: (value: { data: typeof mockMenuItems }) => void
+    ;(axios.get as any).mockImplementation((url: string) => {
+      if (url.startsWith('/menu-items')) {
+        return new Promise((resolve) => { resolveMenu = resolve })
+      }
+      if (url === '/api/stats/survey-status') {
+        return Promise.resolve({ data: { isFull: false } })
+      }
+      if (url === '/questions/all') {
+        return Promise.resolve({ data: [{
+          id: 1,
+          text: 'Question 1 — Mood Association: How suitable is this item?',
+          options: [{ id: 701, label: 'Relaxation', sub: '(Wants to unwind)' }],
+        }] })
+      }
+      return Promise.resolve({ data: [...mockQuestions] })
+    })
+
+    const wrapper = mount(Survey)
+    await wrapper.find('.primary-btn.pulse').trigger('click')
+    await wrapper.find('.consent-card').trigger('click')
+    await wrapper.find('.privacy-proceed-btn').trigger('click')
+    const demoButtons = wrapper.findAll('.demo-opt-btn')
+    await demoButtons[0].trigger('click')
+    await demoButtons[5].trigger('click')
+
+    expect(wrapper.find('.menu-load-status').text()).toContain('saved menu is ready')
+    expect(wrapper.find('.demo-proceed-btn').attributes('disabled')).toBeUndefined()
+    await wrapper.find('.demo-proceed-btn').trigger('click')
+    ;(wrapper.vm as any).showInstructionsModal = false
+    await wrapper.vm.$nextTick()
+    expect(wrapper.text()).toContain('Chicken Alfredo')
+    expect(wrapper.find('.menu-sync-notice').text()).toContain('saved menu')
+    const initialPhoto = wrapper.find('.cover-img-el').attributes('src')
+    ;(wrapper.vm as any).setMoodAnswer(101, 'relaxation', 4)
+    await (wrapper.vm as any).executeFinalSubmit()
+    expect(axios.post).not.toHaveBeenCalled()
+
+    resolveMenu({ data: [...mockMenuItems] })
+    await flushPromises()
+    expect(wrapper.find('.menu-sync-notice').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Chicken Alfredo')
+    expect(wrapper.find('.cover-img-el').attributes('src')).toBe(`${initialPhoto}?refresh=1`)
+    expect((wrapper.vm as any).getMoodAnswer(101, 'relaxation')).toBe(4)
+    expect((wrapper.vm as any).moodRows[0].dbOptionId).toBe(701)
+    expect((wrapper.vm as any).menuLoadState).toBe('ready')
+  })
+
+  it('replaces unavailable saved items when the live menu arrives', async () => {
+    localStorage.setItem('foodPreferenceSurvey_menu_v1', JSON.stringify({
+      apiBase: String(axios.defaults?.baseURL ?? ''),
+      savedAt: Date.now(),
+      items: [mockMenuItems[0]],
+    }))
+    let resolveMenu!: (value: { data: typeof mockMenuItems }) => void
+    ;(axios.get as any).mockImplementation((url: string) => {
+      if (url.startsWith('/menu-items')) {
+        return new Promise((resolve) => { resolveMenu = resolve })
+      }
+      if (url === '/api/stats/survey-status') {
+        return Promise.resolve({ data: { isFull: false } })
+      }
+      return Promise.resolve({ data: [...mockQuestions] })
+    })
+
+    const wrapper = mount(Survey)
+    await wrapper.find('.primary-btn.pulse').trigger('click')
+    ;(wrapper.vm as any).currentSection = 3
+    ;(wrapper.vm as any).setMoodAnswer(101, 'relaxation', 4)
+    await wrapper.vm.$nextTick()
+    expect(wrapper.text()).toContain('Chicken Alfredo')
+
+    resolveMenu({ data: [mockMenuItems[1]] })
+    await flushPromises()
+    expect(wrapper.text()).toContain('Aglio e Olio')
+    expect(wrapper.find('.menu-sync-notice').text()).toContain('Some items were replaced')
+    expect((wrapper.vm as any).answers[101]).toBeUndefined()
+    expect((wrapper.vm as any).menuLoadState).toBe('ready')
   })
 
   it('preloads upcoming photos before moving to the next item', async () => {
@@ -721,5 +857,3 @@ describe('Survey.vue', () => {
     expect((wrapper.vm as any).showLimitModal).toBe(true)
   })
 })
-
-
