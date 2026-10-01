@@ -258,6 +258,18 @@
             </div>
 
             <div class="action-footer demographic-footer">
+              <p
+                v-if="menuLoadState !== 'ready' && menuLoadState !== 'empty'"
+                class="menu-load-status"
+                role="status"
+                aria-live="polite"
+              >
+                {{ menuLoadState === 'cached'
+                  ? 'A saved menu is ready. We’re checking current availability in the background.'
+                  : menuLoadState === 'retrying'
+                    ? 'The menu server is waking up. We’ll keep trying automatically while you complete this section.'
+                    : 'Loading the menu while you complete this section…' }}
+              </p>
               <div class="demo-footer-buttons">
                 <button
                   type="button"
@@ -269,8 +281,8 @@
                 <button
                   type="button"
                   class="nav-btn primary demo-proceed-btn"
-                  :disabled="!isDemographicComplete"
-                  :class="{ 'disabled-btn': !isDemographicComplete }"
+                  :disabled="!isDemographicComplete || (menuLoadState !== 'ready' && menuLoadState !== 'cached')"
+                  :class="{ 'disabled-btn': !isDemographicComplete || (menuLoadState !== 'ready' && menuLoadState !== 'cached') }"
                   @click="proceedToSection3"
                 >
                   Continue to Section 3: Menu Evaluation &rarr;
@@ -284,6 +296,12 @@
         <!-- SECTION 3 — Menu Item Evaluation                         -->
         <!-- ======================================================== -->
         <div v-else class="rating-view fade-in">
+          <p v-if="menuLoadState === 'cached'" class="menu-sync-notice" role="status">
+            Showing a saved menu while we check current availability. You can start rating now.
+          </p>
+          <p v-if="menuUpdatedNotice" class="menu-sync-notice" role="status">
+            Menu availability changed. Some items were replaced; please review your ratings.
+          </p>
           <div class="left-pane">
             <div class="sticky-card">
               <div class="section-switch-header">
@@ -331,9 +349,13 @@
                   @click="openZoomModal"
                   :title="currentItem?.imageName ? 'Click to view full photo' : ''"
                 >
+                  <span v-if="currentItem?.imageName" class="photo-wait-label">
+                    Photo loading from the menu server…
+                  </span>
                   <img
                     v-if="currentItem?.imageName"
-                    :src="getSurveyImagePath(currentItem)"
+                    :key="`${currentItem.id}-${imageRetryToken}`"
+                    :src="getSurveyPhotoPath(currentItem)"
                     :alt="currentItem?.name ?? 'Menu item'"
                     class="cover-img-el"
                     loading="eager"
@@ -366,7 +388,8 @@
               <div class="mobile-sticky-left">
                 <img
                   v-if="currentItem?.imageName"
-                  :src="getSurveyImagePath(currentItem)"
+                  :key="`${currentItem.id}-${imageRetryToken}`"
+                  :src="getSurveyPhotoPath(currentItem)"
                   :alt="currentItem?.name"
                   class="mobile-sticky-thumb"
                   @error="($event.target as HTMLImageElement).style.display = 'none'"
@@ -751,7 +774,10 @@
             <button class="nav-btn secondary" @click="showReviewModal = false">
               Back to Survey
             </button>
-            <button class="nav-btn primary" @click="executeFinalSubmit">
+            <p v-if="menuLoadState !== 'ready'" class="menu-load-status" role="status">
+              Waiting for the menu server to verify your items before submission.
+            </p>
+            <button class="nav-btn primary" :disabled="menuLoadState !== 'ready'" @click="executeFinalSubmit">
               Confirm & Submit Data
             </button>
           </div>
@@ -836,6 +862,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import axios from 'axios'
+import bundledMenuSnapshot from '../generated/menu-snapshot.json'
 import {
   AGE_GROUP_OPTIONS,
   DINING_FREQUENCY_OPTIONS,
@@ -890,7 +917,7 @@ const proceedToSection2 = () => {
 }
 
 const proceedToSection3 = () => {
-  if (!isDemographicComplete.value) return
+  if (!isDemographicComplete.value || (menuLoadState.value !== 'ready' && menuLoadState.value !== 'cached')) return
   currentSection.value = 3
   showInstructionsModal.value = true
   window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -934,8 +961,14 @@ const openZoomModal = () => {
 }
 
 const menuItems = ref<any[]>([])
+const menuLoadState = ref<'loading' | 'retrying' | 'cached' | 'ready' | 'empty'>('loading')
+const menuUpdatedNotice = ref(false)
+const imageRetryToken = ref(0)
 const currentItemIndex = ref(0)
 const preloadedPhotoPaths = new Set<string>()
+let menuRetryTimer: ReturnType<typeof setTimeout> | undefined
+let menuRequestController: AbortController | undefined
+let menuRequestGeneration = 0
 
 const preloadItemPhotos = (startIndex: number, count = 3) => {
   for (
@@ -959,6 +992,13 @@ const preloadItemPhotos = (startIndex: number, count = 3) => {
   }
 }
 
+const getSurveyPhotoPath = (item: any) => {
+  const path = getSurveyImagePath(item)
+  if (!path || imageRetryToken.value === 0 || path.startsWith('/items/') ||
+    path.startsWith('data:') || path.startsWith('blob:')) return path
+  return `${path}${path.includes('?') ? '&' : '?'}refresh=${imageRetryToken.value}`
+}
+
 // Answers Dictionary: { itemId: { moods: { moodId: rating }, weather: { weatherId: rating } } }
 const answers = ref<
   Record<number, { moods?: Record<string, number>; weather?: Record<string, number> }>
@@ -966,6 +1006,13 @@ const answers = ref<
 
 // 1. The clean, empty reactive array
 const questions = ref<any[]>([])
+
+const optionRowId = (option: any): string =>
+  String(option.label ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '') || String(option.id)
 
 // 2. Fetch function
 const fetchQuestions = async () => {
@@ -981,7 +1028,7 @@ const fetchQuestions = async () => {
       moodQuestion.value = mQ
       if (Array.isArray(mQ.options)) {
         moodRows.value = mQ.options.map((opt: any) => ({
-          id: String(opt.id),
+          id: optionRowId(opt),
           label: opt.sub ? `${opt.label} ${opt.sub}` : (opt.icon ? `${opt.icon} ${opt.label}` : opt.label),
           short: opt.label,
           sub: opt.sub || '',
@@ -999,7 +1046,7 @@ const fetchQuestions = async () => {
       weatherQuestion.value = wQ
       if (Array.isArray(wQ.options)) {
         weatherRows.value = wQ.options.map((opt: any) => ({
-          id: String(opt.id),
+          id: optionRowId(opt),
             label: opt.sub
               ? `${opt.label} ${opt.sub}`
               : opt.icon && !String(opt.label).trim().toLowerCase().startsWith('rainy')
@@ -1158,18 +1205,116 @@ const shuffleArray = <T>(items: T[]) => {
   return array
 }
 
-const fetchMenuItems = async () => {
+const MENU_CACHE_KEY = 'foodPreferenceSurvey_menu_v1'
+const MENU_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
+const apiBase = () => String(axios.defaults?.baseURL ?? '')
+
+const readCachedMenu = (): any[] => {
   try {
-    const response = await axios.get('/menu-items?availableOnly=true')
-    const allItems = shuffleArray(response.data ?? [])
-    menuItems.value = allItems.slice(0, SURVEY_ITEM_LIMIT)
+    const saved = JSON.parse(localStorage.getItem(MENU_CACHE_KEY) ?? 'null')
+    if (
+      saved?.apiBase !== apiBase() ||
+      !Number.isFinite(saved?.savedAt) ||
+      saved.savedAt > Date.now() ||
+      Date.now() - saved.savedAt > MENU_CACHE_MAX_AGE_MS ||
+      !Array.isArray(saved.items)
+    ) return []
+    return saved.items.filter((item: any) =>
+      Number.isInteger(item?.id) && item.id > 0 && typeof item.name === 'string',
+    )
+  } catch {
+    return []
+  }
+}
+
+const saveCachedMenu = (items: any[]) => {
+  try {
+    localStorage.setItem(MENU_CACHE_KEY, JSON.stringify({
+      apiBase: apiBase(),
+      savedAt: Date.now(),
+      items,
+    }))
+  } catch {
+    // The live menu still works if browser storage is disabled or full.
+  }
+}
+
+const clearCachedMenu = () => {
+  try {
+    localStorage.removeItem(MENU_CACHE_KEY)
+  } catch {
+    // Storage may be unavailable.
+  }
+}
+
+const loadMenuAttempt = async (generation: number, retryCount: number) => {
+  const controller = new AbortController()
+  menuRequestController = controller
+  try {
+    const response = await axios.get('/menu-items?availableOnly=true', {
+      signal: controller.signal,
+      timeout: 30000,
+    })
+    if (generation !== menuRequestGeneration) return
+    const availableItems = Array.isArray(response.data) ? response.data : []
+    const selectedFromCache = menuLoadState.value === 'cached' &&
+      (currentSection.value === 3 || Object.keys(answers.value).length > 0)
+    if (selectedFromCache) {
+      const availableById = new Map(availableItems.map((item: any) => [item.id, item]))
+      const previousCurrentId = currentItem.value?.id
+      const retained = menuItems.value
+        .filter((item) => availableById.has(item.id))
+        .map((item) => availableById.get(item.id))
+      const retainedIds = new Set(retained.map((item: any) => item.id))
+      const replacements = shuffleArray(availableItems.filter((item: any) => !retainedIds.has(item.id)))
+      const removed = menuItems.value.filter((item) => !availableById.has(item.id))
+      for (const item of removed) delete answers.value[item.id]
+      menuUpdatedNotice.value = removed.length > 0
+      menuItems.value = [...retained, ...replacements].slice(0, SURVEY_ITEM_LIMIT)
+      const retainedIndex = menuItems.value.findIndex((item) => item.id === previousCurrentId)
+      currentItemIndex.value = retainedIndex >= 0
+        ? retainedIndex
+        : Math.min(currentItemIndex.value, Math.max(menuItems.value.length - 1, 0))
+    } else {
+      menuItems.value = shuffleArray(availableItems).slice(0, SURVEY_ITEM_LIMIT)
+    }
+    menuLoadState.value = menuItems.value.length > 0 ? 'ready' : 'empty'
+    imageRetryToken.value++
     preloadItemPhotos(0)
     if (menuItems.value.length === 0) {
+      clearCachedMenu()
       showLimitModal.value = true
+    } else {
+      saveCachedMenu(availableItems)
+      void fetchQuestions()
+      void checkSurveyLimit()
     }
   } catch (error) {
-    console.error('Error fetching menu items:', error)
+    if (generation !== menuRequestGeneration) return
+    if (retryCount === 0) console.warn('Menu request failed; retrying automatically:', error)
+    if (menuLoadState.value !== 'cached') menuLoadState.value = 'retrying'
+    const delay = Math.min(2000 * 2 ** retryCount, 10000)
+    menuRetryTimer = setTimeout(() => {
+      menuRetryTimer = undefined
+      void loadMenuAttempt(generation, retryCount + 1)
+    }, delay)
+  } finally {
+    if (menuRequestController === controller) menuRequestController = undefined
   }
+}
+
+const fetchMenuItems = () => {
+  menuRequestGeneration++
+  if (menuRetryTimer) clearTimeout(menuRetryTimer)
+  menuRetryTimer = undefined
+  menuRequestController?.abort()
+  const cachedItems = readCachedMenu()
+  const initialItems = cachedItems.length > 0 ? cachedItems : bundledMenuSnapshot
+  menuItems.value = shuffleArray(initialItems).slice(0, SURVEY_ITEM_LIMIT)
+  menuLoadState.value = menuItems.value.length > 0 ? 'cached' : 'loading'
+  menuUpdatedNotice.value = false
+  if (menuItems.value.length > 0) preloadItemPhotos(0)
+  void loadMenuAttempt(menuRequestGeneration, 0)
 }
 
 const checkSurveyLimit = async () => {
@@ -1246,6 +1391,7 @@ const resetSurvey = () => {
 }
 
 const executeFinalSubmit = async () => {
+  if (menuLoadState.value !== 'ready') return
   try {
     if (questions.value.length === 0) {
       await fetchQuestions()
@@ -1401,12 +1547,13 @@ onMounted(() => {
   resetSessionState()
   clearStaleDrafts()
 
-  checkSurveyLimit()
   fetchMenuItems()
-  fetchQuestions()
 })
 
 onBeforeUnmount(() => {
+  menuRequestGeneration++
+  if (menuRetryTimer) clearTimeout(menuRetryTimer)
+  menuRequestController?.abort()
   window.removeEventListener('beforeunload', handleBeforeUnload)
   window.removeEventListener('keydown', handleKeydown)
 })
@@ -1595,6 +1742,16 @@ onBeforeUnmount(() => {
   gap: 36px;
   align-items: start;
 }
+.menu-sync-notice {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 0.9rem;
+}
 .left-pane {
   position: sticky;
   top: 85px;
@@ -1681,7 +1838,16 @@ onBeforeUnmount(() => {
   object-fit: cover;
   object-position: center;
   display: block;
+  position: relative;
+  z-index: 1;
   transition: transform 0.35s ease;
+}
+.photo-wait-label {
+  position: absolute;
+  padding: 0 20px;
+  color: #64748b;
+  font-size: 0.9rem;
+  text-align: center;
 }
 .cover-img.clickable-img:hover .cover-img-el {
   transform: scale(1.03);
@@ -2376,7 +2542,11 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: space-between;
   gap: 15px;
+  flex-wrap: wrap;
   z-index: 10;
+}
+.review-footer .menu-load-status {
+  flex-basis: 100%;
 }
 .review-footer button {
   flex: 1;
@@ -2920,6 +3090,13 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   gap: 12px;
+}
+.menu-load-status {
+  margin: 0;
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  text-align: center;
 }
 .demo-proceed-btn {
   padding: 14px 28px;
