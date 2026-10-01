@@ -6,6 +6,13 @@ This template should help get you started developing with Vue 3 in Vite.
 
 Survey cards use smaller WebP files from `public/items/previews/`; the zoom view uses the originals in `public/items/`. After adding or replacing bundled menu photos, run `npm run generate:item-previews` and commit the generated previews with the originals.
 
+## Instant menu snapshot
+
+`npm run build` fetches the currently available menu from `VITE_API_BASE_URL` and bundles it into the frontend. The build retries for up to three minutes if the backend is asleep. Set `VITE_API_BASE_URL` in the production frontend build environment. When it points to a live API, the build fails if it cannot fetch a current snapshot. Local builds without that variable use the checked-in snapshot.
+
+On page open, survey takers can rate bundled menu items immediately while the live API verifies availability. Submission waits for that verification. A successful live response refreshes the browser's saved menu for later visits and replaces unavailable items if needed.
+
+
 ## Recommended IDE Setup
 
 [VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
