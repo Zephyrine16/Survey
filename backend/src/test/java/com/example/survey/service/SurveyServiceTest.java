@@ -2,11 +2,13 @@ package com.example.survey.service;
 
 import com.example.survey.config.SurveyProperties;
 import com.example.survey.dto.CategorySubmissionDTO;
+import com.example.survey.model.Question;
 import com.example.survey.repository.AnswerRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -84,6 +86,58 @@ class SurveyServiceTest {
         org.mockito.ArgumentCaptor<String> captor = org.mockito.ArgumentCaptor.forClass(String.class);
         verify(jdbcTemplate).update(anyString(), eq("user1"), eq(10L), captor.capture());
         assertEquals("18–20", captor.getValue());
+    }
+
+    @Test
+    void saveCompleteSurveyBatchesRatingsAndDemographicsTogether() {
+        when(questionRepository.existsById(1L)).thenReturn(true);
+        Question age = new Question();
+        age.setId(7L);
+        age.setText("Age Group");
+        Question frequency = new Question();
+        frequency.setId(8L);
+        frequency.setText("How often do you dine at cafés or restaurants?");
+        when(questionRepository.findAll()).thenReturn(List.of(age, frequency));
+
+        CategorySubmissionDTO rating = new CategorySubmissionDTO();
+        rating.setUserId("session-1");
+        rating.setMenuItemId(101L);
+        rating.setQuestionId(1L);
+        rating.setTextResponse("Happy: 4");
+
+        assertTrue(surveyService.saveCompleteSurveyIfUnderLimit(
+                List.of(rating), "session-1", true, "18–20", "Once a week"));
+
+        ArgumentCaptor<BatchPreparedStatementSetter> rows =
+                ArgumentCaptor.forClass(BatchPreparedStatementSetter.class);
+        verify(jdbcTemplate).batchUpdate(anyString(), rows.capture());
+        assertEquals(3, rows.getValue().getBatchSize());
+        verify(jdbcTemplate, never()).update(anyString(), any(), any(), any());
+    }
+
+    @Test
+    void saveCompleteSurveyDoesNotInsertRatingsIfDemographicsCannotBePrepared() {
+        when(questionRepository.existsById(1L)).thenReturn(true);
+        when(questionRepository.findAll()).thenThrow(new IllegalStateException("Question lookup failed"));
+        CategorySubmissionDTO rating = new CategorySubmissionDTO();
+        rating.setUserId("session-1");
+        rating.setMenuItemId(101L);
+        rating.setQuestionId(1L);
+
+        assertThrows(IllegalStateException.class, () -> surveyService.saveCompleteSurveyIfUnderLimit(
+                List.of(rating), "session-1", true, "18–20", null));
+        verify(jdbcTemplate, never()).batchUpdate(anyString(), any(BatchPreparedStatementSetter.class));
+    }
+
+    @Test
+    void retryForAnAlreadySavedSessionDoesNotInsertAnswersAgain() {
+        when(answerRepository.existsByUserIdAndMenuItemIsNotNull("session-1")).thenReturn(true);
+
+        assertTrue(surveyService.saveCompleteSurveyIfUnderLimit(
+                List.of(), "session-1", true, "18–20", "Once a week"));
+
+        verify(answerRepository, never()).countTotalParticipants();
+        verify(jdbcTemplate, never()).batchUpdate(anyString(), any(BatchPreparedStatementSetter.class));
     }
 }
 

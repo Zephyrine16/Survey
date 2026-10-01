@@ -47,6 +47,53 @@ public class SurveyService {
         return true;
     }
 
+    @Transactional
+    public boolean saveCompleteSurveyIfUnderLimit(
+            List<CategorySubmissionDTO> payload,
+            String participantId,
+            boolean retryableSession,
+            @Nullable String ageGroup,
+            @Nullable String diningFrequency
+    ) {
+        // A client may retry after the response is lost even though the first
+        // request committed. Treat that session as already submitted.
+        if (retryableSession && answerRepository.existsByUserIdAndMenuItemIsNotNull(participantId)) {
+            return true;
+        }
+        if (isParticipantLimitReached()) {
+            return false;
+        }
+
+        List<AnswerInsertRow> rows = mapAndSanitizeRows(payload);
+        appendDemographicRow(rows, participantId, "Age Group", ageGroup);
+        appendDemographicRow(rows, participantId, "How often do you dine at cafés or restaurants?", diningFrequency);
+        batchInsertAnswers(rows);
+        return true;
+    }
+
+    private void appendDemographicRow(
+            List<AnswerInsertRow> rows,
+            String participantId,
+            String questionText,
+            @Nullable String responseText
+    ) {
+        if (responseText == null || responseText.isBlank()) return;
+
+        Long questionId = questionRepository.findAll().stream()
+                .filter(question -> question.getText() != null &&
+                        question.getText().trim().equalsIgnoreCase(questionText))
+                .map(Question::getId)
+                .findFirst()
+                .orElseGet(() -> {
+                    Question question = new Question();
+                    question.setText(questionText);
+                    question.setQuestionType("RADIO");
+                    return questionRepository.save(question).getId();
+                });
+        rows.add(new AnswerInsertRow(participantId, null, questionId, null,
+                sanitizeTextResponse(responseText)));
+    }
+
     private boolean isParticipantLimitReached() {
         Long totalParticipants = answerRepository.countTotalParticipants();
         long limit = surveyProperties.getParticipantLimit();

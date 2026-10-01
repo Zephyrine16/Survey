@@ -70,16 +70,16 @@ public class SurveyController {
 
             assignParticipantToPayload(categorySubmissions, participantId);
 
-            boolean savedUnderLimit = surveyService.saveSurveyIfUnderLimit(categorySubmissions);
+            boolean savedUnderLimit = surveyService.saveCompleteSurveyIfUnderLimit(
+                    categorySubmissions,
+                    participantId,
+                    submissionRequest.getSessionId() != null &&
+                            participantId.equals(submissionRequest.getSessionId().trim()),
+                    submissionRequest.getAgeGroup(),
+                    submissionRequest.getDiningFrequency()
+            );
             if(!savedUnderLimit) {
                 return limitReachedResponse();
-            }
-
-            if (submissionRequest.getAgeGroup() != null && !submissionRequest.getAgeGroup().isBlank()) {
-                surveyService.saveDemographicAnswer(participantId, "Age Group", submissionRequest.getAgeGroup());
-            }
-            if (submissionRequest.getDiningFrequency() != null && !submissionRequest.getDiningFrequency().isBlank()) {
-                surveyService.saveDemographicAnswer(participantId, "How often do you dine at cafés or restaurants?", submissionRequest.getDiningFrequency());
             }
 
             return successMessage();

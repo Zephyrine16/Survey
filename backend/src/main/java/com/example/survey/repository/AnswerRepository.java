@@ -89,6 +89,8 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
     @Query("SELECT COUNT(DISTINCT a.userId) FROM Answer a WHERE a.menuItem IS NOT NULL")
     Long countTotalParticipants();
 
+    boolean existsByUserIdAndMenuItemIsNotNull(String userId);
+
     @Modifying
     @Transactional
     @Query("UPDATE Answer a SET a.selectedOption = null WHERE a.selectedOption.id = :optionId")
