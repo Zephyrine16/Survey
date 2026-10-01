@@ -7,6 +7,7 @@ enableAutoUnmount(afterEach)
 
 vi.mock('axios')
 vi.mock('../../generated/menu-snapshot.json', () => ({ default: [] }))
+vi.mock('../../generated/questions-snapshot.json', () => ({ default: [] }))
 
 const mockMenuItems = [
   {
@@ -79,6 +80,49 @@ describe('Survey.vue', () => {
     expect(wrapper.find('.welcome-screen').exists()).toBe(true)
   })
 
+  it('supports keyboard consent and rating controls', async () => {
+    const wrapper = mount(Survey)
+    await flushPromises()
+    await wrapper.find('.primary-btn.pulse').trigger('click')
+    const consent = wrapper.find('.consent-card')
+    expect(consent.attributes('role')).toBe('checkbox')
+    expect(consent.attributes('aria-checked')).toBe('false')
+    await consent.trigger('keydown.space')
+    expect(consent.attributes('aria-checked')).toBe('true')
+    await wrapper.find('.privacy-proceed-btn').trigger('click')
+    const demoButtons = wrapper.findAll('.demo-opt-btn')
+    await demoButtons[0].trigger('click')
+    await demoButtons[5].trigger('click')
+    await wrapper.find('.demo-proceed-btn').trigger('click')
+    ;(wrapper.vm as any).showInstructionsModal = false
+    await wrapper.vm.$nextTick()
+    const rating = wrapper.find('.matrix-table .matrix-td')
+    expect(rating.attributes('tabindex')).toBe('0')
+    expect(rating.attributes('aria-pressed')).toBe('false')
+    await rating.trigger('keydown.enter')
+    expect(rating.attributes('aria-pressed')).toBe('true')
+  })
+
+  it('sends a completed survey only once while submission is pending', async () => {
+    let resolveSubmit!: (value: { data: { message: string } }) => void
+    ;(axios.post as any).mockImplementation(() => new Promise((resolve) => { resolveSubmit = resolve }))
+    const wrapper = mount(Survey)
+    await flushPromises()
+    ;(wrapper.vm as any).setMoodAnswer(101, 'relaxation', 4)
+
+    const firstSubmit = (wrapper.vm as any).executeFinalSubmit()
+    const secondSubmit = (wrapper.vm as any).executeFinalSubmit()
+    await flushPromises()
+    expect(axios.post).toHaveBeenCalledTimes(1)
+    expect((wrapper.vm as any).isSubmitting).toBe(true)
+
+    resolveSubmit({ data: { message: 'Saved' } })
+    await Promise.all([firstSubmit, secondSubmit])
+    expect((wrapper.vm as any).showSuccessModal).toBe(true)
+    await (wrapper.vm as any).executeFinalSubmit()
+    expect(axios.post).toHaveBeenCalledTimes(1)
+  })
+
   it('recovers from a sleeping backend without a page refresh', async () => {
     vi.useFakeTimers()
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -136,9 +180,10 @@ describe('Survey.vue', () => {
     }))
     let resolveMenu!: (value: { data: typeof mockMenuItems }) => void
     ;(axios.get as any).mockImplementation((url: string) => {
-      if (url.startsWith('/menu-items')) {
+      if (url === '/menu-items?availableOnly=true') {
         return new Promise((resolve) => { resolveMenu = resolve })
       }
+      if (url === '/menu-items') return Promise.resolve({ data: [mockMenuItems[1]] })
       if (url === '/api/stats/survey-status') {
         return Promise.resolve({ data: { isFull: false } })
       }
@@ -147,6 +192,10 @@ describe('Survey.vue', () => {
           id: 1,
           text: 'Question 1 — Mood Association: How suitable is this item?',
           options: [{ id: 701, label: 'Relaxation', sub: '(Wants to unwind)' }],
+        }, {
+          id: 2,
+          text: 'Question 2 — Weather Association: How suitable is this item?',
+          options: [{ id: 801, label: 'Rainy' }],
         }] })
       }
       return Promise.resolve({ data: [...mockQuestions] })
@@ -190,9 +239,10 @@ describe('Survey.vue', () => {
     }))
     let resolveMenu!: (value: { data: typeof mockMenuItems }) => void
     ;(axios.get as any).mockImplementation((url: string) => {
-      if (url.startsWith('/menu-items')) {
+      if (url === '/menu-items?availableOnly=true') {
         return new Promise((resolve) => { resolveMenu = resolve })
       }
+      if (url === '/menu-items') return Promise.resolve({ data: [mockMenuItems[1]] })
       if (url === '/api/stats/survey-status') {
         return Promise.resolve({ data: { isFull: false } })
       }
@@ -209,7 +259,7 @@ describe('Survey.vue', () => {
     resolveMenu({ data: [mockMenuItems[1]] })
     await flushPromises()
     expect(wrapper.text()).toContain('Aglio e Olio')
-    expect(wrapper.find('.menu-sync-notice').text()).toContain('Some items were replaced')
+    expect(wrapper.find('.menu-sync-notice').text()).toContain('rated item was removed')
     expect((wrapper.vm as any).answers[101]).toBeUndefined()
     expect((wrapper.vm as any).menuLoadState).toBe('ready')
   })

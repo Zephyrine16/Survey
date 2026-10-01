@@ -136,7 +136,12 @@
               <div
                 class="consent-card"
                 :class="{ active: hasAgreedToPrivacy }"
+                role="checkbox"
+                tabindex="0"
+                :aria-checked="hasAgreedToPrivacy"
                 @click="hasAgreedToPrivacy = !hasAgreedToPrivacy"
+                @keydown.space.prevent="hasAgreedToPrivacy = !hasAgreedToPrivacy"
+                @keydown.enter.prevent="hasAgreedToPrivacy = !hasAgreedToPrivacy"
               >
                 <span class="custom-check-box" :class="{ active: hasAgreedToPrivacy }">
                   <span v-if="hasAgreedToPrivacy" class="check-mark">✓</span>
@@ -300,7 +305,9 @@
             Showing a saved menu while we check current availability. You can start rating now.
           </p>
           <p v-if="menuUpdatedNotice" class="menu-sync-notice" role="status">
-            Menu availability changed. Some items were replaced; please review your ratings.
+            {{ removedRatedItemNotice
+              ? 'A rated item was removed from the menu. It was replaced because the original item can no longer accept answers. Please rate the replacement.'
+              : 'Menu availability changed. Unrated items were replaced; your ratings remain with their original menu items.' }}
           </p>
           <div class="left-pane">
             <div class="sticky-card">
@@ -453,7 +460,13 @@
                           v-for="scale in ratingLevels"
                           :key="scale.value"
                           class="matrix-td"
+                          role="button"
+                          tabindex="0"
+                          :aria-label="`${mood.short || mood.label}: ${scale.value}, ${scale.label}`"
+                          :aria-pressed="getMoodAnswer(currentItem?.id, mood.id) === scale.value"
                           @click="setMoodAnswer(currentItem?.id, mood.id, scale.value)"
+                          @keydown.space.prevent="setMoodAnswer(currentItem?.id, mood.id, scale.value)"
+                          @keydown.enter.prevent="setMoodAnswer(currentItem?.id, mood.id, scale.value)"
                         >
                           <span
                             class="grid-radio-circle"
@@ -517,7 +530,13 @@
                           v-for="scale in ratingLevels"
                           :key="scale.value"
                           class="matrix-td"
+                          role="button"
+                          tabindex="0"
+                          :aria-label="`${weather.short || weather.label}: ${scale.value}, ${scale.label}`"
+                          :aria-pressed="getWeatherAnswer(currentItem?.id, weather.id) === scale.value"
                           @click="setWeatherAnswer(currentItem?.id, weather.id, scale.value)"
+                          @keydown.space.prevent="setWeatherAnswer(currentItem?.id, weather.id, scale.value)"
+                          @keydown.enter.prevent="setWeatherAnswer(currentItem?.id, weather.id, scale.value)"
                         >
                           <span
                             class="grid-radio-circle"
@@ -641,6 +660,9 @@
             Are you completely finished rating your items? If you have nothing else to review, click
             Confirm to complete your session!
           </p>
+          <p v-if="menuLoadState !== 'ready'" class="menu-load-status" role="status">
+            Checking menu availability. You can submit as soon as the server responds.
+          </p>
           <div class="modal-actions">
             <button
               class="nav-btn secondary"
@@ -648,7 +670,9 @@
             >
               Review Answers
             </button>
-            <button class="nav-btn primary" @click="executeFinalSubmit">Confirm & Submit</button>
+            <button class="nav-btn primary" :disabled="menuLoadState !== 'ready' || isSubmitting" @click="executeFinalSubmit">
+              {{ isSubmitting ? 'Submitting…' : 'Confirm & Submit' }}
+            </button>
           </div>
         </div>
       </div>
@@ -777,8 +801,8 @@
             <p v-if="menuLoadState !== 'ready'" class="menu-load-status" role="status">
               Waiting for the menu server to verify your items before submission.
             </p>
-            <button class="nav-btn primary" :disabled="menuLoadState !== 'ready'" @click="executeFinalSubmit">
-              Confirm & Submit Data
+            <button class="nav-btn primary" :disabled="menuLoadState !== 'ready' || isSubmitting" @click="executeFinalSubmit">
+              {{ isSubmitting ? 'Submitting…' : 'Confirm & Submit Data' }}
             </button>
           </div>
         </div>
@@ -863,6 +887,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import axios from 'axios'
 import bundledMenuSnapshot from '../generated/menu-snapshot.json'
+import bundledQuestionsSnapshot from '../generated/questions-snapshot.json'
 import {
   AGE_GROUP_OPTIONS,
   DINING_FREQUENCY_OPTIONS,
@@ -885,10 +910,46 @@ const sessionId = ref(crypto.randomUUID())
 const ageGroupOptions = AGE_GROUP_OPTIONS
 const diningFrequencyOptions = DINING_FREQUENCY_OPTIONS
 
-const moodQuestion = ref<any>(null)
-const weatherQuestion = ref<any>(null)
-const moodRows = ref<any[]>([...SECTION_2_MOOD_ROWS])
-const weatherRows = ref<any[]>([...SECTION_2_WEATHER_ROWS])
+const optionRowId = (option: any): string =>
+  String(option.label ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '') || String(option.id)
+
+const findQuestion = (items: any[], kind: 'mood' | 'weather') => items.find((question: any) =>
+  kind === 'mood'
+    ? /mood|emotion/i.test(question.text ?? '')
+    : /weather/i.test(question.text ?? ''),
+)
+
+const rowsFromQuestion = (question: any, kind: 'mood' | 'weather') =>
+  question.options.map((option: any) => ({
+    id: optionRowId(option),
+    label: option.sub
+      ? `${option.label} ${option.sub}`
+      : option.icon && !(kind === 'weather' && String(option.label).trim().toLowerCase().startsWith('rainy'))
+        ? `${option.icon} ${option.label}`
+        : option.label,
+    short: option.label,
+    sub: option.sub || '',
+    icon: option.icon || '',
+    dbOptionId: option.id,
+  }))
+
+const bundledQuestions: any[] = bundledQuestionsSnapshot
+const initialMoodQuestion = findQuestion(bundledQuestions, 'mood')
+const initialWeatherQuestion = findQuestion(bundledQuestions, 'weather')
+const hasBundledQuestionRows = Boolean(initialMoodQuestion?.options?.length && initialWeatherQuestion?.options?.length)
+const questions = ref<any[]>([...bundledQuestions])
+const moodQuestion = ref<any>(initialMoodQuestion ?? null)
+const weatherQuestion = ref<any>(initialWeatherQuestion ?? null)
+const moodRows = ref<any[]>(initialMoodQuestion?.options?.length
+  ? rowsFromQuestion(initialMoodQuestion, 'mood')
+  : [...SECTION_2_MOOD_ROWS])
+const weatherRows = ref<any[]>(initialWeatherQuestion?.options?.length
+  ? rowsFromQuestion(initialWeatherQuestion, 'weather')
+  : [...SECTION_2_WEATHER_ROWS])
 const ratingLevels = RATING_SCALE_LEVELS
 
 const currentSection = ref(1)
@@ -952,6 +1013,7 @@ const showConfirmModal = ref(false)
 const showSuccessModal = ref(false)
 const showReviewModal = ref(false)
 const showZoomModal = ref(false)
+const isSubmitting = ref(false)
 const honeypotField = ref('')
 
 const openZoomModal = () => {
@@ -963,6 +1025,7 @@ const openZoomModal = () => {
 const menuItems = ref<any[]>([])
 const menuLoadState = ref<'loading' | 'retrying' | 'cached' | 'ready' | 'empty'>('loading')
 const menuUpdatedNotice = ref(false)
+const removedRatedItemNotice = ref(false)
 const imageRetryToken = ref(0)
 const currentItemIndex = ref(0)
 const preloadedPhotoPaths = new Set<string>()
@@ -1004,60 +1067,33 @@ const answers = ref<
   Record<number, { moods?: Record<string, number>; weather?: Record<string, number> }>
 >({})
 
-// 1. The clean, empty reactive array
-const questions = ref<any[]>([])
-
-const optionRowId = (option: any): string =>
-  String(option.label ?? '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_|_$/g, '') || String(option.id)
-
-// 2. Fetch function
 const fetchQuestions = async () => {
   try {
     const response = await axios.get('/questions/all')
-    questions.value = response.data ?? []
+    const liveQuestions = Array.isArray(response.data) ? response.data : []
+    const mood = findQuestion(liveQuestions, 'mood')
+    const weather = findQuestion(liveQuestions, 'weather')
+    if (!mood?.options?.length || !weather?.options?.length) return
+    questions.value = liveQuestions
+    moodQuestion.value = hasBundledQuestionRows
+      ? { ...mood, text: moodQuestion.value?.text ?? mood.text }
+      : mood
+    weatherQuestion.value = hasBundledQuestionRows
+      ? { ...weather, text: weatherQuestion.value?.text ?? weather.text }
+      : weather
 
-    const mQ = questions.value.find((q: any) => {
-      const txt = (q.text || '').toLowerCase()
-      return txt.includes('mood') || txt.includes('emotion')
-    })
-    if (mQ) {
-      moodQuestion.value = mQ
-      if (Array.isArray(mQ.options)) {
-        moodRows.value = mQ.options.map((opt: any) => ({
-          id: optionRowId(opt),
-          label: opt.sub ? `${opt.label} ${opt.sub}` : (opt.icon ? `${opt.icon} ${opt.label}` : opt.label),
-          short: opt.label,
-          sub: opt.sub || '',
-          icon: opt.icon || '',
-          dbOptionId: opt.id,
-        }))
-      }
-    }
-
-    const wQ = questions.value.find((q: any) => {
-      const txt = (q.text || '').toLowerCase()
-      return txt.includes('weather')
-    })
-    if (wQ) {
-      weatherQuestion.value = wQ
-      if (Array.isArray(wQ.options)) {
-        weatherRows.value = wQ.options.map((opt: any) => ({
-          id: optionRowId(opt),
-            label: opt.sub
-              ? `${opt.label} ${opt.sub}`
-              : opt.icon && !String(opt.label).trim().toLowerCase().startsWith('rainy')
-                ? `${opt.icon} ${opt.label}`
-                : opt.label,
-          short: opt.label,
-          sub: opt.sub || '',
-          icon: opt.icon || '',
-          dbOptionId: opt.id,
-        }))
-      }
+    // Keep the rows a visitor started with stable throughout this session.
+    // Only option IDs are refreshed, so ratings remain keyed to the same row.
+    const startedRating = hasBundledQuestionRows || currentSection.value === 3 ||
+      Object.keys(answers.value).length > 0
+    if (!startedRating) {
+      moodRows.value = rowsFromQuestion(mood, 'mood')
+      weatherRows.value = rowsFromQuestion(weather, 'weather')
+    } else {
+      const liveMoodOptions = new Map(mood.options.map((option: any) => [optionRowId(option), option.id]))
+      const liveWeatherOptions = new Map(weather.options.map((option: any) => [optionRowId(option), option.id]))
+      moodRows.value = moodRows.value.map((row) => ({ ...row, dbOptionId: liveMoodOptions.get(row.id) ?? null }))
+      weatherRows.value = weatherRows.value.map((row) => ({ ...row, dbOptionId: liveWeatherOptions.get(row.id) ?? null }))
     }
   } catch (error: any) {
     console.error('Error fetching dynamic questions:', error)
@@ -1261,16 +1297,38 @@ const loadMenuAttempt = async (generation: number, retryCount: number) => {
       (currentSection.value === 3 || Object.keys(answers.value).length > 0)
     if (selectedFromCache) {
       const availableById = new Map(availableItems.map((item: any) => [item.id, item]))
+      const hasRatings = (itemId: number) => {
+        const saved = answers.value[itemId]
+        return Boolean(saved && (Object.keys(saved.moods ?? {}).length || Object.keys(saved.weather ?? {}).length))
+      }
+      const answeredUnavailable = menuItems.value.filter((item) =>
+        !availableById.has(item.id) && hasRatings(item.id))
+      let allById = new Map<number, any>()
+      if (answeredUnavailable.length > 0) {
+        // Availability can change while someone is rating. A capped item still
+        // exists in the database and can receive this in-progress response.
+        const allResponse = await axios.get('/menu-items', {
+          signal: controller.signal,
+          timeout: 30000,
+        })
+        if (generation !== menuRequestGeneration) return
+        if (!Array.isArray(allResponse.data)) throw new Error('Could not verify rated menu items')
+        allById = new Map(allResponse.data.map((item: any) => [item.id, item]))
+      }
       const previousCurrentId = currentItem.value?.id
-      const retained = menuItems.value
-        .filter((item) => availableById.has(item.id))
-        .map((item) => availableById.get(item.id))
-      const retainedIds = new Set(retained.map((item: any) => item.id))
+      const retainedIds = new Set(menuItems.value
+        .filter((item) => availableById.has(item.id) || (hasRatings(item.id) && allById.has(item.id)))
+        .map((item) => item.id))
       const replacements = shuffleArray(availableItems.filter((item: any) => !retainedIds.has(item.id)))
-      const removed = menuItems.value.filter((item) => !availableById.has(item.id))
-      for (const item of removed) delete answers.value[item.id]
+      const removed = menuItems.value.filter((item) => !retainedIds.has(item.id))
       menuUpdatedNotice.value = removed.length > 0
-      menuItems.value = [...retained, ...replacements].slice(0, SURVEY_ITEM_LIMIT)
+      removedRatedItemNotice.value = removed.some((item) => hasRatings(item.id))
+      menuItems.value = menuItems.value.map((item) =>
+        availableById.get(item.id) ??
+        (hasRatings(item.id) ? allById.get(item.id) : undefined) ??
+        replacements.shift(),
+      ).filter(Boolean).slice(0, SURVEY_ITEM_LIMIT)
+      for (const item of removed) delete answers.value[item.id]
       const retainedIndex = menuItems.value.findIndex((item) => item.id === previousCurrentId)
       currentItemIndex.value = retainedIndex >= 0
         ? retainedIndex
@@ -1313,6 +1371,7 @@ const fetchMenuItems = () => {
   menuItems.value = shuffleArray(initialItems).slice(0, SURVEY_ITEM_LIMIT)
   menuLoadState.value = menuItems.value.length > 0 ? 'cached' : 'loading'
   menuUpdatedNotice.value = false
+  removedRatedItemNotice.value = false
   if (menuItems.value.length > 0) preloadItemPhotos(0)
   void loadMenuAttempt(menuRequestGeneration, 0)
 }
@@ -1320,7 +1379,9 @@ const fetchMenuItems = () => {
 const checkSurveyLimit = async () => {
   try {
     const response = await axios.get('/api/stats/survey-status')
-    if (response.data.isFull) {
+    // An in-progress response to a now-capped item is still accepted by the
+    // submit endpoint. Let that visitor finish; the submit handles a global cap.
+    if (response.data.isFull && answeredItems.value.length === 0) {
       showLimitModal.value = true
     }
   } catch (error) {
@@ -1376,6 +1437,7 @@ const resetSurvey = () => {
   showLimitModal.value = false
   showInstructionsModal.value = false
   showZoomModal.value = false
+  isSubmitting.value = false
   hasStarted.value = false
   hasAgreedToPrivacy.value = false
   currentSection.value = 1
@@ -1391,7 +1453,8 @@ const resetSurvey = () => {
 }
 
 const executeFinalSubmit = async () => {
-  if (menuLoadState.value !== 'ready') return
+  if (menuLoadState.value !== 'ready' || isSubmitting.value || showSuccessModal.value) return
+  isSubmitting.value = true
   try {
     if (questions.value.length === 0) {
       await fetchQuestions()
@@ -1473,6 +1536,8 @@ const executeFinalSubmit = async () => {
       const detail = errorData?.error || errorData?.message || error.message || ''
       alert(`Oops! There was a problem saving your answers.${detail ? ' (' + detail + ')' : ''} Please try again.`)
     }
+  } finally {
+    isSubmitting.value = false
   }
 }
 
@@ -1508,6 +1573,7 @@ const resetSessionState = () => {
   showConfirmModal.value = false
   showSuccessModal.value = false
   showReviewModal.value = false
+  isSubmitting.value = false
   // Always start with a fresh session ID so each visit is independent
   sessionId.value = crypto.randomUUID()
 }
@@ -2843,6 +2909,11 @@ onBeforeUnmount(() => {
 .consent-card:hover {
   border-color: #cbd5e1;
   background: #f8fafc;
+}
+.consent-card:focus-visible,
+.matrix-td:focus-visible {
+  outline: 3px solid #0f766e;
+  outline-offset: 3px;
 }
 .consent-card.active {
   border-color: #0d9488;
