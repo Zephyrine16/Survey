@@ -245,7 +245,10 @@
           </div>
 
           <div class="item-tabs-container">
-            <div v-if="filteredMenuItems.length === 0" class="empty-filter">
+            <div v-if="menuLoadError" class="empty-filter" role="alert">
+              Could not load the menu. <button type="button" @click="fetchMenuItems">Try again</button>
+            </div>
+            <div v-else-if="filteredMenuItems.length === 0" class="empty-filter">
               No items found in this category.
             </div>
 
@@ -254,7 +257,13 @@
               :key="item.id"
               class="item-tab"
               :class="{ active: selectedItemId === item.id }"
+              role="button"
+              tabindex="0"
+              :aria-label="`View analytics for ${item.name}`"
+              :aria-pressed="selectedItemId === item.id"
               @click="selectItem(item.id)"
+              @keydown.enter.prevent="selectItem(item.id)"
+              @keydown.space.prevent="selectItem(item.id)"
             >
               <div
                 class="tab-thumb"
@@ -269,6 +278,10 @@
 
         <div v-if="isLoading" class="state-message">
           <h2>Loading analytics for {{ menuItem?.name }}...</h2>
+        </div>
+        <div v-else-if="analyticsLoadError" class="state-message" role="alert">
+          <h2>Could not load analytics for {{ menuItem?.name }}.</h2>
+          <button type="button" class="nav-btn primary" @click="selectedItemId != null && fetchCombinedAnalyticsForItem(selectedItemId)">Try again</button>
         </div>
         <div v-else-if="!menuItem" class="state-message">
           <h2>Select an item to view analytics.</h2>
@@ -1787,29 +1800,30 @@ const handleLogin = async () => {
   isLoggingIn.value = true
   loginError.value = ''
 
+  let token: string
   try {
     const response = await axios.post('/api/admin/login', {
       username: username.value,
       password: password.value,
     })
 
-    const token = response.data?.token
+    token = response.data?.token
     if (typeof token !== 'string' || !token) {
       throw new Error('Admin login did not return a token')
     }
-
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
-
-    isAuthenticated.value = true
-    password.value = ''
-    await fetchMenuItems()
-    await fetchQuestions()
-    await fetchStats()
-  } catch (error) {
-    loginError.value = 'Invalid username or password'
+  } catch (error: any) {
+    loginError.value = error?.response?.status === 401 || error?.response?.status === 403
+      ? 'Invalid username or password.'
+      : 'Could not reach the admin server. Please try again.'
+    return
   } finally {
     isLoggingIn.value = false
   }
+
+  axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+  isAuthenticated.value = true
+  password.value = ''
+  await Promise.all([fetchMenuItems(), fetchQuestions(), fetchStats()])
 }
 
 const handleLogout = async () => {
@@ -1825,6 +1839,9 @@ const handleLogout = async () => {
 const menuItems = ref<any[]>([])
 const analyticsData = ref<Record<string, any>>({})
 const isLoading = ref(true)
+const menuLoadError = ref(false)
+const analyticsLoadError = ref(false)
+let analyticsRequestGeneration = 0
 
 const activeCategory = ref('Meals')
 const activeSubcategory = ref('All')
@@ -1963,6 +1980,8 @@ const saveItemDescription = async () => {
 }
 
 const fetchMenuItems = async () => {
+  menuLoadError.value = false
+  isLoading.value = true
   try {
     const response = await axios.get('/menu-items')
     menuItems.value = response.data
@@ -1973,6 +1992,7 @@ const fetchMenuItems = async () => {
     }
   } catch (error) {
     console.error('Error fetching menu items:', error)
+    menuLoadError.value = true
     isLoading.value = false
   }
 }
@@ -2073,8 +2093,11 @@ const autoSelectFirstFilteredItem = () => {
     const currentStillVisible = filteredMenuItems.value.some((i) => i.id === selectedItemId.value)
     if (!currentStillVisible) selectItem(filteredMenuItems.value[0].id)
   } else {
+    analyticsRequestGeneration++
     selectedItemId.value = null
     analyticsData.value = {}
+    analyticsLoadError.value = false
+    isLoading.value = false
   }
 }
 
@@ -2153,9 +2176,12 @@ const applyItemStats = (data: any) => {
 }
 
 const fetchCombinedAnalyticsForItem = async (menuItemId: number) => {
+  const generation = ++analyticsRequestGeneration
   isLoading.value = true
+  analyticsLoadError.value = false
   try {
     const response = await axios.get(`/analytics/combined/${menuItemId}`)
+    if (generation !== analyticsRequestGeneration) return
     analyticsData.value = response.data?.analyticsData || {}
     applyItemStats(response.data?.stats)
     moodAnalytics.value = response.data?.moodAnalytics || null
@@ -2165,14 +2191,16 @@ const fetchCombinedAnalyticsForItem = async (menuItemId: number) => {
     }
     recentResponses.value = response.data?.recentResponses || []
   } catch (error) {
+    if (generation !== analyticsRequestGeneration) return
     console.error(`Error fetching combined analytics for item ${menuItemId}:`, error)
+    analyticsLoadError.value = true
     analyticsData.value = {}
     applyItemStats(null)
     moodAnalytics.value = null
     weatherAnalytics.value = null
     recentResponses.value = []
   } finally {
-    isLoading.value = false
+    if (generation === analyticsRequestGeneration) isLoading.value = false
   }
 }
 
@@ -3063,6 +3091,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  analyticsRequestGeneration++
   document.removeEventListener('click', handleClickOutsideCategoryDropdown)
   delete axios.defaults.headers.common['Authorization']
   if (securityInterceptor != null) {
@@ -3606,6 +3635,10 @@ onUnmounted(() => {
 }
 .item-tab:hover {
   opacity: 0.9;
+}
+.item-tab:focus-visible {
+  outline: 3px solid #0f766e;
+  outline-offset: 2px;
 }
 .item-tab.active {
   opacity: 1;

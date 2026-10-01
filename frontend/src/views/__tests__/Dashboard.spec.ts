@@ -373,6 +373,40 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     wrapper.unmount()
   })
 
+  it('keeps analytics for the latest selected item when an older request finishes later', async () => {
+    const wrapper = mount(Dashboard)
+    await wrapper.find('input[type="text"]').setValue('admin')
+    await wrapper.find('input[type="password"]').setValue('password')
+    await wrapper.find('form.login-form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.find('.item-tab').attributes('role')).toBe('button')
+    expect(wrapper.find('.item-tab').attributes('tabindex')).toBe('0')
+
+    let resolveOld!: (value: { data: typeof mockCombinedAnalytics }) => void
+    ;(axios.get as any).mockImplementation((url: string) => {
+      if (url === '/analytics/combined/102') {
+        return new Promise((resolve) => { resolveOld = resolve })
+      }
+      if (url === '/analytics/combined/101') {
+        return Promise.resolve({ data: {
+          ...mockCombinedAnalytics,
+          stats: { ...mockCombinedAnalytics.stats, avgSuitabilityScore: 2.5 },
+        } })
+      }
+      return Promise.resolve({ data: {} })
+    })
+
+    const vm = wrapper.vm as any
+    const olderRequest = vm.selectItem(102)
+    await vm.selectItem(101)
+    expect(vm.avgSuitabilityScore).toBe(2.5)
+    resolveOld({ data: mockCombinedAnalytics })
+    await olderRequest
+    expect(vm.selectedItemId).toBe(101)
+    expect(vm.avgSuitabilityScore).toBe(2.5)
+    wrapper.unmount()
+  })
+
   it('requires login again after a page reload', async () => {
     const firstVisit = mount(Dashboard)
     await flushPromises()
@@ -410,6 +444,49 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     expect(axios.defaults.headers.common['Authorization']).toBeUndefined()
     expect(axios.get).not.toHaveBeenCalled()
     wrapper.unmount()
+  })
+
+  it('explains a server connection failure without blaming the password', async () => {
+    ;(axios.post as any).mockRejectedValue(new Error('Network unavailable'))
+    const wrapper = mount(Dashboard)
+    await wrapper.find('input[type="text"]').setValue('admin')
+    await wrapper.find('input[type="password"]').setValue('password')
+    await wrapper.find('form.login-form').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Could not reach the admin server')
+    expect(wrapper.text()).not.toContain('Invalid username or password')
+    wrapper.unmount()
+  })
+
+  it('shows a retry action when item analytics fail to load', async () => {
+    const wrapper = mount(Dashboard)
+    await wrapper.find('input[type="text"]').setValue('admin')
+    await wrapper.find('input[type="password"]').setValue('password')
+    await wrapper.find('form.login-form').trigger('submit')
+    await flushPromises()
+
+    const originalGet = (axios.get as any).getMockImplementation()
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {})
+    ;(axios.get as any).mockImplementation((url: string) =>
+      url === '/analytics/combined/102'
+        ? Promise.reject(new Error('Backend unavailable'))
+        : originalGet(url),
+    )
+    try {
+      await (wrapper.vm as any).selectItem(102)
+      await wrapper.vm.$nextTick()
+      expect(wrapper.text()).toContain('Could not load analytics for Aglio e Olio')
+      expect(wrapper.text()).not.toContain('Nobody has submitted a survey')
+
+      ;(axios.get as any).mockImplementation(originalGet)
+      await wrapper.find('.state-message button').trigger('click')
+      await flushPromises()
+      expect(wrapper.text()).not.toContain('Could not load analytics for Aglio e Olio')
+    } finally {
+      errorLog.mockRestore()
+      wrapper.unmount()
+    }
   })
 
   it('allows adding, editing and deleting evaluation dimensions in Question Manager', async () => {
