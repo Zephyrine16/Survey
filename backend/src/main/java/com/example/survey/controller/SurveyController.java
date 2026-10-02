@@ -237,13 +237,14 @@ public class SurveyController {
     // ==========================================
 
     @DeleteMapping("/api/admin/clear-data")
+    @Transactional
     public ResponseEntity<?> clearAllData() {
         try {
-            answerRepository.deleteAll();
-            return ResponseEntity.ok().body("{\"message\": \"All database records wiped!\"}");
+            answerRepository.deleteAllInBatch();
+            return ResponseEntity.ok().body(java.util.Map.of("message", "All database records wiped!"));
         } catch (Exception e) {
             log.error("Failed to clear survey data.", e);
-            return ResponseEntity.internalServerError().body("{\"error\": \"Failed to wipe data.\"}");
+            return ResponseEntity.internalServerError().body(java.util.Map.of("error", "Failed to wipe data."));
         }
     }
 

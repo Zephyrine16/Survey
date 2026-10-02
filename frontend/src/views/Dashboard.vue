@@ -1210,8 +1210,22 @@
               This action cannot be undone!
             </p>
             <div class="modal-actions">
-              <button class="nav-btn secondary" @click="showClearModal = false">Cancel</button>
-              <button class="nav-btn danger-solid" @click="clearAllData">Yes, Nuke It</button>
+              <button
+                type="button"
+                class="nav-btn secondary"
+                :disabled="isClearingData"
+                @click="showClearModal = false"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="nav-btn danger-solid"
+                :disabled="isClearingData"
+                @click="clearAllData"
+              >
+                {{ isClearingData ? 'Clearing…' : 'Yes, Nuke It' }}
+              </button>
             </div>
           </div>
         </div>
@@ -1849,6 +1863,7 @@ const selectedItemId = ref<number | null>(null)
 
 const baselineCount = ref(0)
 const showClearModal = ref(false)
+const isClearingData = ref(false)
 
 const moodAnalytics = ref<GridQuestionAnalytics | null>(null)
 const weatherAnalytics = ref<GridQuestionAnalytics | null>(null)
@@ -2118,13 +2133,33 @@ const downloadReport = async () => {
 }
 
 const clearAllData = async () => {
+  if (isClearingData.value) return
+  isClearingData.value = true
   try {
     await axios.delete('/api/admin/clear-data')
     showClearModal.value = false
-    window.location.reload()
-  } catch (error) {
+    showToast('All survey responses deleted.')
+    // Refresh in place so the admin stays logged in and sees zeroed stats.
+    // Preserve the currently viewed item so its analytics panel reloads
+    // with the newly wiped data instead of jumping elsewhere.
+    const previousSelection = selectedItemId.value
+    await Promise.all([fetchMenuItems(), fetchQuestions(), fetchStats()])
+    if (
+      previousSelection != null &&
+      menuItems.value.some((item) => item.id === previousSelection)
+    ) {
+      await selectItem(previousSelection)
+    }
+  } catch (error: any) {
     console.error('Error clearing data:', error)
-    alert('Oops! Could not clear the database.')
+    const status = error?.response?.status
+    if (status === 401 || status === 403) {
+      showToast('Session expired. Please log in again.', 'error')
+    } else {
+      showToast('Could not clear the database. Please try again.', 'error')
+    }
+  } finally {
+    isClearingData.value = false
   }
 }
 

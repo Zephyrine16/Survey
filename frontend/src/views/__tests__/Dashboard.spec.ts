@@ -660,4 +660,64 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     expect(labelsPosted).not.toContain('Relaxation')
     expect(labelsPosted).toContain('Comfort')
   })
+
+  it('clears all survey data and refreshes the dashboard without logging out', async () => {
+    ;(axios.delete as any).mockResolvedValue({ data: { message: 'All database records wiped!' } })
+
+    const wrapper = mount(Dashboard)
+    await flushPromises()
+
+    await wrapper.find('input[type="text"]').setValue('admin')
+    await wrapper.find('input[type="password"]').setValue('password')
+    await wrapper.find('form.login-form').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.find('.dashboard-layout').exists()).toBe(true)
+
+    const clearBtn = wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Clear Data'))
+    expect(clearBtn).toBeDefined()
+    await clearBtn!.trigger('click')
+
+    const vm = wrapper.vm as any
+    expect(vm.showClearModal).toBe(true)
+
+    // The confirm button lives in a <Teleport to="body"> so it renders outside
+    // the wrapper tree; invoke the handler directly like the other modal tests.
+    const selectedBefore = vm.selectedItemId
+    await vm.clearAllData()
+    await flushPromises()
+
+    expect(axios.delete).toHaveBeenCalledWith('/api/admin/clear-data')
+    expect(vm.showClearModal).toBe(false)
+    // Admin stays logged in and sees a confirmation instead of a page reload.
+    expect(wrapper.find('.dashboard-layout').exists()).toBe(true)
+    expect(wrapper.find('.login-wrapper').exists()).toBe(false)
+    expect(wrapper.text()).toContain('All survey responses deleted.')
+    // The currently viewed item is preserved so its analytics reload with wiped data.
+    expect(vm.selectedItemId).toBe(selectedBefore)
+  })
+
+  it('shows a session-expired message when clearing data without a valid session', async () => {
+    ;(axios.delete as any).mockRejectedValue({ response: { status: 401 } })
+
+    const wrapper = mount(Dashboard)
+    await flushPromises()
+
+    await wrapper.find('input[type="text"]').setValue('admin')
+    await wrapper.find('input[type="password"]').setValue('password')
+    await wrapper.find('form.login-form').trigger('submit')
+    await flushPromises()
+
+    const vm = wrapper.vm as any
+    vm.showClearModal = true
+    await flushPromises()
+
+    await vm.clearAllData()
+    await flushPromises()
+
+    expect(axios.delete).toHaveBeenCalledWith('/api/admin/clear-data')
+    expect(wrapper.text()).toContain('Session expired. Please log in again.')
+  })
 })
