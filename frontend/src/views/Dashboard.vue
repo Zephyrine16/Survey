@@ -1803,8 +1803,25 @@ export interface SurveyResponseDetail {
   textFeedback?: string | null
 }
 
-//Security State
-const isAuthenticated = ref(false)
+// Restore the admin session before the first render so a page refresh keeps the
+// dashboard open and its initial API requests include the saved JWT.
+const getStoredAdminToken = () => {
+  if (typeof window === 'undefined') return null
+
+  try {
+    return window.localStorage.getItem('admin_token')
+  } catch {
+    return null
+  }
+}
+
+const storedAdminToken = getStoredAdminToken()
+const isAuthenticated = ref(Boolean(storedAdminToken))
+if (storedAdminToken) {
+  axios.defaults.headers.common['Authorization'] = `Bearer ${storedAdminToken}`
+}
+
+// Security State
 const username = ref('')
 const password = ref('')
 const loginError = ref('')
@@ -1835,6 +1852,11 @@ const handleLogin = async () => {
   }
 
   axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+  try {
+    window.localStorage.setItem('admin_token', token)
+  } catch {
+    // Keep this session usable when browser storage is unavailable.
+  }
   isAuthenticated.value = true
   password.value = ''
   await Promise.all([fetchMenuItems(), fetchQuestions(), fetchStats()])
@@ -1844,6 +1866,11 @@ const handleLogout = async () => {
   showLogoutModal.value = false
 
   delete axios.defaults.headers.common['Authorization']
+  try {
+    window.localStorage.removeItem('admin_token')
+  } catch {
+    // The in-memory session is still cleared when browser storage is unavailable.
+  }
   isAuthenticated.value = false
 
   window.location.reload()
@@ -3108,20 +3135,19 @@ onMounted(() => {
       if (!skipRedirect && error.response && (error.response.status === 401 || error.response.status === 403)) {
         console.warn('Session expired! Returning to login screen...')
         delete axios.defaults.headers.common['Authorization']
+        try {
+          window.localStorage.removeItem('admin_token')
+        } catch {
+          // Continue clearing the in-memory session when browser storage is unavailable.
+        }
         isAuthenticated.value = false
       }
       return Promise.reject(error)
     },
   )
 
-  // Require a fresh login after every page load. Remove tokens saved by older releases.
-  delete axios.defaults.headers.common['Authorization']
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.removeItem('admin_token')
-    } catch {
-      // Login still works when browser storage is unavailable.
-    }
+  if (storedAdminToken) {
+    void Promise.all([fetchMenuItems(), fetchQuestions(), fetchStats()])
   }
 })
 
