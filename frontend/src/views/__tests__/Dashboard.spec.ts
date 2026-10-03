@@ -357,19 +357,19 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     expect(wrapper.text()).toContain('60%')
   })
 
-  it('requires login on a new visit and clears a token saved by an older release', async () => {
+  it('restores an existing admin session on a new visit', async () => {
     localStorage.setItem('admin_token', 'persisted-jwt-token')
     axios.defaults.headers.common['Authorization'] = 'Bearer persisted-jwt-token'
 
     const wrapper = mount(Dashboard)
     await flushPromises()
 
-    expect(wrapper.find('.login-wrapper').exists()).toBe(true)
-    expect(wrapper.find('.dashboard-layout').exists()).toBe(false)
-    expect(axios.get).not.toHaveBeenCalled()
+    expect(wrapper.find('.login-wrapper').exists()).toBe(false)
+    expect(wrapper.find('.dashboard-layout').exists()).toBe(true)
+    expect(axios.get).toHaveBeenCalled()
     expect(axios.post).not.toHaveBeenCalled()
-    expect(axios.defaults.headers.common['Authorization']).toBeUndefined()
-    expect(localStorage.getItem('admin_token')).toBeNull()
+    expect(axios.defaults.headers.common['Authorization']).toBe('Bearer persisted-jwt-token')
+    expect(localStorage.getItem('admin_token')).toBe('persisted-jwt-token')
     wrapper.unmount()
   })
 
@@ -407,7 +407,7 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     wrapper.unmount()
   })
 
-  it('requires login again after a page reload', async () => {
+  it('keeps the admin session after a page reload', async () => {
     const firstVisit = mount(Dashboard)
     await flushPromises()
     await firstVisit.find('input[type="text"]').setValue('admin')
@@ -417,15 +417,17 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
 
     expect(firstVisit.find('.dashboard-layout').exists()).toBe(true)
     expect(axios.defaults.headers.common['Authorization']).toBe('Bearer mock-jwt-token')
-    expect(localStorage.getItem('admin_token')).toBeNull()
+    expect(localStorage.getItem('admin_token')).toBe('mock-jwt-token')
     firstVisit.unmount()
 
     const nextVisit = mount(Dashboard)
     await flushPromises()
 
-    expect(nextVisit.find('.login-wrapper').exists()).toBe(true)
-    expect(nextVisit.find('.dashboard-layout').exists()).toBe(false)
-    expect(axios.defaults.headers.common['Authorization']).toBeUndefined()
+    expect(nextVisit.find('.login-wrapper').exists()).toBe(false)
+    expect(nextVisit.find('.dashboard-layout').exists()).toBe(true)
+    expect(axios.defaults.headers.common['Authorization']).toBe('Bearer mock-jwt-token')
+    expect(localStorage.getItem('admin_token')).toBe('mock-jwt-token')
+    expect(axios.post).toHaveBeenCalledTimes(1)
     nextVisit.unmount()
   })
 
