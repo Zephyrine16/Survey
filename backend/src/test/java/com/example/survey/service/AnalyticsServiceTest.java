@@ -24,6 +24,9 @@ class AnalyticsServiceTest {
     @Mock
     private QuestionRepository questionRepository;
 
+    @Mock
+    private SurveyService surveyService;
+
     @InjectMocks
     private AnalyticsService analyticsService;
 
