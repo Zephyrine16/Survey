@@ -36,8 +36,29 @@ class SurveyServiceTest {
     @Mock
     private com.example.survey.repository.QuestionRepository questionRepository;
 
+    @Mock
+    private com.example.survey.repository.MenuItemRepository menuItemRepository;
+
     @InjectMocks
     private SurveyService surveyService;
+
+    @Test
+    void resolveParticipantLimit_derivedFromItemCountWhenNoExplicitLimit() {
+        when(surveyProperties.getParticipantLimit()).thenReturn(0L);
+        when(surveyProperties.getItemRespondentLimit()).thenReturn(35L);
+        when(surveyProperties.getItemsPerParticipant()).thenReturn(10);
+        when(menuItemRepository.count()).thenReturn(73L);
+
+        // ceil(73 * 35 / 10) = 256
+        assertEquals(256L, surveyService.resolveParticipantLimit());
+    }
+
+    @Test
+    void resolveParticipantLimit_explicitLimitWins() {
+        when(surveyProperties.getParticipantLimit()).thenReturn(40L);
+
+        assertEquals(40L, surveyService.resolveParticipantLimit());
+    }
 
     @Test
     void saveSurveyIfUnderLimit_ParticipantLimitReached() {

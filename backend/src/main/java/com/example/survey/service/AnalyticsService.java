@@ -53,6 +53,7 @@ public class AnalyticsService {
 
     private final AnswerRepository answerRepository;
     private final QuestionRepository questionRepository;
+    private final SurveyService surveyService;
 
     public Map<Long, Object> getAnalyticsForMenuItem(Long menuItemId) {
         Map<Long, Object> dashboardData = initializeQuestionBuckets();
@@ -302,6 +303,7 @@ public class AnalyticsService {
 
         return DemographicAnalyticsDTO.builder()
                 .globalParticipants(globalParticipants)
+                .participantLimit(surveyService.resolveParticipantLimit())
                 .totalParticipants(totalParticipants)
                 .ageGroupCounts(ageGroupCounts)
                 .diningFrequencyCounts(diningFreqCounts)

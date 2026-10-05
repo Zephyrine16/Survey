@@ -1796,6 +1796,7 @@ export interface GridQuestionAnalytics {
 
 export interface DemographicAnalytics {
   globalParticipants: number
+  participantLimit?: number
   totalParticipants: number
   ageGroupCounts: Record<string, number>
   diningFrequencyCounts: Record<string, number>
@@ -2199,10 +2200,12 @@ const globalTotal = ref(0)
 const itemTotal = ref(0)
 const sentiment = ref({ pos: 0, neu: 0, neg: 0, posPct: 0, neuPct: 0, negPct: 0 })
 
-// Each participant rates SURVEY_ITEM_LIMIT random items and every item needs
-// SURVEY_BASELINE_TARGET responses, so the minimum participants needed is
-// (items x per-item target) / items-per-participant.
+// The backend enforces the real respondent cap and reports it as participantLimit,
+// so the card matches what the survey accepts. Fallback (older backend): minimum
+// participants needed = (items x per-item target) / items-per-participant.
 const globalParticipantTarget = computed(() => {
+  const backendLimit = Number(demographics.value?.participantLimit) || 0
+  if (backendLimit > 0) return backendLimit
   const required = Math.ceil((menuItems.value.length * SURVEY_BASELINE_TARGET) / SURVEY_ITEM_LIMIT)
   return Math.max(required, SURVEY_BASELINE_TARGET)
 })

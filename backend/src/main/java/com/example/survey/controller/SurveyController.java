@@ -154,7 +154,7 @@ public class SurveyController {
     @GetMapping("/api/stats/survey-status")
     public ResponseEntity<?> checkSurveyStatus() {
         Long totalParticipants = answerRepository.countTotalParticipants();
-        long limit = surveyProperties.getParticipantLimit();
+        long limit = surveyService.resolveParticipantLimit();
         boolean isFull = limit > 0 && (totalParticipants != null && totalParticipants >= limit);
 
         long itemLimit = surveyProperties.getItemRespondentLimit();

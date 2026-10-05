@@ -4,6 +4,7 @@ import com.example.survey.config.SurveyProperties;
 import com.example.survey.dto.CategorySubmissionDTO;
 import com.example.survey.model.Question;
 import com.example.survey.repository.AnswerRepository;
+import com.example.survey.repository.MenuItemRepository;
 import com.example.survey.repository.QuestionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,7 @@ public class SurveyService {
 
     private final AnswerRepository answerRepository;
     private final QuestionRepository questionRepository;
+    private final MenuItemRepository menuItemRepository;
     private final JdbcTemplate jdbcTemplate;
     private final SurveyProperties surveyProperties;
 
@@ -94,9 +96,29 @@ public class SurveyService {
                 sanitizeTextResponse(responseText)));
     }
 
+    /**
+     * Maximum number of respondents. An explicit survey.participant-limit (> 0) wins;
+     * otherwise it is derived so every item can reach its respondent limit:
+     * ceil(menu items x per-item limit / items per participant). The dashboard shows this same value.
+     * Returns 0 when no limit applies.
+     */
+    public long resolveParticipantLimit() {
+        long explicit = surveyProperties.getParticipantLimit();
+        if (explicit > 0) {
+            return explicit;
+        }
+        long perItem = surveyProperties.getItemRespondentLimit();
+        if (perItem <= 0) {
+            return 0;
+        }
+        long perParticipant = Math.max(1, surveyProperties.getItemsPerParticipant());
+        long derived = (menuItemRepository.count() * perItem + perParticipant - 1) / perParticipant;
+        return Math.max(derived, perItem);
+    }
+
     private boolean isParticipantLimitReached() {
         Long totalParticipants = answerRepository.countTotalParticipants();
-        long limit = surveyProperties.getParticipantLimit();
+        long limit = resolveParticipantLimit();
         if(limit <= 0) {
             return false;
         }

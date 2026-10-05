@@ -25,6 +25,11 @@ public class SurveyProperties {
     @PositiveOrZero
     private Long itemRespondentLimit = 35L;
 
+    /** How many menu items each participant rates; must match the frontend's items-per-survey setting. */
+    @NotNull
+    @Positive
+    private Integer itemsPerParticipant = 10;
+
     @NotNull
     @Positive
     private Integer textResponseMaxLength;
