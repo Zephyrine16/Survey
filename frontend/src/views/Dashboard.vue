@@ -105,11 +105,11 @@
             <h2 class="kpi-val">{{ demographics.globalParticipants || baselineCount }}</h2>
             <p class="kpi-name">PARTICIPANTS</p>
             <p class="kpi-desc">
-              Target {{ SURVEY_BASELINE_TARGET }} •
+              Target {{ globalParticipantTarget }} •
               {{
-                (demographics.globalParticipants || baselineCount) >= SURVEY_BASELINE_TARGET
+                (demographics.globalParticipants || baselineCount) >= globalParticipantTarget
                   ? 'Goal Reached!'
-                  : `Need ${SURVEY_BASELINE_TARGET - (demographics.globalParticipants || baselineCount)} more`
+                  : `Need ${globalParticipantTarget - (demographics.globalParticipants || baselineCount)} more`
               }}
             </p>
           </div>
@@ -119,6 +119,10 @@
             <h2 class="kpi-val">{{ itemTotal }}</h2>
             <p class="kpi-name">TOTAL RESPONSES</p>
             <p class="kpi-desc">{{ itemCoverageLabel }}</p>
+            <p class="kpi-desc">
+              Target {{ SURVEY_BASELINE_TARGET }} per item •
+              {{ itemTotal >= SURVEY_BASELINE_TARGET ? 'Goal Reached!' : `Need ${SURVEY_BASELINE_TARGET - itemTotal} more` }}
+            </p>
           </div>
 
           <div class="new-kpi-card item-card">
@@ -1760,6 +1764,7 @@ import {
   SECTION_2_MOOD_ROWS,
   SECTION_2_WEATHER_ROWS,
   SURVEY_BASELINE_TARGET,
+  SURVEY_ITEM_LIMIT,
 } from '../config/constants'
 import {
   getCategoryPillClass,
@@ -2193,6 +2198,14 @@ const clearAllData = async () => {
 const globalTotal = ref(0)
 const itemTotal = ref(0)
 const sentiment = ref({ pos: 0, neu: 0, neg: 0, posPct: 0, neuPct: 0, negPct: 0 })
+
+// Each participant rates SURVEY_ITEM_LIMIT random items and every item needs
+// SURVEY_BASELINE_TARGET responses, so the minimum participants needed is
+// (items x per-item target) / items-per-participant.
+const globalParticipantTarget = computed(() => {
+  const required = Math.ceil((menuItems.value.length * SURVEY_BASELINE_TARGET) / SURVEY_ITEM_LIMIT)
+  return Math.max(required, SURVEY_BASELINE_TARGET)
+})
 
 // Share of all participants who evaluated the current item (itemTotal counts
 // distinct evaluators per item, so this is directly comparable to the global
