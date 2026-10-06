@@ -48,6 +48,20 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
     """)
     List<Object[]> findDemographicResponses();
 
+    @Query("""
+        SELECT a.userId, a.menuItem.id, a.menuItem.name, a.menuItem.category, a.response
+        FROM Answer a
+        WHERE a.menuItem IS NOT NULL AND a.response IS NOT NULL
+    """)
+    List<Object[]> findAllItemRatingResponses();
+
+    @Query("""
+        SELECT a.userId, a.question.text, a.response
+        FROM Answer a
+        WHERE a.menuItem IS NULL AND a.response IS NOT NULL
+    """)
+    List<Object[]> findAllUserDemographics();
+
     // ==========================================
     // DATA INGESTION & EXPORT QUERIES
     // ==========================================
