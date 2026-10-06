@@ -61,49 +61,51 @@
         </div>
       </header>
 
-      <div class="admin-tabs-container">
-        <div class="sliding-highlight" :class="activeAdminTab"></div>
+      <div class="admin-tabs-nav-bar">
+        <div class="admin-tabs-container">
+          <div class="sliding-highlight" :class="activeAdminTab"></div>
 
-        <button
-          class="tab-btn"
-          :class="{ active: activeAdminTab === 'analytics' }"
-          @click="activeAdminTab = 'analytics'"
-        >
-          <span class="tab-btn-icon">📊</span>
-          <span class="tab-btn-text">Analytics View</span>
-        </button>
-        <button
-          class="tab-btn"
-          :class="{ active: activeAdminTab === 'manager' }"
-          @click="activeAdminTab = 'manager'"
-        >
-          <span class="tab-btn-icon">⚙️</span>
-          <span class="tab-btn-text">Menu Manager</span>
-        </button>
-        <button
-          class="tab-btn"
-          :class="{ active: activeAdminTab === 'descriptions' }"
-          @click="activeAdminTab = 'descriptions'"
-        >
-          <span class="tab-btn-icon">✎</span>
-          <span class="tab-btn-text">Item Descriptions</span>
-        </button>
-        <button
-          class="tab-btn"
-          :class="{ active: activeAdminTab === 'questions' }"
-          @click="activeAdminTab = 'questions'"
-        >
-          <span class="tab-btn-icon">❓</span>
-          <span class="tab-btn-text">Question Manager</span>
-        </button>
-        <button
-          class="tab-btn"
-          :class="{ active: activeAdminTab === 'statistics' }"
-          @click="activeAdminTab = 'statistics'"
-        >
-          <span class="tab-btn-icon">📐</span>
-          <span class="tab-btn-text">Statistical Tests</span>
-        </button>
+          <button
+            class="tab-btn"
+            :class="{ active: activeAdminTab === 'analytics' }"
+            @click="activeAdminTab = 'analytics'"
+          >
+            <span class="tab-btn-icon">📊</span>
+            <span class="tab-btn-text">Analytics View</span>
+          </button>
+          <button
+            class="tab-btn"
+            :class="{ active: activeAdminTab === 'manager' }"
+            @click="activeAdminTab = 'manager'"
+          >
+            <span class="tab-btn-icon">⚙️</span>
+            <span class="tab-btn-text">Menu Manager</span>
+          </button>
+          <button
+            class="tab-btn"
+            :class="{ active: activeAdminTab === 'descriptions' }"
+            @click="activeAdminTab = 'descriptions'"
+          >
+            <span class="tab-btn-icon">✎</span>
+            <span class="tab-btn-text">Item Descriptions</span>
+          </button>
+          <button
+            class="tab-btn"
+            :class="{ active: activeAdminTab === 'questions' }"
+            @click="activeAdminTab = 'questions'"
+          >
+            <span class="tab-btn-icon">❓</span>
+            <span class="tab-btn-text">Question Manager</span>
+          </button>
+          <button
+            class="tab-btn"
+            :class="{ active: activeAdminTab === 'statistics' }"
+            @click="activeAdminTab = 'statistics'"
+          >
+            <span class="tab-btn-icon">📐</span>
+            <span class="tab-btn-text">Statistical Tests</span>
+          </button>
+        </div>
       </div>
 
       <div v-show="activeAdminTab === 'analytics'">
@@ -4838,54 +4840,80 @@ onUnmounted(() => {
 /* NOTE: Keyword-filter interaction styles were removed with the word-cloud feature. */
 
 /* ==========================================
-   ⚙️ MENU MANAGER STYLES
+   ⚙️ ADMIN TABS NAVIGATION STYLES
    ========================================== */
-.admin-tabs-container {
+.admin-tabs-nav-bar {
   display: flex;
-  gap: 15px;
-  margin-bottom: 25px;
-  border-bottom: 2px solid #e2e8f0;
-  padding-bottom: 15px;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 28px;
+  padding: 2px 2px 6px 2px;
+  scrollbar-width: none;
 }
-.tab-btn:hover {
-  background: #f1f5f9;
-  color: #0f172a;
+.admin-tabs-nav-bar::-webkit-scrollbar {
+  display: none;
 }
 .admin-tabs-container {
   position: relative;
   display: inline-grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(130px, 1fr));
   background: #f8fafc;
   padding: 6px;
   border-radius: 12px;
-  margin-bottom: 30px;
   border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
 }
 .tab-btn {
   position: relative;
   z-index: 2;
   background: transparent !important;
   border: none;
-  padding: 12px 24px;
-  font-weight: bold;
+  padding: 11px 18px;
+  font-weight: 600;
+  font-size: 0.92rem;
   color: #64748b;
   cursor: pointer;
-  transition: color 0.3s ease;
+  transition: color 0.25s ease;
   text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  user-select: none;
+  border-radius: 8px;
+}
+.tab-btn:hover {
+  color: #0f172a;
 }
 .tab-btn.active {
-  color: white !important;
+  color: #ffffff !important;
+  font-weight: 700;
+}
+.tab-btn-icon {
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+.tab-btn-text {
+  font-size: 0.92rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 .sliding-highlight {
   position: absolute;
   top: 6px;
   bottom: 6px;
   left: 6px;
-  width: calc(20% - 2.5px);
-  background: #f97316;
+  width: calc((100% - 12px) / 5);
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
   border-radius: 8px;
-  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.35);
+  transition: transform 0.35s cubic-bezier(0.25, 1, 0.5, 1);
   z-index: 1;
+  pointer-events: none;
 }
 .sliding-highlight.analytics {
   transform: translateX(0%);
@@ -5572,18 +5600,16 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
+  .admin-tabs-nav-bar {
+    margin-bottom: 20px;
+  }
   .admin-tabs-container {
-    display: grid;
-    width: 100%;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 2px;
+    grid-template-columns: repeat(5, minmax(125px, 1fr));
   }
   .tab-btn {
-    padding: 10px 4px;
-    font-size: 0.72rem;
-  }
-  .tab-btn-icon {
-    display: none;
+    padding: 10px 10px;
+    font-size: 0.82rem;
+    gap: 6px;
   }
   .description-editor-layout {
     grid-template-columns: 1fr;
@@ -7530,15 +7556,13 @@ onUnmounted(() => {
 
   /* Admin Tabs */
   .admin-tabs-container {
-    width: 100%;
+    width: max-content;
     margin-bottom: 20px;
-    padding: 4px;
-    box-sizing: border-box;
   }
   .tab-btn {
-    padding: 10px 4px;
-    font-size: 0.78rem;
-    gap: 4px;
+    padding: 10px 8px;
+    font-size: 0.8rem;
+    gap: 6px;
   }
 
   /* KPI Grid */
@@ -7747,8 +7771,8 @@ onUnmounted(() => {
     font-size: 1.15rem;
   }
   .tab-btn {
-    font-size: 0.72rem;
-    padding: 8px 2px;
+    font-size: 0.78rem;
+    padding: 8px 6px;
   }
   .kpi-val {
     font-size: 26px;
