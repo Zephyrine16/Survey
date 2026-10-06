@@ -96,6 +96,14 @@
           <span class="tab-btn-icon">❓</span>
           <span class="tab-btn-text">Question Manager</span>
         </button>
+        <button
+          class="tab-btn"
+          :class="{ active: activeAdminTab === 'statistics' }"
+          @click="activeAdminTab = 'statistics'"
+        >
+          <span class="tab-btn-icon">📐</span>
+          <span class="tab-btn-text">Statistical Tests</span>
+        </button>
       </div>
 
       <div v-show="activeAdminTab === 'analytics'">
@@ -1199,6 +1207,432 @@
                   </div>
                 </div>
               </template>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ======================================================== -->
+      <!-- TAB 5: STATISTICAL INFERENCE (T-TEST & ANOVA)            -->
+      <!-- ======================================================== -->
+      <div v-show="activeAdminTab === 'statistics'" class="manager-layout fade-in stats-page-layout">
+        <!-- Header Row -->
+        <div class="manager-header-row stats-header-row">
+          <div>
+            <div class="stats-badge-pill">
+              <span class="live-dot-teal"></span> INFERENTIAL STATISTICS ENGINE
+            </div>
+            <h2>Hypothesis Testing & Significance Analysis</h2>
+            <p class="manager-subtitle">
+              Evaluate whether differences across menu items, categories, moods, weather, and customer demographics are statistically significant using Welch's t-test and Fisher's One-Way ANOVA.
+            </p>
+          </div>
+          <div class="stats-header-kpis" v-if="statisticalOverview">
+            <div class="stat-mini-pill">
+              <span class="pill-number">{{ statisticalOverview.totalRatingsCount }}</span>
+              <span class="pill-label">Rating Records</span>
+            </div>
+            <div class="stat-mini-pill">
+              <span class="pill-number">{{ statisticalOverview.totalEvaluatorsCount }}</span>
+              <span class="pill-label">Evaluators</span>
+            </div>
+            <button class="nav-btn secondary" @click="fetchStatisticalOverview" :disabled="statsLoading">
+              🔄 Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- Mode Toggle Bar: T-Test vs ANOVA -->
+        <div class="stats-method-toggle-card">
+          <div class="method-btn-group">
+            <button
+              class="method-toggle-btn"
+              :class="{ active: activeTestType === 'ttest' }"
+              @click="activeTestType = 'ttest'"
+            >
+              <span class="toggle-icon">📊</span>
+              <div class="toggle-text-block">
+                <strong>Two-Sample T-Test</strong>
+                <small>Compare means between 2 groups (Welch's Heteroscedastic t-test)</small>
+              </div>
+            </button>
+            <button
+              class="method-toggle-btn"
+              :class="{ active: activeTestType === 'anova' }"
+              @click="activeTestType = 'anova'"
+            >
+              <span class="toggle-icon">📈</span>
+              <div class="toggle-text-block">
+                <strong>One-Way ANOVA</strong>
+                <small>Test variance across 3+ groups (Fisher's F-ratio & Eta-Squared)</small>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading indicator -->
+        <div v-if="statsLoading" class="state-message">
+          <h2>Computing statistical parameters...</h2>
+        </div>
+
+        <!-- T-Test Panel -->
+        <div v-else-if="activeTestType === 'ttest'" class="stats-test-container">
+          <!-- Configuration Card -->
+          <div class="stats-config-card">
+            <div class="config-header">
+              <h3>⚙️ T-Test Configuration</h3>
+              <span class="config-sub">Select comparison factor, groups, and significance threshold</span>
+            </div>
+            <div class="config-grid">
+              <div class="config-field">
+                <label>Comparison Mode</label>
+                <select v-model="tTestMode" class="form-select" @change="onTTestModeChange">
+                  <option value="SUPER_CATEGORIES">Meals vs. Beverages (Supercategories)</option>
+                  <option value="SUBCATEGORIES">Compare Two Subcategories</option>
+                  <option value="ITEMS">Compare Two Menu Items</option>
+                  <option value="AGE_GROUPS">Compare Two Age Groups</option>
+                  <option value="DINING_FREQUENCY">Compare Two Dining Frequencies</option>
+                  <option value="DIMENSIONS">Compare Two Evaluation Dimensions</option>
+                </select>
+              </div>
+
+              <!-- Group 1 -->
+              <div class="config-field" v-if="tTestMode !== 'SUPER_CATEGORIES'">
+                <label>Group 1</label>
+                <select v-model="tTestGroup1" class="form-select">
+                  <option v-for="opt in tTestGroup1Options" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Group 2 -->
+              <div class="config-field" v-if="tTestMode !== 'SUPER_CATEGORIES'">
+                <label>Group 2</label>
+                <select v-model="tTestGroup2" class="form-select">
+                  <option v-for="opt in tTestGroup2Options" :key="opt.value" :value="opt.value">
+                    {{ opt.label }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Dimension Filter -->
+              <div class="config-field" v-if="tTestMode !== 'DIMENSIONS'">
+                <label>Evaluation Dimension</label>
+                <select v-model="tTestDimension" class="form-select">
+                  <option value="all">All (Overall Suitability)</option>
+                  <option value="relaxation">Relaxation</option>
+                  <option value="focus">Focus</option>
+                  <option value="celebrate">Celebrate</option>
+                  <option value="comfort">Comfort</option>
+                  <option value="welcoming">Welcoming</option>
+                  <option value="socialize">Socialize</option>
+                  <option value="enjoyment">Enjoyment</option>
+                  <option value="rainy">Rainy</option>
+                  <option value="hot">Hot Dry</option>
+                  <option value="cool">Cool Dry</option>
+                </select>
+              </div>
+
+              <!-- Alpha Level -->
+              <div class="config-field">
+                <label>Significance Level (α)</label>
+                <select v-model.number="tTestAlpha" class="form-select">
+                  <option :value="0.05">α = 0.05 (95% Confidence)</option>
+                  <option :value="0.01">α = 0.01 (99% Confidence)</option>
+                  <option :value="0.10">α = 0.10 (90% Confidence)</option>
+                </select>
+              </div>
+
+              <div class="config-action">
+                <button class="nav-btn primary run-test-btn" @click="executeTTest" :disabled="statsLoading">
+                  🚀 Calculate T-Test
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- T-Test Results Display -->
+          <div v-if="tTestResult" class="stats-result-wrapper">
+            <!-- Hypothesis & Outcome Card -->
+            <div class="hypothesis-summary-card" :class="tTestResult.significant ? 'is-sig' : 'not-sig'">
+              <div class="hypo-top">
+                <div class="hypo-info">
+                  <span class="badge-tag">{{ tTestResult.testName }}</span>
+                  <p class="hypo-formula"><strong>Hypothesis:</strong> {{ tTestResult.hypothesis }}</p>
+                </div>
+                <div class="sig-badge" :class="tTestResult.significant ? 'badge-sig' : 'badge-nonsig'">
+                  <span class="dot-indicator"></span>
+                  {{ tTestResult.significant ? 'Statistically Significant (p < α)' : 'No Significant Difference (p ≥ α)' }}
+                </div>
+              </div>
+              <!-- Executive Summary Callout -->
+              <div class="takeaway-box">
+                <div class="takeaway-icon">💡</div>
+                <div class="takeaway-text">
+                  <h4>Managerial Conclusion & Business Insight</h4>
+                  <p>{{ tTestResult.conclusion }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Group Comparison Cards -->
+            <div class="stats-comparison-row">
+              <div class="group-stat-card card-g1">
+                <div class="card-g-tag">Group 1</div>
+                <h3>{{ tTestResult.group1Label }}</h3>
+                <div class="g-score-hero">
+                  <span class="hero-score">{{ tTestResult.mean1.toFixed(2) }}</span>
+                  <span class="hero-scale">/ 5.0</span>
+                </div>
+                <div class="g-metrics-grid">
+                  <div><strong>N:</strong> {{ tTestResult.n1 }}</div>
+                  <div><strong>SD (s):</strong> {{ tTestResult.sd1.toFixed(2) }}</div>
+                </div>
+              </div>
+
+              <div class="vs-divider-card">
+                <div class="diff-badge">
+                  <span>Difference (Δ):</span>
+                  <strong>{{ tTestResult.meanDifference > 0 ? '+' : '' }}{{ tTestResult.meanDifference.toFixed(2) }}</strong>
+                </div>
+                <div class="ci-text">
+                  95% CI: [{{ tTestResult.ciLower.toFixed(2) }}, {{ tTestResult.ciUpper.toFixed(2) }}]
+                </div>
+              </div>
+
+              <div class="group-stat-card card-g2">
+                <div class="card-g-tag">Group 2</div>
+                <h3>{{ tTestResult.group2Label }}</h3>
+                <div class="g-score-hero">
+                  <span class="hero-score">{{ tTestResult.mean2.toFixed(2) }}</span>
+                  <span class="hero-scale">/ 5.0</span>
+                </div>
+                <div class="g-metrics-grid">
+                  <div><strong>N:</strong> {{ tTestResult.n2 }}</div>
+                  <div><strong>SD (s):</strong> {{ tTestResult.sd2.toFixed(2) }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Detailed Statistical Table -->
+            <div class="stats-table-card">
+              <div class="table-card-header">
+                <h4>📐 Test Statistics & Effect Size</h4>
+              </div>
+              <div class="table-card-body">
+                <table class="stats-report-table">
+                  <thead>
+                    <tr>
+                      <th>t-Statistic</th>
+                      <th>Degrees of Freedom (df)</th>
+                      <th>Standard Error (SE)</th>
+                      <th>p-Value (2-tailed)</th>
+                      <th>Cohen's d</th>
+                      <th>Effect Magnitude</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="font-mono font-bold">{{ tTestResult.tStatistic.toFixed(3) }}</td>
+                      <td class="font-mono">{{ tTestResult.degreesOfFreedom.toFixed(1) }}</td>
+                      <td class="font-mono">{{ tTestResult.standardError.toFixed(3) }}</td>
+                      <td class="font-mono font-bold" :class="tTestResult.significant ? 'text-teal' : ''">
+                        {{ tTestResult.pValue < 0.001 ? '< 0.001' : tTestResult.pValue.toFixed(4) }}
+                      </td>
+                      <td class="font-mono font-bold">{{ tTestResult.cohensD.toFixed(2) }}</td>
+                      <td>
+                        <span class="effect-badge">{{ tTestResult.effectSizeLabel }}</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ANOVA Panel -->
+        <div v-else class="stats-test-container">
+          <!-- Configuration Card -->
+          <div class="stats-config-card">
+            <div class="config-header">
+              <h3>⚙️ One-Way ANOVA Configuration</h3>
+              <span class="config-sub">Analyze variance across 3 or more groups</span>
+            </div>
+            <div class="config-grid">
+              <div class="config-field">
+                <label>Grouping Factor</label>
+                <select v-model="anovaFactor" class="form-select">
+                  <option value="SUBCATEGORIES">Menu Subcategories (Pasta, Waffle, Coffee, etc.)</option>
+                  <option value="AGE_GROUPS">Age Demographic Groups</option>
+                  <option value="DINING_FREQUENCY">Dining Frequency Segments</option>
+                  <option value="MOOD_DIMENSIONS">All 7 Mood Dimensions</option>
+                  <option value="WEATHER_DIMENSIONS">All 3 Weather Conditions</option>
+                </select>
+              </div>
+
+              <!-- Item Filter (for Mood/Weather) -->
+              <div class="config-field" v-if="anovaFactor === 'MOOD_DIMENSIONS' || anovaFactor === 'WEATHER_DIMENSIONS'">
+                <label>Filter to Specific Item</label>
+                <select v-model="anovaItemId" class="form-select">
+                  <option :value="null">All Menu Items Combined</option>
+                  <option v-for="it in statisticalOverview?.items" :key="it.id" :value="it.id">
+                    {{ it.name }} ({{ it.ratingCount }} ratings)
+                  </option>
+                </select>
+              </div>
+
+              <!-- Dimension Filter (for Subcategories & Demographics) -->
+              <div class="config-field" v-if="anovaFactor !== 'MOOD_DIMENSIONS' && anovaFactor !== 'WEATHER_DIMENSIONS'">
+                <label>Evaluation Dimension</label>
+                <select v-model="anovaDimension" class="form-select">
+                  <option value="all">All (Overall Suitability)</option>
+                  <option value="relaxation">Relaxation</option>
+                  <option value="focus">Focus</option>
+                  <option value="celebrate">Celebrate</option>
+                  <option value="comfort">Comfort</option>
+                  <option value="welcoming">Welcoming</option>
+                  <option value="socialize">Socialize</option>
+                  <option value="enjoyment">Enjoyment</option>
+                  <option value="rainy">Rainy</option>
+                  <option value="hot">Hot Dry</option>
+                  <option value="cool">Cool Dry</option>
+                </select>
+              </div>
+
+              <!-- Alpha Level -->
+              <div class="config-field">
+                <label>Significance Level (α)</label>
+                <select v-model.number="anovaAlpha" class="form-select">
+                  <option :value="0.05">α = 0.05 (95% Confidence)</option>
+                  <option :value="0.01">α = 0.01 (99% Confidence)</option>
+                  <option :value="0.10">α = 0.10 (90% Confidence)</option>
+                </select>
+              </div>
+
+              <div class="config-action">
+                <button class="nav-btn primary run-test-btn" @click="executeAnova" :disabled="statsLoading">
+                  🚀 Calculate ANOVA
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ANOVA Results Display -->
+          <div v-if="anovaResult" class="stats-result-wrapper">
+            <!-- Hypothesis & Outcome Card -->
+            <div class="hypothesis-summary-card" :class="anovaResult.significant ? 'is-sig' : 'not-sig'">
+              <div class="hypo-top">
+                <div class="hypo-info">
+                  <span class="badge-tag">{{ anovaResult.testName }}</span>
+                  <p class="hypo-formula"><strong>Hypothesis:</strong> {{ anovaResult.hypothesis }}</p>
+                </div>
+                <div class="sig-badge" :class="anovaResult.significant ? 'badge-sig' : 'badge-nonsig'">
+                  <span class="dot-indicator"></span>
+                  {{ anovaResult.significant ? 'Statistically Significant (p < α)' : 'No Significant Difference (p ≥ α)' }}
+                </div>
+              </div>
+              <!-- Executive Summary Callout -->
+              <div class="takeaway-box">
+                <div class="takeaway-icon">💡</div>
+                <div class="takeaway-text">
+                  <h4>Managerial Conclusion & Business Insight</h4>
+                  <p>{{ anovaResult.conclusion }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Group Breakdown Cards & Bars -->
+            <div class="stats-table-card">
+              <div class="table-card-header">
+                <h4>📊 Group Means, Sample Sizes & Confidence Intervals</h4>
+                <span class="grand-mean-tag">Grand Mean: <strong>{{ anovaResult.grandMean.toFixed(2) }}</strong> (N = {{ anovaResult.totalN }})</span>
+              </div>
+              <div class="table-card-body">
+                <table class="stats-report-table">
+                  <thead>
+                    <tr>
+                      <th>Group Name</th>
+                      <th>Sample Size (N)</th>
+                      <th>Mean Score (1–5)</th>
+                      <th>Std Dev (s)</th>
+                      <th>Std Error (SE)</th>
+                      <th>95% Confidence Interval</th>
+                      <th>Score Distribution</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="grp in anovaResult.groups" :key="grp.groupName">
+                      <td class="font-bold">{{ grp.groupName }}</td>
+                      <td class="font-mono">{{ grp.n }}</td>
+                      <td class="font-mono font-bold">{{ grp.mean.toFixed(2) }}</td>
+                      <td class="font-mono">{{ grp.stdDev.toFixed(2) }}</td>
+                      <td class="font-mono">{{ grp.standardError.toFixed(3) }}</td>
+                      <td class="font-mono">[{{ grp.ciLower.toFixed(2) }}, {{ grp.ciUpper.toFixed(2) }}]</td>
+                      <td>
+                        <div class="mini-score-bar-track">
+                          <div class="mini-score-fill" :style="{ width: ((grp.mean / 5.0) * 100) + '%' }"></div>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Standard ANOVA Summary Table -->
+            <div class="stats-table-card">
+              <div class="table-card-header">
+                <h4>📐 ANOVA Summary Source Table (Between vs. Within Groups)</h4>
+                <div class="effect-header-badge">
+                  <span>Variance Explained (η²):</span>
+                  <strong>{{ (anovaResult.etaSquared * 100).toFixed(1) }}%</strong>
+                  <span class="effect-sub-badge">({{ anovaResult.effectSizeLabel }})</span>
+                </div>
+              </div>
+              <div class="table-card-body">
+                <table class="stats-report-table">
+                  <thead>
+                    <tr>
+                      <th>Source of Variation</th>
+                      <th>Sum of Squares (SS)</th>
+                      <th>df</th>
+                      <th>Mean Square (MS)</th>
+                      <th>F-Ratio</th>
+                      <th>p-Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="font-bold">Between Groups (Factor)</td>
+                      <td class="font-mono">{{ anovaResult.ssBetween.toFixed(3) }}</td>
+                      <td class="font-mono">{{ anovaResult.dfBetween }}</td>
+                      <td class="font-mono font-bold">{{ anovaResult.msBetween.toFixed(3) }}</td>
+                      <td class="font-mono font-bold text-teal" rowspan="2" style="vertical-align: middle">
+                        {{ anovaResult.fStatistic.toFixed(3) }}
+                      </td>
+                      <td class="font-mono font-bold text-teal" rowspan="2" style="vertical-align: middle">
+                        {{ anovaResult.pValue < 0.001 ? '< 0.001' : anovaResult.pValue.toFixed(4) }}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td class="font-bold">Within Groups (Error)</td>
+                      <td class="font-mono">{{ anovaResult.ssWithin.toFixed(3) }}</td>
+                      <td class="font-mono">{{ anovaResult.dfWithin }}</td>
+                      <td class="font-mono font-bold">{{ anovaResult.msWithin.toFixed(3) }}</td>
+                    </tr>
+                    <tr class="total-row">
+                      <td class="font-bold">Total</td>
+                      <td class="font-mono">{{ anovaResult.ssTotal.toFixed(3) }}</td>
+                      <td class="font-mono">{{ anovaResult.dfTotal }}</td>
+                      <td>—</td>
+                      <td>—</td>
+                      <td>—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -2554,6 +2988,137 @@ const hasRatings = (map: any) => {
 let securityInterceptor: number | null = null
 
 const activeAdminTab = ref('analytics')
+
+// ==========================================
+// TAB 5: STATISTICAL TESTING STATE & LOGIC
+// ==========================================
+const statisticalOverview = ref<any>(null)
+const tTestResult = ref<any>(null)
+const anovaResult = ref<any>(null)
+const statsLoading = ref(false)
+const activeTestType = ref<'ttest' | 'anova'>('ttest')
+
+const tTestMode = ref('SUPER_CATEGORIES')
+const tTestGroup1 = ref('')
+const tTestGroup2 = ref('')
+const tTestDimension = ref('all')
+const tTestAlpha = ref(0.05)
+
+const anovaFactor = ref('SUBCATEGORIES')
+const anovaDimension = ref('all')
+const anovaItemId = ref<number | null>(null)
+const anovaAlpha = ref(0.05)
+
+const tTestGroup1Options = computed(() => {
+  if (!statisticalOverview.value) return []
+  if (tTestMode.value === 'SUBCATEGORIES') {
+    return (statisticalOverview.value.subcategories || []).map((sc: string) => ({ value: sc, label: sc }))
+  }
+  if (tTestMode.value === 'ITEMS') {
+    return (statisticalOverview.value.items || []).map((it: any) => ({
+      value: String(it.id),
+      label: `${it.name} (${it.category})`,
+    }))
+  }
+  if (tTestMode.value === 'AGE_GROUPS') {
+    return (statisticalOverview.value.ageGroups || []).map((ag: string) => ({ value: ag, label: ag }))
+  }
+  if (tTestMode.value === 'DINING_FREQUENCY') {
+    return (statisticalOverview.value.diningFrequencies || []).map((df: string) => ({ value: df, label: df }))
+  }
+  if (tTestMode.value === 'DIMENSIONS') {
+    return (statisticalOverview.value.dimensions || [])
+      .filter((d: string) => !d.startsWith('All'))
+      .map((d: string) => ({ value: d.toLowerCase(), label: d }))
+  }
+  return []
+})
+
+const tTestGroup2Options = computed(() => {
+  return tTestGroup1Options.value.filter((opt: any) => opt.value !== tTestGroup1.value)
+})
+
+const onTTestModeChange = () => {
+  const opts = tTestGroup1Options.value
+  if (opts.length >= 2) {
+    tTestGroup1.value = opts[0].value
+    tTestGroup2.value = opts[1].value
+  } else if (opts.length === 1) {
+    tTestGroup1.value = opts[0].value
+    tTestGroup2.value = ''
+  } else {
+    tTestGroup1.value = ''
+    tTestGroup2.value = ''
+  }
+}
+
+const fetchStatisticalOverview = async () => {
+  statsLoading.value = true
+  try {
+    const res = await axios.get('/analytics/statistical-tests/overview')
+    statisticalOverview.value = res.data
+    if (res.data.sampleTTest && !tTestResult.value) {
+      tTestResult.value = res.data.sampleTTest
+    }
+    if (res.data.sampleAnova && !anovaResult.value) {
+      anovaResult.value = res.data.sampleAnova
+    }
+    onTTestModeChange()
+  } catch (error) {
+    console.error('Error fetching statistical overview:', error)
+    showToast('Failed to load statistical overview.', 'error')
+  } finally {
+    statsLoading.value = false
+  }
+}
+
+const executeTTest = async () => {
+  statsLoading.value = true
+  try {
+    const payload = {
+      mode: tTestMode.value,
+      group1: tTestMode.value === 'SUPER_CATEGORIES' ? 'Meals' : tTestGroup1.value,
+      group2: tTestMode.value === 'SUPER_CATEGORIES' ? 'Beverages' : tTestGroup2.value,
+      dimension: tTestDimension.value,
+      alpha: tTestAlpha.value,
+    }
+    const res = await axios.post('/analytics/statistical-tests/t-test', payload)
+    tTestResult.value = res.data
+    showToast('T-Test calculated successfully.')
+  } catch (error) {
+    console.error('Error calculating T-Test:', error)
+    showToast('Could not calculate T-Test.', 'error')
+  } finally {
+    statsLoading.value = false
+  }
+}
+
+const executeAnova = async () => {
+  statsLoading.value = true
+  try {
+    const payload = {
+      factor: anovaFactor.value,
+      dimension: anovaDimension.value,
+      menuItemId: anovaItemId.value,
+      alpha: anovaAlpha.value,
+    }
+    const res = await axios.post('/analytics/statistical-tests/anova', payload)
+    anovaResult.value = res.data
+    showToast('ANOVA calculated successfully.')
+  } catch (error) {
+    console.error('Error calculating ANOVA:', error)
+    showToast('Could not calculate ANOVA.', 'error')
+  } finally {
+    statsLoading.value = false
+  }
+}
+
+watch(activeAdminTab, (newTab) => {
+  if (newTab === 'statistics' && !statisticalOverview.value) {
+    fetchStatisticalOverview()
+  }
+})
+
 const showItemModal = ref(false)
 const isSavingItem = ref(false)
 const showLogoutModal = ref(false)
@@ -4316,7 +4881,7 @@ onUnmounted(() => {
   top: 6px;
   bottom: 6px;
   left: 6px;
-  width: calc(25% - 3px);
+  width: calc(20% - 2.5px);
   background: #f97316;
   border-radius: 8px;
   transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
@@ -4333,6 +4898,531 @@ onUnmounted(() => {
 }
 .sliding-highlight.questions {
   transform: translateX(300%);
+}
+.sliding-highlight.statistics {
+  transform: translateX(400%);
+}
+
+/* ======================================================== */
+/* TAB 5: STATISTICAL TESTING & INFERENCE STYLES            */
+/* ======================================================== */
+.stats-page-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.stats-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.stats-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(13, 148, 136, 0.1);
+  color: #0d9488;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  margin-bottom: 8px;
+}
+
+.live-dot-teal {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #0d9488;
+  box-shadow: 0 0 6px rgba(13, 148, 136, 0.6);
+}
+
+.stats-header-kpis {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.stat-mini-pill {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.stat-mini-pill .pill-number {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.stat-mini-pill .pill-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.stats-method-toggle-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+
+.method-btn-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.method-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border: 2px solid transparent;
+  background: #f8fafc;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.method-toggle-btn:hover {
+  background: #f1f5f9;
+}
+
+.method-toggle-btn.active {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.12);
+}
+
+.method-toggle-btn .toggle-icon {
+  font-size: 2rem;
+}
+
+.toggle-text-block strong {
+  display: block;
+  font-size: 1.05rem;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.toggle-text-block small {
+  display: block;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.stats-config-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  margin-bottom: 24px;
+}
+
+.config-header {
+  margin-bottom: 20px;
+}
+
+.config-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.config-sub {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.config-field label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.form-select {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: white;
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.form-select:focus {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+}
+
+.run-test-btn {
+  padding: 11px 24px !important;
+  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stats-result-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.hypothesis-summary-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-left: 6px solid #94a3b8;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+}
+
+.hypothesis-summary-card.is-sig {
+  border-left-color: #0d9488;
+}
+
+.hypo-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.badge-tag {
+  display: inline-block;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.hypo-formula {
+  font-size: 1rem;
+  color: #334155;
+  margin: 0;
+}
+
+.sig-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.badge-sig {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.badge-sig .dot-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #0d9488;
+}
+
+.badge-nonsig {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.badge-nonsig .dot-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.takeaway-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.takeaway-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.takeaway-text h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #92400e;
+  text-transform: uppercase;
+  margin: 0 0 4px 0;
+}
+
+.takeaway-text p {
+  font-size: 0.95rem;
+  color: #78350f;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.stats-comparison-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.group-stat-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  text-align: center;
+}
+
+.card-g-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.group-stat-card h3 {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 12px 0;
+}
+
+.g-score-hero {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.hero-score {
+  font-size: 2.8rem;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.hero-scale {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.g-metrics-grid {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.vs-divider-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+}
+
+.diff-badge {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 0.95rem;
+  color: #334155;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.ci-text {
+  font-size: 0.75rem;
+  font-family: monospace;
+  color: #64748b;
+}
+
+.stats-table-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+
+.table-card-header {
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.table-card-header h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.grand-mean-tag {
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.effect-header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #eff6ff;
+  color: #1e40af;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.effect-sub-badge {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #3b82f6;
+}
+
+.table-card-body {
+  overflow-x: auto;
+}
+
+.stats-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.stats-report-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.stats-report-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.9rem;
+  color: #1e293b;
+}
+
+.stats-report-table tr:last-child td {
+  border-bottom: none;
+}
+
+.total-row td {
+  background: #f8fafc;
+  font-weight: 700;
+  border-top: 2px solid #e2e8f0;
+}
+
+.mini-score-bar-track {
+  width: 100px;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.mini-score-fill {
+  height: 100%;
+  background: #f97316;
+  border-radius: 4px;
+}
+
+.effect-badge {
+  display: inline-block;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.text-teal {
+  color: #0d9488 !important;
+}
+
+@media (max-width: 840px) {
+  .method-btn-group {
+    grid-template-columns: 1fr;
+  }
+  .stats-comparison-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .description-editor-layout {

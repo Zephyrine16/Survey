@@ -722,4 +722,91 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     expect(axios.delete).toHaveBeenCalledWith('/api/admin/clear-data')
     expect(wrapper.text()).toContain('Session expired. Please log in again.')
   })
+
+  it('renders Statistical Tests tab and switches to it', async () => {
+    const mockOverview = {
+      items: [{ id: 101, name: 'Chicken Alfredo', category: 'Pasta', ratingCount: 10 }],
+      subcategories: ['Pasta', 'Coffee'],
+      supercategories: ['Meals', 'Beverages'],
+      dimensions: ['All (Overall Suitability)', 'Relaxation'],
+      ageGroups: ['18–20'],
+      diningFrequencies: ['Daily'],
+      totalRatingsCount: 10,
+      totalEvaluatorsCount: 2,
+      sampleTTest: {
+        testName: 'Two-Sample T-Test (Welch)',
+        hypothesis: 'H0: mu1 = mu2',
+        group1Label: 'Meals',
+        group2Label: 'Beverages',
+        n1: 5,
+        n2: 5,
+        mean1: 4.2,
+        mean2: 4.0,
+        sd1: 0.4,
+        sd2: 0.5,
+        meanDifference: 0.2,
+        standardError: 0.2,
+        ciLower: -0.2,
+        ciUpper: 0.6,
+        tStatistic: 1.0,
+        degreesOfFreedom: 8.0,
+        pValue: 0.34,
+        alpha: 0.05,
+        isSignificant: false,
+        cohensD: 0.44,
+        effectSizeLabel: 'Small effect',
+        conclusion: 'No statistically significant difference found.',
+      },
+      sampleAnova: {
+        testName: 'One-Way ANOVA',
+        factor: 'SUBCATEGORIES',
+        hypothesis: 'H0: All means equal',
+        groups: [{ groupName: 'Pasta', n: 5, mean: 4.2, stdDev: 0.4, standardError: 0.18, ciLower: 3.8, ciUpper: 4.6 }],
+        grandMean: 4.2,
+        totalN: 5,
+        dfBetween: 1,
+        dfWithin: 4,
+        dfTotal: 5,
+        ssBetween: 0.1,
+        ssWithin: 0.9,
+        ssTotal: 1.0,
+        msBetween: 0.1,
+        msWithin: 0.225,
+        fStatistic: 0.44,
+        pValue: 0.54,
+        alpha: 0.05,
+        isSignificant: false,
+        etaSquared: 0.1,
+        effectSizeLabel: 'Medium effect',
+        conclusion: 'No statistically significant variance across groups.',
+      },
+    }
+
+    ;(axios.get as any).mockImplementation((url: string) => {
+      if (url === '/analytics/statistical-tests/overview') {
+        return Promise.resolve({ data: mockOverview })
+      }
+      return Promise.resolve({ data: [] })
+    })
+
+    const wrapper = mount(Dashboard)
+    await flushPromises()
+
+    await wrapper.find('input[type="text"]').setValue('admin')
+    await wrapper.find('input[type="password"]').setValue('password')
+    await wrapper.find('form.login-form').trigger('submit')
+    await flushPromises()
+
+    const vm = wrapper.vm as any
+    // Click the statistical tests tab
+    const statsTabBtn = wrapper.findAll('.tab-btn').find(b => b.text().includes('Statistical Tests'))
+    expect(statsTabBtn).toBeDefined()
+    await statsTabBtn!.trigger('click')
+    await flushPromises()
+
+    expect(vm.activeAdminTab).toBe('statistics')
+    expect(wrapper.find('.stats-page-layout').isVisible()).toBe(true)
+    expect(wrapper.text()).toContain('Hypothesis Testing & Significance Analysis')
+  })
 })
+
