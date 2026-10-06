@@ -1822,7 +1822,7 @@ const getStoredAdminToken = () => {
 }
 
 const storedAdminToken = getStoredAdminToken()
-const isAuthenticated = ref(Boolean(storedAdminToken))
+const isAuthenticated = ref(false)
 if (storedAdminToken) {
   axios.defaults.headers.common['Authorization'] = `Bearer ${storedAdminToken}`
 }
@@ -3163,7 +3163,18 @@ onMounted(() => {
   )
 
   if (storedAdminToken) {
-    void Promise.all([fetchMenuItems(), fetchQuestions(), fetchStats()])
+    void (async () => {
+      try {
+        const response = await axios.get('/api/admin/session')
+        if (response.data?.authenticated !== true) throw new Error('Invalid admin session')
+        isAuthenticated.value = true
+        await Promise.all([fetchMenuItems(), fetchQuestions(), fetchStats()])
+      } catch {
+        delete axios.defaults.headers.common['Authorization']
+        try { window.localStorage.removeItem('admin_token') } catch { /* Storage unavailable. */ }
+        isAuthenticated.value = false
+      }
+    })()
   }
 })
 

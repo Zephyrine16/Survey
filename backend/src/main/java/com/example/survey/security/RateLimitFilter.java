@@ -48,22 +48,20 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String rateLimitPath = rateLimitProperties.getPath();
 
         // We only want to rate-limit the public category submission endpoint!
-        if (rateLimitPath != null && !rateLimitPath.isBlank()
+        if ("POST".equals(request.getMethod()) && rateLimitPath != null && !rateLimitPath.isBlank()
                 && (path.equals(rateLimitPath) || path.startsWith(rateLimitPath + "/"))) {
             String clientIp = clientIpResolver.resolveClientIp(request);
 
             // Check if this IP is on cooldown
-            if(ipCooldowns.getIfPresent(clientIp) != null) {
+            if(ipCooldowns.asMap().putIfAbsent(clientIp, Boolean.TRUE) != null) {
                 log.warn("Blocked repeat submit-category request from IP {}", clientIp);
                 response.setStatus(429); // HTTP 429 = "Too Many Requests"
+                response.setHeader("Retry-After", Long.toString(rateLimitProperties.getWindowSeconds()));
                 response.setContentType("text/plain;charset=UTF-8");
                 response.getWriter().write(rateLimitProperties.getMessage());
                 return;
             }
 
-            // Put them in the cache.
-            // Caffeine will automatically delete this entire entry after the configured window.
-            ipCooldowns.put(clientIp, Boolean.TRUE);
         }
 
         // Allow the request to pass through normally

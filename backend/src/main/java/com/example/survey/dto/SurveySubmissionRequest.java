@@ -9,8 +9,11 @@ import java.util.List;
 @Data
 public class SurveySubmissionRequest {
 
+    @Size(max = 200)
     private String phoneNumber;
+    @Size(max = 100)
     private String ageGroup;
+    @Size(max = 100)
     private String diningFrequency;
 
     /**
@@ -19,10 +22,11 @@ public class SurveySubmissionRequest {
      * time the survey is opened it is treated as an independent new session,
      * regardless of any existing participant cookie.
      */
+    @Size(max = 36)
     private String sessionId;
 
     @NotNull
-    @Size(min = 1, message = "Submission must contain at least one answer")
+    @Size(min = 1, max = 1000, message = "Submission must contain between 1 and 1000 answers")
     @Valid
-    private List<CategorySubmissionDTO> answers;
+    private List<@NotNull CategorySubmissionDTO> answers;
 }

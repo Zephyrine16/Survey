@@ -84,6 +84,8 @@ public class SurveyController {
 
             return successMessage();
 
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Invalid survey submission"));
         } catch (Exception e) {
             log.error("Failed to save survey category submission.", e);
             return ResponseEntity.internalServerError().body("{\"error\": \"Failed to save data.\"}");

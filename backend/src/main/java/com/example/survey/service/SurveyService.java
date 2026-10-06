@@ -30,6 +30,7 @@ public class SurveyService {
 
     private final AnswerRepository answerRepository;
     private final QuestionRepository questionRepository;
+    private final com.example.survey.repository.OptionRepository optionRepository;
     private final MenuItemRepository menuItemRepository;
     private final JdbcTemplate jdbcTemplate;
     private final SurveyProperties surveyProperties;
@@ -128,7 +129,18 @@ public class SurveyService {
     private List<AnswerInsertRow> mapAndSanitizeRows(List<CategorySubmissionDTO> payload) {
         List<AnswerInsertRow> rows = new ArrayList<>();
         for(CategorySubmissionDTO dto : payload) {
-            Long validQuestionId = resolveValidQuestionId(dto.getQuestionId(), dto.getTextResponse());
+            if (dto == null || dto.getMenuItemId() == null
+                    || !menuItemRepository.existsById(dto.getMenuItemId())) {
+                throw new IllegalArgumentException("Invalid menu item");
+            }
+            Long validQuestionId = resolveValidQuestionId(dto.getQuestionId());
+            if (dto.getSelectedOptionId() != null) {
+                var option = optionRepository.findById(dto.getSelectedOptionId())
+                        .orElseThrow(() -> new IllegalArgumentException("Invalid option"));
+                if (option.getQuestion() == null || !validQuestionId.equals(option.getQuestion().getId())) {
+                    throw new IllegalArgumentException("Option does not belong to the submitted question");
+                }
+            }
             rows.add(new AnswerInsertRow(
                     dto.getUserId(),
                     dto.getMenuItemId(),
@@ -140,36 +152,12 @@ public class SurveyService {
         return rows;
     }
 
-    private Long resolveValidQuestionId(Long submittedQuestionId, @Nullable String textResponse) {
+    private Long resolveValidQuestionId(Long submittedQuestionId) {
         if (submittedQuestionId != null && questionRepository.existsById(submittedQuestionId)) {
             return submittedQuestionId;
         }
 
-        String lowerText = textResponse != null ? textResponse.toLowerCase() : "";
-        boolean isWeather = lowerText.contains("weather")
-                || lowerText.contains("sunny")
-                || lowerText.contains("humid")
-                || lowerText.contains("rain")
-                || lowerText.contains("cool");
-
-        String keyword = isWeather ? "weather" : "mood";
-        return questionRepository.findAll().stream()
-                .filter(q -> q.getText() != null && (q.getText().toLowerCase().contains(keyword) || (!isWeather && q.getText().toLowerCase().contains("emotion"))))
-                .map(Question::getId)
-                .findFirst()
-                .orElseGet(() -> {
-                    return questionRepository.findAll().stream()
-                            .findFirst()
-                            .map(Question::getId)
-                            .orElseGet(() -> {
-                                Question newQ = new Question();
-                                newQ.setText(isWeather
-                                        ? "Question 2 — Weather Association: How suitable is this item for each of the following weather conditions?"
-                                        : "Question 1 — Mood Association: How suitable is this item for each of the following moods?");
-                                newQ.setQuestionType("TEXT");
-                                return questionRepository.save(newQ).getId();
-                            });
-                });
+        throw new IllegalArgumentException("Invalid question");
     }
 
     private @Nullable String sanitizeTextResponse(@Nullable String textResponse) {
