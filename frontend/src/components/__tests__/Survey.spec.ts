@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, enableAutoUnmount } from '@vue/test-utils'
 import axios from 'axios'
 import Survey from '../Survey.vue'
+import { SURVEY_ITEM_LIMIT } from '../../config/constants'
 
 enableAutoUnmount(afterEach)
 
@@ -164,7 +165,7 @@ describe('Survey.vue', () => {
       expect(wrapper.find('.demo-proceed-btn').attributes('disabled')).toBeUndefined()
       await wrapper.find('.demo-proceed-btn').trigger('click')
       expect(wrapper.text()).toContain('Chicken Alfredo')
-      expect(wrapper.text()).toContain(`Item 1 of ${mockMenuItems.length}`)
+      expect(wrapper.text()).toContain(`Item 1 of ${Math.min(mockMenuItems.length, SURVEY_ITEM_LIMIT)}`)
       wrapper.unmount()
     } finally {
       warning.mockRestore()
