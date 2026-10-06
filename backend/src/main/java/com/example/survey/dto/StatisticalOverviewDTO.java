@@ -16,6 +16,8 @@ public class StatisticalOverviewDTO {
     private List<String> subcategories;
     private List<String> supercategories;
     private List<String> dimensions;
+    private List<DimensionOptionDTO> dimensionOptions;
+    private List<EvaluationQuestionDTO> evaluationQuestions;
     private List<String> ageGroups;
     private List<String> diningFrequencies;
 
@@ -35,5 +37,32 @@ public class StatisticalOverviewDTO {
         private String name;
         private String category;
         private int ratingCount;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class DimensionOptionDTO {
+        private String key;
+        private String label;
+        private String icon;
+        private String sub;
+        private Long questionId;
+        private String questionText;
+        private int ratingCount;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class EvaluationQuestionDTO {
+        private Long questionId;
+        private String title;
+        private String factorKey;
+        private String factorLabel;
+        private int dimensionCount;
+        private List<String> dimensionLabels;
     }
 }

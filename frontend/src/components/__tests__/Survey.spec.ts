@@ -164,7 +164,7 @@ describe('Survey.vue', () => {
       expect(wrapper.find('.demo-proceed-btn').attributes('disabled')).toBeUndefined()
       await wrapper.find('.demo-proceed-btn').trigger('click')
       expect(wrapper.text()).toContain('Chicken Alfredo')
-      expect(wrapper.text()).toContain('Item 1 of 10')
+      expect(wrapper.text()).toContain(`Item 1 of ${mockMenuItems.length}`)
       wrapper.unmount()
     } finally {
       warning.mockRestore()

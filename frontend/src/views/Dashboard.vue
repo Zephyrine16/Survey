@@ -1323,16 +1323,9 @@
                 <label>Evaluation Dimension</label>
                 <select v-model="tTestDimension" class="form-select">
                   <option value="all">All (Overall Suitability)</option>
-                  <option value="relaxation">Relaxation</option>
-                  <option value="focus">Focus</option>
-                  <option value="celebrate">Celebrate</option>
-                  <option value="comfort">Comfort</option>
-                  <option value="welcoming">Welcoming</option>
-                  <option value="socialize">Socialize</option>
-                  <option value="enjoyment">Enjoyment</option>
-                  <option value="rainy">Rainy</option>
-                  <option value="hot">Hot Dry</option>
-                  <option value="cool">Cool Dry</option>
+                  <option v-for="dim in availableDimensionOptions" :key="dim.key" :value="dim.key">
+                    {{ dim.icon ? `${dim.icon} ` : '' }}{{ dim.label }}
+                  </option>
                 </select>
               </div>
 
@@ -1388,7 +1381,7 @@
                   <span class="hero-scale">/ 5.0</span>
                 </div>
                 <div class="g-metrics-grid">
-                  <div><strong>N:</strong> {{ tTestResult.n1 }}</div>
+                  <div><strong>Ratings (N):</strong> {{ tTestResult.n1 }}</div>
                   <div><strong>SD (s):</strong> {{ tTestResult.sd1.toFixed(2) }}</div>
                 </div>
               </div>
@@ -1411,7 +1404,7 @@
                   <span class="hero-scale">/ 5.0</span>
                 </div>
                 <div class="g-metrics-grid">
-                  <div><strong>N:</strong> {{ tTestResult.n2 }}</div>
+                  <div><strong>Ratings (N):</strong> {{ tTestResult.n2 }}</div>
                   <div><strong>SD (s):</strong> {{ tTestResult.sd2.toFixed(2) }}</div>
                 </div>
               </div>
@@ -1467,16 +1460,29 @@
                 <label>Grouping Factor</label>
                 <select v-model="anovaFactor" class="form-select">
                   <option value="SUBCATEGORIES">Menu Subcategories (Pasta, Waffle, Coffee, etc.)</option>
+                  <option value="SUPER_CATEGORIES">Supercategories (Meals vs. Beverages)</option>
                   <option value="AGE_GROUPS">Age Demographic Groups</option>
                   <option value="DINING_FREQUENCY">Dining Frequency Segments</option>
-                  <option value="MOOD_DIMENSIONS">All 7 Mood Dimensions</option>
-                  <option value="WEATHER_DIMENSIONS">All 3 Weather Conditions</option>
+                  <template v-if="statisticalOverview?.evaluationQuestions?.length">
+                    <option
+                      v-for="eq in statisticalOverview.evaluationQuestions"
+                      :key="eq.factorKey"
+                      :value="eq.factorKey"
+                    >
+                      {{ eq.factorLabel }}
+                    </option>
+                  </template>
+                  <template v-else>
+                    <option value="MOOD_DIMENSIONS">Mood Dimensions (from Database)</option>
+                    <option value="WEATHER_DIMENSIONS">Weather Conditions (from Database)</option>
+                  </template>
+                  <option value="ALL_DIMENSIONS">All Evaluation Dimensions Combined</option>
                 </select>
               </div>
 
-              <!-- Item Filter (for Mood/Weather) -->
-              <div class="config-field" v-if="anovaFactor === 'MOOD_DIMENSIONS' || anovaFactor === 'WEATHER_DIMENSIONS'">
-                <label>Filter to Specific Item</label>
+              <!-- Item Filter (for Mood/Weather/Questions) -->
+              <div class="config-field" v-if="isDimensionAnovaFactor">
+                <label>Filter to Specific Item (Optional)</label>
                 <select v-model="anovaItemId" class="form-select">
                   <option :value="null">All Menu Items Combined</option>
                   <option v-for="it in statisticalOverview?.items" :key="it.id" :value="it.id">
@@ -1486,20 +1492,13 @@
               </div>
 
               <!-- Dimension Filter (for Subcategories & Demographics) -->
-              <div class="config-field" v-if="anovaFactor !== 'MOOD_DIMENSIONS' && anovaFactor !== 'WEATHER_DIMENSIONS'">
+              <div class="config-field" v-if="!isDimensionAnovaFactor">
                 <label>Evaluation Dimension</label>
                 <select v-model="anovaDimension" class="form-select">
                   <option value="all">All (Overall Suitability)</option>
-                  <option value="relaxation">Relaxation</option>
-                  <option value="focus">Focus</option>
-                  <option value="celebrate">Celebrate</option>
-                  <option value="comfort">Comfort</option>
-                  <option value="welcoming">Welcoming</option>
-                  <option value="socialize">Socialize</option>
-                  <option value="enjoyment">Enjoyment</option>
-                  <option value="rainy">Rainy</option>
-                  <option value="hot">Hot Dry</option>
-                  <option value="cool">Cool Dry</option>
+                  <option v-for="dim in availableDimensionOptions" :key="dim.key" :value="dim.key">
+                    {{ dim.icon ? `${dim.icon} ` : '' }}{{ dim.label }}
+                  </option>
                 </select>
               </div>
 
@@ -1548,15 +1547,20 @@
             <!-- Group Breakdown Cards & Bars -->
             <div class="stats-table-card">
               <div class="table-card-header">
-                <h4>📊 Group Means, Sample Sizes & Confidence Intervals</h4>
-                <span class="grand-mean-tag">Grand Mean: <strong>{{ anovaResult.grandMean.toFixed(2) }}</strong> (N = {{ anovaResult.totalN }})</span>
+                <div>
+                  <h4>📊 Group Means, Sample Sizes & Confidence Intervals</h4>
+                  <p class="sample-size-explainer">
+                    ℹ️ <strong>Sample Size (N) Explained:</strong> Represents total rating observations across evaluated items (each participant rates all matrix dimensions per item). Filtering by a specific dimension restricts N to that dimension alone.
+                  </p>
+                </div>
+                <span class="grand-mean-tag">Grand Mean: <strong>{{ anovaResult.grandMean.toFixed(2) }}</strong> (Total N = {{ anovaResult.totalN }} ratings)</span>
               </div>
               <div class="table-card-body">
                 <table class="stats-report-table">
                   <thead>
                     <tr>
                       <th>Group Name</th>
-                      <th>Sample Size (N)</th>
+                      <th>Observations (N ratings)</th>
                       <th>Mean Score (1–5)</th>
                       <th>Std Dev (s)</th>
                       <th>Std Error (SE)</th>
@@ -3011,6 +3015,36 @@ const anovaDimension = ref('all')
 const anovaItemId = ref<number | null>(null)
 const anovaAlpha = ref(0.05)
 
+const availableDimensionOptions = computed(() => {
+  if (statisticalOverview.value?.dimensionOptions?.length) {
+    return statisticalOverview.value.dimensionOptions.map((d: any) => ({
+      key: d.key,
+      label: d.label,
+      icon: d.icon || '',
+      questionText: d.questionText || '',
+    }))
+  }
+  if (statisticalOverview.value?.dimensions?.length) {
+    return statisticalOverview.value.dimensions
+      .filter((d: string) => !d.startsWith('All'))
+      .map((d: string) => ({
+        key: d.toLowerCase(),
+        label: d,
+        icon: '',
+        questionText: '',
+      }))
+  }
+  return []
+})
+
+const isDimensionAnovaFactor = computed(() => {
+  const f = anovaFactor.value
+  return f === 'MOOD_DIMENSIONS' ||
+    f === 'WEATHER_DIMENSIONS' ||
+    f === 'ALL_DIMENSIONS' ||
+    f.startsWith('QUESTION_')
+})
+
 const tTestGroup1Options = computed(() => {
   if (!statisticalOverview.value) return []
   if (tTestMode.value === 'SUBCATEGORIES') {
@@ -3029,9 +3063,10 @@ const tTestGroup1Options = computed(() => {
     return (statisticalOverview.value.diningFrequencies || []).map((df: string) => ({ value: df, label: df }))
   }
   if (tTestMode.value === 'DIMENSIONS') {
-    return (statisticalOverview.value.dimensions || [])
-      .filter((d: string) => !d.startsWith('All'))
-      .map((d: string) => ({ value: d.toLowerCase(), label: d }))
+    return availableDimensionOptions.value.map((d: any) => ({
+      value: d.key,
+      label: d.icon ? `${d.icon} ${d.label}` : d.label,
+    }))
   }
   return []
 })
@@ -5350,6 +5385,15 @@ onUnmounted(() => {
   font-weight: 700;
   color: #0f172a;
   margin: 0;
+}
+
+.sample-size-explainer {
+  margin: 4px 0 0 0;
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 500;
+  line-height: 1.4;
+  max-width: 650px;
 }
 
 .grand-mean-tag {

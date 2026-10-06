@@ -2,8 +2,11 @@ package com.example.survey.service;
 
 import com.example.survey.dto.*;
 import com.example.survey.model.MenuItem;
+import com.example.survey.model.Option;
+import com.example.survey.model.Question;
 import com.example.survey.repository.AnswerRepository;
 import com.example.survey.repository.MenuItemRepository;
+import com.example.survey.repository.QuestionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.math3.distribution.FDistribution;
@@ -40,8 +43,18 @@ public class StatisticalAnalysisService {
             int rating
     ) {}
 
+    public record DbDimension(
+            String key,
+            String label,
+            String icon,
+            String sub,
+            Long questionId,
+            String questionText
+    ) {}
+
     private final AnswerRepository answerRepository;
     private final MenuItemRepository menuItemRepository;
+    private final QuestionRepository questionRepository;
     private final TTest tTest = new TTest();
     private final OneWayAnova anova = new OneWayAnova();
 
@@ -197,38 +210,82 @@ public class StatisticalAnalysisService {
                     }
                 }
             }
-            case "MOOD_DIMENSIONS" -> {
-                List<String> canonicalMoods = List.of("Relaxation", "Focus", "Celebrate", "Comfort", "Welcoming", "Socialize", "Enjoyment");
-                for (String m : canonicalMoods) {
-                    groupedData.put(m, new ArrayList<>());
+            case "MOOD_DIMENSIONS", "WEATHER_DIMENSIONS" -> {
+                List<StatisticalOverviewDTO.EvaluationQuestionDTO> evalQs = loadEvaluationQuestions();
+                StatisticalOverviewDTO.EvaluationQuestionDTO targetQ = evalQs.stream()
+                        .filter(eq -> eq.getFactorKey().equalsIgnoreCase(factor))
+                        .findFirst()
+                        .orElse(null);
+
+                List<String> targetGroups;
+                if (targetQ != null && targetQ.getDimensionLabels() != null && !targetQ.getDimensionLabels().isEmpty()) {
+                    targetGroups = targetQ.getDimensionLabels();
+                } else {
+                    targetGroups = "MOOD_DIMENSIONS".equals(factor)
+                            ? List.of("Relaxation", "Focus", "Celebrate", "Comfort", "Welcoming", "Socialize", "Enjoyment")
+                            : List.of("Rainy", "Hot Dry", "Cool Dry");
                 }
+
+                for (String g : targetGroups) {
+                    groupedData.put(g, new ArrayList<>());
+                }
+
                 for (RatingRecord r : allRatings) {
                     if (filterItemId != null && !filterItemId.equals(r.menuItemId())) continue;
-                    for (String m : canonicalMoods) {
-                        if (r.dimensionKey().contains(m.toLowerCase())) {
-                            groupedData.get(m).add((double) r.rating());
+                    for (String g : targetGroups) {
+                        String gLower = g.toLowerCase();
+                        if (r.dimensionKey().equalsIgnoreCase(gLower)
+                                || r.dimensionOriginal().toLowerCase().contains(gLower)
+                                || gLower.contains(r.dimensionKey())) {
+                            groupedData.get(g).add((double) r.rating());
                             break;
                         }
                     }
                 }
             }
-            case "WEATHER_DIMENSIONS" -> {
-                List<String> canonicalWeather = List.of("Rainy", "Hot Dry", "Cool Dry");
-                for (String w : canonicalWeather) {
-                    groupedData.put(w, new ArrayList<>());
+            case "ALL_DIMENSIONS" -> {
+                List<DbDimension> allDims = loadDatabaseEvaluationDimensions();
+                for (DbDimension d : allDims) {
+                    groupedData.put(d.label(), new ArrayList<>());
                 }
                 for (RatingRecord r : allRatings) {
                     if (filterItemId != null && !filterItemId.equals(r.menuItemId())) continue;
-                    if (r.dimensionKey().contains("rain")) {
-                        groupedData.get("Rainy").add((double) r.rating());
-                    } else if (r.dimensionKey().contains("hot")) {
-                        groupedData.get("Hot Dry").add((double) r.rating());
-                    } else if (r.dimensionKey().contains("cool")) {
-                        groupedData.get("Cool Dry").add((double) r.rating());
+                    for (DbDimension d : allDims) {
+                        if (r.dimensionKey().equalsIgnoreCase(d.key()) || r.dimensionOriginal().toLowerCase().contains(d.key())) {
+                            groupedData.get(d.label()).add((double) r.rating());
+                            break;
+                        }
                     }
                 }
             }
-            default -> throw new IllegalArgumentException("Unsupported ANOVA factor: " + factor);
+            default -> {
+                if (factor.startsWith("QUESTION_")) {
+                    List<StatisticalOverviewDTO.EvaluationQuestionDTO> evalQs = loadEvaluationQuestions();
+                    StatisticalOverviewDTO.EvaluationQuestionDTO targetQ = evalQs.stream()
+                            .filter(eq -> eq.getFactorKey().equalsIgnoreCase(factor))
+                            .findFirst()
+                            .orElse(null);
+                    if (targetQ != null && targetQ.getDimensionLabels() != null && !targetQ.getDimensionLabels().isEmpty()) {
+                        for (String g : targetQ.getDimensionLabels()) {
+                            groupedData.put(g, new ArrayList<>());
+                        }
+                        for (RatingRecord r : allRatings) {
+                            if (filterItemId != null && !filterItemId.equals(r.menuItemId())) continue;
+                            for (String g : targetQ.getDimensionLabels()) {
+                                String gLower = g.toLowerCase();
+                                if (r.dimensionKey().equalsIgnoreCase(gLower)
+                                        || r.dimensionOriginal().toLowerCase().contains(gLower)
+                                        || gLower.contains(r.dimensionKey())) {
+                                    groupedData.get(g).add((double) r.rating());
+                                    break;
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+                throw new IllegalArgumentException("Unsupported ANOVA factor: " + factor);
+            }
         }
 
         // Apply group filter if user selected specific groups
@@ -277,11 +334,30 @@ public class StatisticalAnalysisService {
 
         List<String> supercategories = List.of("Meals", "Beverages");
 
-        List<String> dimensions = List.of(
-                "All (Overall Suitability)",
-                "Relaxation", "Focus", "Celebrate", "Comfort", "Welcoming", "Socialize", "Enjoyment",
-                "Rainy", "Hot Dry", "Cool Dry"
-        );
+        List<DbDimension> dbDimensions = loadDatabaseEvaluationDimensions();
+        List<StatisticalOverviewDTO.DimensionOptionDTO> dimensionOptions = new ArrayList<>();
+        List<String> dimensions = new ArrayList<>();
+        dimensions.add("All (Overall Suitability)");
+
+        Map<String, Integer> ratingCountByDim = new HashMap<>();
+        for (RatingRecord r : allRatings) {
+            ratingCountByDim.merge(r.dimensionKey(), 1, Integer::sum);
+        }
+
+        for (DbDimension d : dbDimensions) {
+            dimensions.add(d.label());
+            dimensionOptions.add(StatisticalOverviewDTO.DimensionOptionDTO.builder()
+                    .key(d.key())
+                    .label(d.label())
+                    .icon(d.icon())
+                    .sub(d.sub())
+                    .questionId(d.questionId())
+                    .questionText(d.questionText())
+                    .ratingCount(ratingCountByDim.getOrDefault(d.key(), 0))
+                    .build());
+        }
+
+        List<StatisticalOverviewDTO.EvaluationQuestionDTO> evalQuestions = loadEvaluationQuestions();
 
         Map<String, String> userAge = loadUserDemographics("age");
         List<String> ageGroups = userAge.values().stream().filter(Objects::nonNull).distinct().sorted().toList();
@@ -319,6 +395,8 @@ public class StatisticalAnalysisService {
                 .subcategories(subcategories)
                 .supercategories(supercategories)
                 .dimensions(dimensions)
+                .dimensionOptions(dimensionOptions)
+                .evaluationQuestions(evalQuestions)
                 .ageGroups(ageGroups)
                 .diningFrequencies(diningFrequencies)
                 .totalRatingsCount(allRatings.size())
@@ -617,7 +695,119 @@ public class StatisticalAnalysisService {
     // DATA LOADER & PARSING HELPERS
     // =========================================================================
 
+    public List<DbDimension> loadDatabaseEvaluationDimensions() {
+        Map<String, DbDimension> dimensionMap = new LinkedHashMap<>();
+
+        try {
+            List<Question> questions = questionRepository.findAllWithOptions();
+            for (Question q : questions) {
+                String qText = q.getText() == null ? "" : q.getText().toLowerCase();
+                String qType = q.getQuestionType() == null ? "" : q.getQuestionType().toUpperCase();
+                boolean isEval = "TEXT".equals(qType) || "MATRIX".equals(qType)
+                        || qText.contains("mood") || qText.contains("weather")
+                        || qText.contains("association") || qText.contains("suitable") || qText.contains("question");
+
+                if (isEval && q.getOptions() != null && !q.getOptions().isEmpty()) {
+                    for (Option opt : q.getOptions()) {
+                        String label = opt.getLabel() == null ? "" : opt.getLabel().trim();
+                        if (label.isBlank()) continue;
+                        String key = label.toLowerCase();
+                        dimensionMap.putIfAbsent(key, new DbDimension(
+                                key,
+                                label,
+                                opt.getIcon(),
+                                opt.getSubDescription(),
+                                q.getId(),
+                                q.getText()
+                        ));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Error reading question options for dimensions: {}", e.getMessage());
+        }
+
+        // Also check answer records for any dimensions present in submitted answers
+        try {
+            List<Object[]> rows = answerRepository.findAllItemRatingResponses();
+            for (Object[] r : rows) {
+                String resp = r[4] == null ? null : r[4].toString();
+                if (resp == null || resp.isBlank()) continue;
+                Matcher matcher = RATING_PATTERN.matcher(resp.trim());
+                if (matcher.matches()) {
+                    String dimRaw = matcher.group(1).trim();
+                    String cleanLabel = extractLabel(dimRaw);
+                    String key = cleanLabel.toLowerCase();
+                    if (!key.isBlank()) {
+                        dimensionMap.putIfAbsent(key, new DbDimension(
+                                key,
+                                cleanLabel,
+                                null,
+                                null,
+                                null,
+                                null
+                        ));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Error scanning answer responses for dimensions: {}", e.getMessage());
+        }
+
+        return new ArrayList<>(dimensionMap.values());
+    }
+
+    public List<StatisticalOverviewDTO.EvaluationQuestionDTO> loadEvaluationQuestions() {
+        List<StatisticalOverviewDTO.EvaluationQuestionDTO> list = new ArrayList<>();
+        try {
+            List<Question> questions = questionRepository.findAllWithOptions();
+            for (Question q : questions) {
+                String qText = q.getText() == null ? "" : q.getText().trim();
+                String lower = qText.toLowerCase();
+                boolean isEval = "TEXT".equalsIgnoreCase(q.getQuestionType())
+                        || "MATRIX".equalsIgnoreCase(q.getQuestionType())
+                        || lower.contains("mood") || lower.contains("weather")
+                        || lower.contains("association") || lower.contains("suitable");
+
+                if (isEval && q.getOptions() != null && !q.getOptions().isEmpty()) {
+                    String title = qText;
+                    if (qText.contains(":")) {
+                        title = qText.split(":", 2)[0].trim();
+                    }
+                    List<String> optLabels = q.getOptions().stream()
+                            .map(Option::getLabel)
+                            .filter(Objects::nonNull)
+                            .map(String::trim)
+                            .filter(s -> !s.isBlank())
+                            .toList();
+
+                    String factorKey;
+                    if (lower.contains("mood") || lower.contains("emotion") || lower.contains("question 1")) {
+                        factorKey = "MOOD_DIMENSIONS";
+                    } else if (lower.contains("weather") || lower.contains("question 2")) {
+                        factorKey = "WEATHER_DIMENSIONS";
+                    } else {
+                        factorKey = "QUESTION_" + q.getId();
+                    }
+
+                    list.add(StatisticalOverviewDTO.EvaluationQuestionDTO.builder()
+                            .questionId(q.getId())
+                            .title(title)
+                            .factorKey(factorKey)
+                            .factorLabel(String.format("%s (%d Dimensions from DB)", title, optLabels.size()))
+                            .dimensionCount(optLabels.size())
+                            .dimensionLabels(optLabels)
+                            .build());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Error loading evaluation questions: {}", e.getMessage());
+        }
+        return list;
+    }
+
     private List<RatingRecord> loadAllRatingRecords() {
+        List<DbDimension> knownDimensions = loadDatabaseEvaluationDimensions();
         List<Object[]> rows = answerRepository.findAllItemRatingResponses();
         List<RatingRecord> list = new ArrayList<>();
 
@@ -633,7 +823,16 @@ public class StatisticalAnalysisService {
             Matcher matcher = RATING_PATTERN.matcher(response.trim());
             if (matcher.matches()) {
                 String dimRaw = matcher.group(1).trim();
-                String dimKey = normalizeDimension(dimRaw);
+                String cleanLabel = extractLabel(dimRaw);
+                String normalizedKey = cleanLabel.toLowerCase();
+
+                DbDimension matched = knownDimensions.stream()
+                        .filter(d -> d.key().equalsIgnoreCase(normalizedKey) || d.label().equalsIgnoreCase(cleanLabel))
+                        .findFirst()
+                        .orElse(null);
+
+                String dimKey = matched != null ? matched.key() : normalizedKey;
+                String dimOriginal = matched != null ? matched.label() : cleanLabel;
                 int rating = Math.clamp(Integer.parseInt(matcher.group(2)), 1, 5);
 
                 String superCategory = resolveSupercategory(subcategory);
@@ -645,7 +844,7 @@ public class StatisticalAnalysisService {
                         subcategory,
                         superCategory,
                         dimKey,
-                        dimRaw,
+                        dimOriginal,
                         rating
                 ));
             }
@@ -673,21 +872,32 @@ public class StatisticalAnalysisService {
         if (dimension == null || dimension.equalsIgnoreCase("all") || dimension.isBlank()) {
             return true;
         }
-        return r.dimensionKey().contains(dimension.toLowerCase().trim());
+        String target = dimension.trim().toLowerCase();
+        return r.dimensionKey().equalsIgnoreCase(target)
+                || r.dimensionOriginal().toLowerCase().contains(target)
+                || r.dimensionKey().contains(target);
     }
 
     private boolean matchesDimensionKey(RatingRecord r, String targetDim) {
         if (targetDim == null || targetDim.isBlank()) return false;
-        return r.dimensionKey().contains(targetDim.toLowerCase().trim());
+        String target = targetDim.trim().toLowerCase();
+        return r.dimensionKey().equalsIgnoreCase(target)
+                || r.dimensionOriginal().toLowerCase().contains(target)
+                || r.dimensionKey().contains(target);
     }
 
-    private String normalizeDimension(String raw) {
-        String s = raw.toLowerCase();
+    private String extractLabel(String raw) {
+        if (raw == null) return "";
+        String s = raw.trim();
         int paren = s.indexOf('(');
         if (paren > 0) {
             s = s.substring(0, paren).trim();
         }
         return s;
+    }
+
+    private String normalizeDimension(String raw) {
+        return extractLabel(raw).toLowerCase();
     }
 
     private String resolveSupercategory(String subcategory) {

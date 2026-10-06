@@ -2,8 +2,11 @@ package com.example.survey.service;
 
 import com.example.survey.dto.*;
 import com.example.survey.model.MenuItem;
+import com.example.survey.model.Option;
+import com.example.survey.model.Question;
 import com.example.survey.repository.AnswerRepository;
 import com.example.survey.repository.MenuItemRepository;
+import com.example.survey.repository.QuestionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,6 +29,9 @@ class StatisticalAnalysisServiceTest {
     @Mock
     private MenuItemRepository menuItemRepository;
 
+    @Mock
+    private QuestionRepository questionRepository;
+
     @InjectMocks
     private StatisticalAnalysisService statisticalAnalysisService;
 
@@ -45,6 +51,31 @@ class StatisticalAnalysisServiceTest {
         lenient().when(menuItemRepository.findById(1L)).thenReturn(Optional.of(item1));
         lenient().when(menuItemRepository.findById(2L)).thenReturn(Optional.of(item2));
         lenient().when(menuItemRepository.findAll()).thenReturn(List.of(item1, item2));
+
+        // Mock evaluation questions from database
+        Question q1 = new Question();
+        q1.setId(5L);
+        q1.setText("Question 1 — Mood Association: How suitable is this item for each mood?");
+        q1.setQuestionType("TEXT");
+        Option optRelax = new Option();
+        optRelax.setId(47L);
+        optRelax.setLabel("Relaxation");
+        optRelax.setSubDescription("(Wants to unwind)");
+        optRelax.setQuestion(q1);
+        q1.setOptions(List.of(optRelax));
+
+        Question q2 = new Question();
+        q2.setId(6L);
+        q2.setText("Question 2 — Weather Association: How suitable is this item in this weather?");
+        q2.setQuestionType("TEXT");
+        Option optRain = new Option();
+        optRain.setId(54L);
+        optRain.setLabel("Rainy");
+        optRain.setSubDescription("(Wet, gloomy)");
+        optRain.setQuestion(q2);
+        q2.setOptions(List.of(optRain));
+
+        lenient().when(questionRepository.findAllWithOptions()).thenReturn(List.of(q1, q2));
 
         // Sample answers: userId, menuItemId, menuItemName, category, response
         List<Object[]> sampleAnswers = List.of(
