@@ -22,6 +22,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final SecurityStateStore securityStateStore;
 
     @Value("${admin.username}")
     private String adminUsername;
@@ -37,7 +38,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
             try {
                 String username = jwtUtil.extractUsername(token);
-                if (adminUsername.equals(username)) {
+                if (adminUsername.equals(username) && !securityStateStore.isRevoked(token)) {
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(username, null,
                                     List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));

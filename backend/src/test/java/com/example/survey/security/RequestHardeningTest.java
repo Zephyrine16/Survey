@@ -22,7 +22,11 @@ class RequestHardeningTest {
         properties.setWindowSeconds(15L);
         properties.setMaxSize(100L);
         properties.setMessage("Please wait");
-        var filter = new RateLimitFilter(properties, new ClientIpResolver(false));
+        var state = org.mockito.Mockito.mock(SecurityStateStore.class);
+        var calls = new AtomicInteger();
+        org.mockito.Mockito.when(state.consume("survey", "203.0.113.1", 1, 15L))
+                .thenAnswer(invocation -> calls.incrementAndGet() == 1);
+        var filter = new RateLimitFilter(properties, new ClientIpResolver(false), state);
         var allowed = new AtomicInteger();
         var blocked = new AtomicInteger();
         try (var pool = java.util.concurrent.Executors.newFixedThreadPool(20)) {

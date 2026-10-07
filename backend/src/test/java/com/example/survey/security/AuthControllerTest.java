@@ -24,6 +24,7 @@ class AuthControllerTest {
     private PasswordEncoder passwordEncoder;
     private AdminLoginProperties adminLoginProperties;
     private AuthController controller;
+    private SecurityStateStore securityStateStore;
 
     private static final String ADMIN_USER = "admin";
     private static final String ADMIN_HASH = "$2a$10$realHashForTesting12345678901234567890";
@@ -39,10 +40,11 @@ class AuthControllerTest {
         adminLoginProperties.setLockoutMinutes(15);
         adminLoginProperties.setCacheMaxSize(100);
 
-        controller = new AuthController(jwtUtil, clientIpResolver, passwordEncoder, adminLoginProperties);
+        securityStateStore = Mockito.mock(SecurityStateStore.class);
+        when(securityStateStore.consume(anyString(), anyString(), Mockito.anyInt(), Mockito.anyLong())).thenReturn(true);
+        controller = new AuthController(jwtUtil, clientIpResolver, securityStateStore, passwordEncoder, adminLoginProperties);
         ReflectionTestUtils.setField(controller, "adminUser", ADMIN_USER);
         ReflectionTestUtils.setField(controller, "adminPassHash", ADMIN_HASH);
-        controller.initCache();
     }
 
     @Test
@@ -92,6 +94,9 @@ class AuthControllerTest {
 
     @Test
     void testLockoutAfterMaxFailedAttempts() {
+        var attempts = new java.util.concurrent.atomic.AtomicInteger();
+        when(securityStateStore.consume(anyString(), anyString(), Mockito.anyInt(), Mockito.anyLong()))
+                .thenAnswer(invocation -> attempts.incrementAndGet() <= 5);
         HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
         when(clientIpResolver.resolveClientIp(request)).thenReturn("192.168.1.99");
         when(passwordEncoder.matches(anyString(), anyString())).thenReturn(false);
@@ -114,6 +119,9 @@ class AuthControllerTest {
 
     @Test
     void concurrentLoginAttemptsCannotBypassLockout() throws Exception {
+        var attempts = new java.util.concurrent.atomic.AtomicInteger();
+        when(securityStateStore.consume(anyString(), anyString(), Mockito.anyInt(), Mockito.anyLong()))
+                .thenAnswer(invocation -> attempts.incrementAndGet() <= 5);
         var request = Mockito.mock(HttpServletRequest.class);
         when(clientIpResolver.resolveClientIp(request)).thenReturn("192.168.1.99");
         var inPasswordCheck = new java.util.concurrent.CountDownLatch(5);
@@ -163,5 +171,15 @@ class AuthControllerTest {
         credentials.setPassword("界".repeat(25));
         assertEquals(HttpStatus.UNAUTHORIZED, controller.login(credentials, request).getStatusCode());
         Mockito.verifyNoInteractions(passwordEncoder);
+    }
+
+    @Test
+    void logoutRevokesThePresentedTokenUntilItsExpiry() {
+        var request = Mockito.mock(HttpServletRequest.class);
+        when(request.getHeader("Authorization")).thenReturn("Bearer issued-token");
+        var expiry = java.time.Instant.now().plusSeconds(900);
+        when(jwtUtil.extractExpiration("issued-token")).thenReturn(expiry);
+        assertEquals(HttpStatus.NO_CONTENT, controller.logout(request).getStatusCode());
+        Mockito.verify(securityStateStore).revoke("issued-token", expiry);
     }
 }

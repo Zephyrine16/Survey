@@ -41,14 +41,15 @@ public class JwtUtil {
 
         this.key = Keys.hmacShaKeyFor(secretBytes);
 
-        if(expirationMs == null || expirationMs <= 0) {
-            throw new IllegalStateException("JWT expiration must be a positive duration in milliseconds.");
+        if(expirationMs == null || expirationMs <= 0 || expirationMs > 900000) {
+            throw new IllegalStateException("JWT expiration must be between 1 and 900000 milliseconds (15 minutes).");
         }
     }
 
     public String generateToken(String username) {
         return Jwts.builder()
                 .setSubject(username)
+                .setId(java.util.UUID.randomUUID().toString())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(key, SignatureAlgorithm.HS256)
@@ -66,12 +67,22 @@ public class JwtUtil {
     }
 
     public String extractUsername(String token) {
+        return extractClaims(token).getSubject();
+    }
+
+    public java.time.Instant extractExpiration(String token) {
+        return extractClaims(token).getExpiration().toInstant();
+    }
+
+    private Claims extractClaims(String token) {
         Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
         if (claims.getSubject() == null || claims.getSubject().isBlank()
+                || claims.getId() == null || claims.getId().isBlank()
                 || claims.getExpiration() == null || claims.getIssuedAt() == null
-                || !claims.getExpiration().after(claims.getIssuedAt())) {
+                || !claims.getExpiration().after(claims.getIssuedAt())
+                || claims.getExpiration().getTime() - claims.getIssuedAt().getTime() > 900000) {
             throw new io.jsonwebtoken.JwtException("Invalid token claims");
         }
-        return claims.getSubject();
+        return claims;
     }
 }

@@ -2,9 +2,6 @@ package com.example.survey.security;
 
 import com.example.survey.config.AdminLoginProperties;
 import com.example.survey.dto.AdminLoginRequest;
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
-import jakarta.annotation.PostConstruct;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +14,6 @@ import org.springframework.web.bind.annotation.*;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -27,6 +22,7 @@ public class AuthController {
 
     private final JwtUtil jwtUtil;
     private final ClientIpResolver clientIpResolver;
+    private final SecurityStateStore securityStateStore;
 
     @Value("${admin.username}")
     private String adminUser;
@@ -37,16 +33,6 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final AdminLoginProperties adminLoginProperties;
 
-    private Cache<String, AtomicInteger> failedLoginAttempts;
-
-    @PostConstruct
-    public void initCache() {
-        failedLoginAttempts = Caffeine.newBuilder()
-                .expireAfterWrite(adminLoginProperties.getLockoutMinutes(), TimeUnit.MINUTES)
-                .maximumSize(adminLoginProperties.getCacheMaxSize())
-                .build();
-    }
-
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody AdminLoginRequest credentials, HttpServletRequest request) {
         String username = credentials.getUsername();
@@ -54,13 +40,10 @@ public class AuthController {
 
         String rateLimitKey = clientIpResolver.resolveClientIp(request);
 
-        // Reserve an attempt atomically before the expensive password check.
-        // Saturate at max + 1 so rejected traffic cannot overflow the counter.
-        AtomicInteger attempts = failedLoginAttempts.get(rateLimitKey, key -> new AtomicInteger());
-        int attempt = attempts.updateAndGet(count ->
-                Math.min(count, adminLoginProperties.getMaxFailedAttempts()) + 1);
-        if(attempt > adminLoginProperties.getMaxFailedAttempts()) {
+        if (!securityStateStore.consume("admin-login", rateLimitKey,
+                adminLoginProperties.getMaxFailedAttempts(), adminLoginProperties.getLockoutMinutes() * 60L)) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .header("Retry-After", Long.toString(adminLoginProperties.getLockoutMinutes() * 60L))
                     .body(Map.of("error", "Too many failed login attempts. Try again later."));
         }
 
@@ -75,7 +58,7 @@ public class AuthController {
                 && passwordEncoder.matches(password, adminPassHash);
 
         if(usernameMatches && passwordMatches) {
-            failedLoginAttempts.invalidate(rateLimitKey);
+            securityStateStore.reset("admin-login", rateLimitKey);
             String token = jwtUtil.generateToken(username);
             return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
                     .body(Map.of("token", token));
@@ -88,5 +71,12 @@ public class AuthController {
     public ResponseEntity<?> session() {
         return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
                 .body(Map.of("authenticated", true));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletRequest request) {
+        String token = request.getHeader("Authorization").substring(7);
+        securityStateStore.revoke(token, jwtUtil.extractExpiration(token));
+        return ResponseEntity.noContent().cacheControl(org.springframework.http.CacheControl.noStore()).build();
     }
 }

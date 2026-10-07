@@ -28,9 +28,10 @@ class MenuAuthorizationTest {
             properties.setEnabled(false);
             properties.setWindowSeconds(1L);
             properties.setMaxSize(100L);
+            var state = org.mockito.Mockito.mock(SecurityStateStore.class);
             context.addBeanFactoryPostProcessor(factory -> {
-                factory.registerSingleton("jwtAuthFilter", new JwtAuthFilter(jwt));
-                factory.registerSingleton("rateLimitFilter", new RateLimitFilter(properties, new ClientIpResolver(false)));
+                factory.registerSingleton("jwtAuthFilter", new JwtAuthFilter(jwt, state));
+                factory.registerSingleton("rateLimitFilter", new RateLimitFilter(properties, new ClientIpResolver(false), state));
             });
             context.register(SecurityConfig.class);
             context.refresh();
@@ -44,6 +45,8 @@ class MenuAuthorizationTest {
                 String token = jwt.generateToken("admin");
                 assertAccess(chain, method, token.substring(0, token.lastIndexOf('.') + 1) + "AAAA", false);
                 assertAccess(chain, method, token, true);
+                org.mockito.Mockito.when(state.isRevoked(token)).thenReturn(true);
+                assertAccess(chain, method, token, false);
             }
         }
     }

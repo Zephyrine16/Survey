@@ -13,6 +13,14 @@ class JwtUtilTest {
     private static final String SECRET = "test-only-signing-secret-32-bytes-long";
 
     @Test
+    void rejectsLongLivedAdminTokens() {
+        var jwt = new JwtUtil();
+        ReflectionTestUtils.setField(jwt, "secretString", SECRET);
+        ReflectionTestUtils.setField(jwt, "expirationMs", 86400000L);
+        assertThrows(IllegalStateException.class, jwt::init);
+    }
+
+    @Test
     void validatesSignaturesExpiryAndRequiredClaims() {
         var jwt = new JwtUtil();
         ReflectionTestUtils.setField(jwt, "secretString", SECRET);

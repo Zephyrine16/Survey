@@ -1,8 +1,6 @@
 package com.example.survey.security;
 
 import com.example.survey.config.RateLimitProperties;
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,7 +12,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 
 @Component
 @NullMarked
@@ -23,16 +20,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private final RateLimitProperties rateLimitProperties;
     private final ClientIpResolver clientIpResolver;
-    private final Cache<String, Boolean> ipCooldowns;
+    private final SecurityStateStore securityStateStore;
 
-    public RateLimitFilter(RateLimitProperties rateLimitProperties, ClientIpResolver clientIpResolver) {
+    public RateLimitFilter(RateLimitProperties rateLimitProperties, ClientIpResolver clientIpResolver,
+                           SecurityStateStore securityStateStore) {
         this.rateLimitProperties = rateLimitProperties;
         this.clientIpResolver = clientIpResolver;
 
-        this.ipCooldowns = Caffeine.newBuilder()
-                .expireAfterWrite(rateLimitProperties.getWindowSeconds(), TimeUnit.SECONDS)
-                .maximumSize(rateLimitProperties.getMaxSize())
-                .build();
+        this.securityStateStore = securityStateStore;
     }
 
     @Override
@@ -53,7 +48,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             String clientIp = clientIpResolver.resolveClientIp(request);
 
             // Check if this IP is on cooldown
-            if(ipCooldowns.asMap().putIfAbsent(clientIp, Boolean.TRUE) != null) {
+            if (!securityStateStore.consume("survey", clientIp, 1, rateLimitProperties.getWindowSeconds())) {
                 log.warn("Blocked repeat submit-category request from IP {}", clientIp);
                 response.setStatus(429); // HTTP 429 = "Too Many Requests"
                 response.setHeader("Retry-After", Long.toString(rateLimitProperties.getWindowSeconds()));
