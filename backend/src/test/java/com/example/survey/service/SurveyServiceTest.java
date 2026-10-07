@@ -39,6 +39,9 @@ class SurveyServiceTest {
     @Mock
     private com.example.survey.repository.MenuItemRepository menuItemRepository;
 
+    @Mock
+    private com.example.survey.repository.OptionRepository optionRepository;
+
     @InjectMocks
     private SurveyService surveyService;
 
@@ -74,6 +77,12 @@ class SurveyServiceTest {
 
     @Test
     void saveSurveyIfUnderLimit_Success() {
+        when(menuItemRepository.existsById(1L)).thenReturn(true);
+        var question = new Question();
+        question.setId(1L);
+        var option = new com.example.survey.model.Option();
+        option.setQuestion(question);
+        when(optionRepository.findById(2L)).thenReturn(java.util.Optional.of(option));
         when(answerRepository.countTotalParticipants()).thenReturn(50L);
         when(surveyProperties.getParticipantLimit()).thenReturn(100L);
         when(surveyProperties.getTextResponseMaxLength()).thenReturn(255);
@@ -111,6 +120,7 @@ class SurveyServiceTest {
 
     @Test
     void saveCompleteSurveyBatchesRatingsAndDemographicsTogether() {
+        when(menuItemRepository.existsById(101L)).thenReturn(true);
         when(questionRepository.existsById(1L)).thenReturn(true);
         Question age = new Question();
         age.setId(7L);
@@ -138,6 +148,7 @@ class SurveyServiceTest {
 
     @Test
     void saveCompleteSurveyDoesNotInsertRatingsIfDemographicsCannotBePrepared() {
+        when(menuItemRepository.existsById(101L)).thenReturn(true);
         when(questionRepository.existsById(1L)).thenReturn(true);
         when(questionRepository.findAll()).thenThrow(new IllegalStateException("Question lookup failed"));
         CategorySubmissionDTO rating = new CategorySubmissionDTO();
@@ -159,6 +170,43 @@ class SurveyServiceTest {
 
         verify(answerRepository, never()).countTotalParticipants();
         verify(jdbcTemplate, never()).batchUpdate(anyString(), any(BatchPreparedStatementSetter.class));
+    }
+
+    @Test
+    void rejectsUnknownQuestionInsteadOfCreatingOrReplacingIt() {
+        var answer = new CategorySubmissionDTO();
+        answer.setMenuItemId(101L);
+        answer.setQuestionId(999L);
+        when(menuItemRepository.existsById(101L)).thenReturn(true);
+        assertThrows(IllegalArgumentException.class, () -> surveyService.saveSurveyIfUnderLimit(List.of(answer)));
+        verify(questionRepository, never()).save(any());
+        verifyNoInteractions(jdbcTemplate);
+    }
+
+    @Test
+    void rejectsOptionFromADifferentQuestion() {
+        var answer = new CategorySubmissionDTO();
+        answer.setMenuItemId(101L);
+        answer.setQuestionId(1L);
+        answer.setSelectedOptionId(2L);
+        when(menuItemRepository.existsById(101L)).thenReturn(true);
+        when(questionRepository.existsById(1L)).thenReturn(true);
+        var otherQuestion = new Question();
+        otherQuestion.setId(3L);
+        var option = new com.example.survey.model.Option();
+        option.setQuestion(otherQuestion);
+        when(optionRepository.findById(2L)).thenReturn(java.util.Optional.of(option));
+        assertThrows(IllegalArgumentException.class, () -> surveyService.saveSurveyIfUnderLimit(List.of(answer)));
+        verifyNoInteractions(jdbcTemplate);
+    }
+
+    @Test
+    void rejectsUnknownMenuItemBeforeWriting() {
+        var answer = new CategorySubmissionDTO();
+        answer.setMenuItemId(999L);
+        answer.setQuestionId(1L);
+        assertThrows(IllegalArgumentException.class, () -> surveyService.saveSurveyIfUnderLimit(List.of(answer)));
+        verifyNoInteractions(jdbcTemplate);
     }
 }
 

@@ -10,8 +10,10 @@ RUN ./mvnw clean package
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=build /app/target/Survey-0.0.1-SNAPSHOT.jar app.jar
+RUN mkdir -p /app/uploads && chown -R 10001:10001 /app
+USER 10001:10001
 
 ENV PORT=8080
 EXPOSE 8080
 
-ENTRYPOINT ["sh", "-c", "java -Dserver.port=${PORT:-8080} -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "exec java -Dserver.port=${PORT:-8080} -jar app.jar"]

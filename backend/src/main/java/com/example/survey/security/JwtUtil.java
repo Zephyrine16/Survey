@@ -41,7 +41,7 @@ public class JwtUtil {
 
         this.key = Keys.hmacShaKeyFor(secretBytes);
 
-        if(expirationMs <= 0) {
+        if(expirationMs == null || expirationMs <= 0) {
             throw new IllegalStateException("JWT expiration must be a positive duration in milliseconds.");
         }
     }
@@ -57,7 +57,7 @@ public class JwtUtil {
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+            extractUsername(token);
             return true;
         } catch(Exception e) {
             log.debug("Invalid JWT token received.", e);
@@ -67,6 +67,11 @@ public class JwtUtil {
 
     public String extractUsername(String token) {
         Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token).getBody();
+        if (claims.getSubject() == null || claims.getSubject().isBlank()
+                || claims.getExpiration() == null || claims.getIssuedAt() == null
+                || !claims.getExpiration().after(claims.getIssuedAt())) {
+            throw new io.jsonwebtoken.JwtException("Invalid token claims");
+        }
         return claims.getSubject();
     }
 }

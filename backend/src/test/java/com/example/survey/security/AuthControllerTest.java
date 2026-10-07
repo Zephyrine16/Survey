@@ -111,4 +111,57 @@ class AuthControllerTest {
         assertEquals(HttpStatus.TOO_MANY_REQUESTS, blockedResponse.getStatusCode());
         assertTrue(((Map<?, ?>) blockedResponse.getBody()).get("error").toString().contains("Too many failed login attempts"));
     }
+
+    @Test
+    void concurrentLoginAttemptsCannotBypassLockout() throws Exception {
+        var request = Mockito.mock(HttpServletRequest.class);
+        when(clientIpResolver.resolveClientIp(request)).thenReturn("192.168.1.99");
+        var inPasswordCheck = new java.util.concurrent.CountDownLatch(5);
+        var releasePasswordCheck = new java.util.concurrent.CountDownLatch(1);
+        when(passwordEncoder.matches(anyString(), anyString())).thenAnswer(invocation -> {
+            inPasswordCheck.countDown();
+            releasePasswordCheck.await(5, java.util.concurrent.TimeUnit.SECONDS);
+            return false;
+        });
+        var credentials = new AdminLoginRequest();
+        credentials.setUsername("admin");
+        credentials.setPassword("wrong");
+        try (var pool = java.util.concurrent.Executors.newFixedThreadPool(20)) {
+            var futures = new java.util.ArrayList<java.util.concurrent.Future<ResponseEntity<?>>>();
+            for (int i = 0; i < 20; i++) futures.add(pool.submit(() -> controller.login(credentials, request)));
+            try {
+                assertTrue(inPasswordCheck.await(5, java.util.concurrent.TimeUnit.SECONDS));
+            } finally {
+                releasePasswordCheck.countDown();
+            }
+            int blocked = 0;
+            for (var future : futures) if (future.get().getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) blocked++;
+            assertEquals(15, blocked);
+            Mockito.verify(passwordEncoder, Mockito.times(5)).matches(anyString(), anyString());
+        }
+    }
+
+    @Test
+    void wrongUsernameUsesConfiguredHashAndCannotAuthenticateEvenWithCorrectPassword() {
+        var request = Mockito.mock(HttpServletRequest.class);
+        when(clientIpResolver.resolveClientIp(request)).thenReturn("192.168.1.99");
+        when(passwordEncoder.matches("correctPassword", ADMIN_HASH)).thenReturn(true);
+        var credentials = new AdminLoginRequest();
+        credentials.setUsername("other-user");
+        credentials.setPassword("correctPassword");
+        assertEquals(HttpStatus.UNAUTHORIZED, controller.login(credentials, request).getStatusCode());
+        Mockito.verify(passwordEncoder).matches("correctPassword", ADMIN_HASH);
+        Mockito.verifyNoInteractions(jwtUtil);
+    }
+
+    @Test
+    void rejectsPasswordExceedingBcryptByteLimit() {
+        var request = Mockito.mock(HttpServletRequest.class);
+        when(clientIpResolver.resolveClientIp(request)).thenReturn("192.168.1.99");
+        var credentials = new AdminLoginRequest();
+        credentials.setUsername("admin");
+        credentials.setPassword("界".repeat(25));
+        assertEquals(HttpStatus.UNAUTHORIZED, controller.login(credentials, request).getStatusCode());
+        Mockito.verifyNoInteractions(passwordEncoder);
+    }
 }

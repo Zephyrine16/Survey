@@ -67,10 +67,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                         .requestMatchers(HttpMethod.HEAD, "/uploads/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/submit-category", "/api/admin/login").permitAll()
-                        .requestMatchers("/analytics/**", "/api/stats/**", "/export", "/api/admin/**").authenticated()
-                        .anyRequest().authenticated()
+                        .requestMatchers("/analytics/**", "/api/stats/**", "/export", "/api/admin/**").hasRole("ADMIN")
+                        .anyRequest().denyAll()
                 )
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new JsonBodyLimitFilter(), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -95,12 +96,21 @@ public class SecurityConfig {
         }
 
         for (String origin : origins) {
-            if (!origin.startsWith("http://") && !origin.startsWith("https://")) {
-                throw new IllegalStateException("Invalid CORS origin format (must start with http:// or https://): " + origin);
+            java.net.URI uri;
+            try {
+                uri = java.net.URI.create(origin);
+            } catch (IllegalArgumentException ex) {
+                throw new IllegalStateException("Invalid CORS origin configuration", ex);
+            }
+            if (!("http".equals(uri.getScheme()) || "https".equals(uri.getScheme()))
+                    || uri.getHost() == null || uri.getUserInfo() != null
+                    || !uri.getRawPath().isEmpty() || uri.getRawQuery() != null
+                    || uri.getRawFragment() != null || origin.contains("*")) {
+                throw new IllegalStateException("CORS entries must be exact HTTP(S) origins without paths or wildcards");
             }
         }
 
-        configuration.setAllowedOriginPatterns(origins);
+        configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With",
                 "Accept",

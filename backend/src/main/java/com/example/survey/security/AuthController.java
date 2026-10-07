@@ -18,13 +18,12 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
 public class AuthController {
-
-    private static final String DUMMY_BCRYPT_HASH = "$2a$10$e8kPqZ2aZJ6w1K4e7rXGVuY7w1K4e7rXGVuY7w1K4e7rXGVuY7w1K4";
 
     private final JwtUtil jwtUtil;
     private final ClientIpResolver clientIpResolver;
@@ -38,7 +37,7 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final AdminLoginProperties adminLoginProperties;
 
-    private Cache<String, Integer> failedLoginAttempts;
+    private Cache<String, AtomicInteger> failedLoginAttempts;
 
     @PostConstruct
     public void initCache() {
@@ -55,10 +54,12 @@ public class AuthController {
 
         String rateLimitKey = clientIpResolver.resolveClientIp(request);
 
-        Integer failures = failedLoginAttempts.getIfPresent(rateLimitKey);
-        int failureCount = failures == null ? 0 : failures;
-
-        if(failureCount >= adminLoginProperties.getMaxFailedAttempts()) {
+        // Reserve an attempt atomically before the expensive password check.
+        // Saturate at max + 1 so rejected traffic cannot overflow the counter.
+        AtomicInteger attempts = failedLoginAttempts.get(rateLimitKey, key -> new AtomicInteger());
+        int attempt = attempts.updateAndGet(count ->
+                Math.min(count, adminLoginProperties.getMaxFailedAttempts()) + 1);
+        if(attempt > adminLoginProperties.getMaxFailedAttempts()) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("error", "Too many failed login attempts. Try again later."));
         }
@@ -68,22 +69,24 @@ public class AuthController {
                 username.getBytes(StandardCharsets.UTF_8)
         );
 
-        boolean passwordMatches;
-        if (usernameMatches) {
-            passwordMatches = passwordEncoder.matches(password, adminPassHash);
-        } else {
-            // Mitigate timing attack: execute dummy check so response time is indistinguishable
-            passwordEncoder.matches(password, DUMMY_BCRYPT_HASH);
-            passwordMatches = false;
-        }
+        // Use the same configured hash and work factor for every username.
+        // BCrypt accepts at most 72 UTF-8 bytes; reject longer inputs explicitly.
+        boolean passwordMatches = password.getBytes(StandardCharsets.UTF_8).length <= 72
+                && passwordEncoder.matches(password, adminPassHash);
 
         if(usernameMatches && passwordMatches) {
             failedLoginAttempts.invalidate(rateLimitKey);
             String token = jwtUtil.generateToken(username);
-            return ResponseEntity.ok(Map.of("token", token));
+            return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                    .body(Map.of("token", token));
         }
 
-        failedLoginAttempts.put(rateLimitKey, failureCount + 1);
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid credentials"));
+    }
+
+    @GetMapping("/session")
+    public ResponseEntity<?> session() {
+        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(Map.of("authenticated", true));
     }
 }

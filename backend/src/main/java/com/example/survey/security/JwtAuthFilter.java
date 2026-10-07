@@ -12,7 +12,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 @Component
 @RequiredArgsConstructor
@@ -20,6 +22,9 @@ import java.util.ArrayList;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+
+    @Value("${admin.username}")
+    private String adminUsername;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -30,12 +35,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if(authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
 
-            if(jwtUtil.validateToken(token)) {
+            try {
                 String username = jwtUtil.extractUsername(token);
-
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(username, null, new ArrayList<>());
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                if (adminUsername.equals(username)) {
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(username, null,
+                                    List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
+            } catch (io.jsonwebtoken.JwtException | IllegalArgumentException ignored) {
+                // A forged, malformed, or expired token must never establish a session.
             }
         }
         filterChain.doFilter(request, response);

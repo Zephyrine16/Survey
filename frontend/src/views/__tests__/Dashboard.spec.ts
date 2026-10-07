@@ -217,6 +217,9 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
       return Promise.resolve({ data: {} })
     })
     ;(axios.get as any).mockImplementation((url: string) => {
+      if (url === '/api/admin/session') {
+        return Promise.resolve({ data: { authenticated: true } })
+      }
       if (url === '/menu-items') {
         return Promise.resolve({ data: mockMenuItems })
       }
@@ -370,6 +373,19 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     expect(axios.post).not.toHaveBeenCalled()
     expect(axios.defaults.headers.common['Authorization']).toBe('Bearer persisted-jwt-token')
     expect(localStorage.getItem('admin_token')).toBe('persisted-jwt-token')
+    wrapper.unmount()
+  })
+
+  it('rejects a forged stored token before loading dashboard data', async () => {
+    localStorage.setItem('admin_token', 'forged-token')
+    ;(axios.get as any).mockRejectedValue({ response: { status: 403 } })
+    const wrapper = mount(Dashboard)
+    expect(wrapper.find('.login-wrapper').exists()).toBe(true)
+    await flushPromises()
+    expect(wrapper.find('.dashboard-layout').exists()).toBe(false)
+    expect(axios.get).toHaveBeenCalledExactlyOnceWith('/api/admin/session')
+    expect(localStorage.getItem('admin_token')).toBeNull()
+    expect(axios.defaults.headers.common['Authorization']).toBeUndefined()
     wrapper.unmount()
   })
 
