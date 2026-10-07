@@ -43,6 +43,9 @@ public class SurveyController {
     @org.springframework.beans.factory.annotation.Value("${survey.participant-cookie-secure:false}")
     private boolean participantCookieSecure;
 
+    @org.springframework.beans.factory.annotation.Value("${security.maintenance.enabled:false}")
+    private boolean maintenanceEnabled;
+
     // ==========================================
     // 1. SAVE SURVEY ANSWERS
     // ==========================================
@@ -235,22 +238,6 @@ public class SurveyController {
     }
 
     // ==========================================
-    // 4. ADMIN TOOLS: NUKE DATABASE (For Testing)
-    // ==========================================
-
-    @DeleteMapping("/api/admin/clear-data")
-    @Transactional
-    public ResponseEntity<?> clearAllData() {
-        try {
-            answerRepository.deleteAllInBatch();
-            return ResponseEntity.ok().body(java.util.Map.of("message", "All database records wiped!"));
-        } catch (Exception e) {
-            log.error("Failed to clear survey data.", e);
-            return ResponseEntity.internalServerError().body(java.util.Map.of("error", "Failed to wipe data."));
-        }
-    }
-
-    // ==========================================
     // 5. ADMIN TOOLS: MENU ITEM MANAGEMENT (CRUD)
     // ==========================================
 
@@ -331,6 +318,7 @@ public class SurveyController {
 
     @DeleteMapping("/api/admin/questions/{id}")
     public ResponseEntity<Void> deleteQuestion(@PathVariable Long id) {
+        if (!maintenanceEnabled) return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
         if (!questionRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
@@ -386,6 +374,7 @@ public class SurveyController {
     @DeleteMapping("/api/admin/options/{optionId}")
     @Transactional
     public ResponseEntity<Void> deleteOption(@PathVariable Long optionId) {
+        if (!maintenanceEnabled) return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
         if (!optionRepository.existsById(optionId)) {
             return ResponseEntity.notFound().build();
         }

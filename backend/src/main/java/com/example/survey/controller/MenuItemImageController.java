@@ -4,7 +4,6 @@ import com.example.survey.repository.MenuItemRepository;
 import com.example.survey.repository.UploadedImageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,22 +20,16 @@ public class MenuItemImageController {
     private final MenuItemRepository menuItemRepository;
     private final UploadedImageRepository uploadedImageRepository;
 
+    @Value("${security.maintenance.enabled:false}")
+    private boolean maintenanceEnabled;
+
     private static final Set<String> ALLOWED_TYPES = Set.of("image/jpeg", "image/png", "image/webp", "image/jpg");
     private static final long MAX_SIZE = 5 * 1024 * 1024;
-
-    /** DELETE /api/admin/menu-items — removes every menu item in one batch. */
-    @DeleteMapping
-    @Transactional
-    public ResponseEntity<Void> deleteAllMenuItems() {
-        // First detach all answers so the FK constraint doesn't block delete
-        menuItemRepository.detachAllAnswersFromMenuItems();
-        menuItemRepository.deleteAllInBatch();
-        return ResponseEntity.noContent().build();
-    }
 
     /** DELETE /api/admin/menu-items/{id} — removes a single menu item by id. */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteMenuItem(@PathVariable Long id) {
+        if (!maintenanceEnabled) return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
         if (!menuItemRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }

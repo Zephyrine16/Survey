@@ -1,58 +1,46 @@
 package com.example.survey.controller;
 
-import com.example.survey.config.SurveyProperties;
 import com.example.survey.repository.AnswerRepository;
 import com.example.survey.repository.MenuItemRepository;
-import com.example.survey.repository.OptionRepository;
-import com.example.survey.repository.QuestionRepository;
-import com.example.survey.service.AnalyticsService;
-import com.example.survey.service.SurveyService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-
-import java.util.Map;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class SurveyControllerTest {
-
-    private AnswerRepository answerRepository;
-    private SurveyController controller;
-
-    @BeforeEach
-    void setUp() {
-        answerRepository = Mockito.mock(AnswerRepository.class);
-        controller = new SurveyController(
-                answerRepository,
-                Mockito.mock(MenuItemRepository.class),
-                Mockito.mock(QuestionRepository.class),
-                Mockito.mock(OptionRepository.class),
-                Mockito.mock(SurveyService.class),
-                Mockito.mock(AnalyticsService.class),
-                new SurveyProperties());
+    @Test
+    void bulkDeletionIsDisabledByDefault() {
+        var answers = Mockito.mock(AnswerRepository.class);
+        var menu = Mockito.mock(MenuItemRepository.class);
+        var controller = new AdminMaintenanceController(answers, menu);
+        assertEquals(HttpStatus.FORBIDDEN, controller.clearAllData().getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN, controller.deleteAllMenuItems().getStatusCode());
+        Mockito.verifyNoInteractions(answers, menu);
     }
 
     @Test
-    void testClearAllDataDeletesAnswersAndReturnsMessage() {
-        ResponseEntity<?> response = controller.clearAllData();
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        Mockito.verify(answerRepository).deleteAllInBatch();
-        assertNotNull(response.getBody());
-        assertTrue(((Map<?, ?>) response.getBody()).containsKey("message"));
+    void explicitlyEnabledDevelopmentMaintenanceDeletesData() {
+        var answers = Mockito.mock(AnswerRepository.class);
+        var menu = Mockito.mock(MenuItemRepository.class);
+        var controller = new AdminMaintenanceController(answers, menu);
+        ReflectionTestUtils.setField(controller, "enabled", true);
+        assertEquals(HttpStatus.OK, controller.clearAllData().getStatusCode());
+        Mockito.verify(answers).deleteAllInBatch();
+        assertEquals(HttpStatus.NO_CONTENT, controller.deleteAllMenuItems().getStatusCode());
+        Mockito.verify(menu).detachAllAnswersFromMenuItems();
+        Mockito.verify(menu).deleteAllInBatch();
     }
 
     @Test
-    void testClearAllDataReturnsServerErrorWhenDeleteFails() {
-        Mockito.doThrow(new RuntimeException("db down")).when(answerRepository).deleteAllInBatch();
-
-        ResponseEntity<?> response = controller.clearAllData();
-
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertTrue(((Map<?, ?>) response.getBody()).containsKey("error"));
+    void productionDoesNotRegisterBulkDeletionController() {
+        try (var context = new AnnotationConfigApplicationContext()) {
+            context.getEnvironment().setActiveProfiles("prod");
+            context.register(AdminMaintenanceController.class);
+            context.refresh();
+            assertTrue(context.getBeansOfType(AdminMaintenanceController.class).isEmpty());
+        }
     }
 }
