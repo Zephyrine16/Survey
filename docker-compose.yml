@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: postgres
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -21,14 +21,20 @@ services:
     container_name: survey-backend
     restart: always
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     depends_on:
       - postgres-db
     env_file:
       - ./backend/.env
     environment:
       - DATABASE_URL=jdbc:postgresql://postgres-db:5432/postgres
-      - CORS_ALLOWED_ORIGINS=http://localhost,http://localhost:80,http://localhost:5173,http://admin.localhost,http://survey.localhost,http://*.localhost,https://*.vercel.app
+      - CORS_ALLOWED_ORIGINS=http://localhost,http://localhost:80,http://localhost:5173,http://admin.localhost,http://survey.localhost
+      - DB_SSL_MODE=disable
+      - SURVEY_COOKIE_SECURE=false
+      - SERVER_FORWARD_HEADERS_STRATEGY=none
+      - SECURITY_TRUSTED_PROXIES_ENABLED=true
+      - SECURITY_TRUSTED_PROXY_ADDRESSES=172.30.42.10
+      - JWT_EXPIRATION_MS=900000
     volumes:
       - backend_uploads:/app/uploads
 
@@ -42,6 +48,14 @@ services:
       - "80:80"
     depends_on:
       - backend
+    networks:
+      default:
+        ipv4_address: 172.30.42.10
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.42.0/24
 volumes:
   postgres_data:
   backend_uploads:
