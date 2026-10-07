@@ -33,7 +33,8 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
     List<Object[]> findTextResponsesForMenuItem(@Param("menuItemId") Long menuItemId);
 
     @Query("""
-        SELECT a.question.id, a.userId, a.response, o.label, a.question.text, a.question.questionType
+        SELECT a.question.id, a.userId, a.response, o.label, a.question.text,
+               a.question.questionType, a.selectedOption.id
         FROM Answer a
         LEFT JOIN a.selectedOption o
         WHERE a.menuItem.id = :menuItemId
@@ -49,7 +50,8 @@ public interface AnswerRepository extends JpaRepository<Answer, Long> {
     List<Object[]> findDemographicResponses();
 
     @Query("""
-        SELECT a.userId, a.menuItem.id, a.menuItem.name, a.menuItem.category, a.response
+        SELECT a.userId, a.menuItem.id, a.menuItem.name, a.menuItem.category, a.response,
+               a.question.questionType, a.selectedOption.id
         FROM Answer a
         WHERE a.menuItem IS NOT NULL AND a.response IS NOT NULL
     """)

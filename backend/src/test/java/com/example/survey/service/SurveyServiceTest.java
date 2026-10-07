@@ -5,6 +5,7 @@ import com.example.survey.dto.CategorySubmissionDTO;
 import com.example.survey.model.Question;
 import com.example.survey.repository.AnswerRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -23,6 +24,11 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SurveyServiceTest {
+
+    @BeforeEach
+    void defaults() {
+        lenient().when(surveyProperties.getItemsPerParticipant()).thenReturn(10);
+    }
 
     @Mock
     private AnswerRepository answerRepository;
@@ -155,6 +161,7 @@ class SurveyServiceTest {
         rating.setUserId("session-1");
         rating.setMenuItemId(101L);
         rating.setQuestionId(1L);
+        rating.setTextResponse("Happy: 4");
 
         assertThrows(IllegalStateException.class, () -> surveyService.saveCompleteSurveyIfUnderLimit(
                 List.of(rating), "session-1", true, "18–20", null));
@@ -207,6 +214,52 @@ class SurveyServiceTest {
         answer.setQuestionId(1L);
         assertThrows(IllegalArgumentException.class, () -> surveyService.saveSurveyIfUnderLimit(List.of(answer)));
         verifyNoInteractions(jdbcTemplate);
+    }
+
+    @Test
+    void rejectsDuplicateDimensionAnswersBeforeInserting() {
+        var answer = new CategorySubmissionDTO();
+        answer.setMenuItemId(101L);
+        answer.setQuestionId(1L);
+        answer.setTextResponse("Happy: 4");
+        when(menuItemRepository.existsById(101L)).thenReturn(true);
+        when(questionRepository.existsById(1L)).thenReturn(true);
+        assertThrows(IllegalArgumentException.class, () -> surveyService.saveSurveyIfUnderLimit(List.of(answer, answer)));
+        verify(jdbcTemplate, never()).batchUpdate(anyString(), any(BatchPreparedStatementSetter.class));
+    }
+
+    @Test
+    void rejectsAnItemThatIsAlreadyAtItsRespondentLimit() {
+        var answer = new CategorySubmissionDTO();
+        answer.setMenuItemId(101L);
+        answer.setQuestionId(1L);
+        answer.setTextResponse("Happy: 4");
+        when(menuItemRepository.existsById(101L)).thenReturn(true);
+        when(questionRepository.existsById(1L)).thenReturn(true);
+        when(surveyProperties.getItemRespondentLimit()).thenReturn(35L);
+        when(answerRepository.countTotalResponsesForItem(101L)).thenReturn(35L);
+        assertFalse(surveyService.saveCompleteSurveyIfUnderLimit(List.of(answer), "session-1", true, null, null));
+        verify(jdbcTemplate, never()).batchUpdate(anyString(), any(BatchPreparedStatementSetter.class));
+    }
+
+    @Test
+    void acceptsDifferentDimensionsOfTheSameGridQuestion() {
+        when(menuItemRepository.existsById(101L)).thenReturn(true);
+        when(questionRepository.existsById(1L)).thenReturn(true);
+        var question = new Question();
+        question.setId(1L);
+        var option = new com.example.survey.model.Option();
+        option.setQuestion(question);
+        when(optionRepository.findById(anyLong())).thenReturn(java.util.Optional.of(option));
+        var happy = new CategorySubmissionDTO();
+        happy.setMenuItemId(101L);
+        happy.setQuestionId(1L);
+        happy.setSelectedOptionId(1L);
+        var comfort = new CategorySubmissionDTO();
+        comfort.setMenuItemId(101L);
+        comfort.setQuestionId(1L);
+        comfort.setSelectedOptionId(2L);
+        assertTrue(surveyService.saveCompleteSurveyIfUnderLimit(List.of(happy, comfort), "session-1", true, null, null));
     }
 }
 

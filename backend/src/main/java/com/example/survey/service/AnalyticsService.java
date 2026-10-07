@@ -12,8 +12,6 @@ import com.example.survey.model.Question;
 
 import java.util.*;
 import java.util.function.BiPredicate;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Slf4j
 @Service
@@ -29,8 +27,6 @@ public class AnalyticsService {
 
     private static final Pattern POSITIVE_PATTERN = Pattern.compile(".*\\b(good|great|love|best|delicious|yummy|perfect|nice|amazing|sweet|comfort|favorite|warm|fresh|hot|filling)\\b.*");
     private static final Pattern NEGATIVE_PATTERN = Pattern.compile(".*\\b(bad|hate|awful|terrible|gross|expensive|worse|bland|nasty|disgusting|dry|salty|cold|hard|stale)\\b.*");
-    private static final Pattern RATING_PATTERN = Pattern.compile("^(.*?):\\s*(\\d+)(?:\\s*\\((.*?)\\))?$");
-
     private static final int MAX_KEYWORDS = 8;
 
     public record RowDef(String id, String label, String shortLabel) {}
@@ -108,10 +104,9 @@ public class AnalyticsService {
             String response = row[2] == null ? null : row[2].toString();
             if (response == null || response.isBlank()) continue;
 
-            Matcher matcher = RATING_PATTERN.matcher(response.trim());
-            if (matcher.matches()) {
-                int rating = Integer.parseInt(matcher.group(2));
-                rating = Math.clamp(rating, 1, 5);
+            var parsedRating = isRatingAnswer(row) ? RatingResponseParser.parse(response) : java.util.Optional.<RatingResponseParser.ParsedRating>empty();
+            if (parsedRating.isPresent()) {
+                int rating = parsedRating.get().value();
                 ratingSum += rating;
                 ratingCount++;
                 if (rating >= 4) {
@@ -225,10 +220,10 @@ public class AnalyticsService {
             String response = row[2] == null ? null : row[2].toString();
             if (response == null || response.isBlank()) continue;
 
-            Matcher matcher = RATING_PATTERN.matcher(response.trim());
-            if (matcher.matches()) {
-                String rowLabelPart = matcher.group(1).trim().toLowerCase();
-                int rating = Math.clamp(Integer.parseInt(matcher.group(2)), 1, 5);
+            var parsedRating = isRatingAnswer(row) ? RatingResponseParser.parse(response) : java.util.Optional.<RatingResponseParser.ParsedRating>empty();
+            if (parsedRating.isPresent()) {
+                String rowLabelPart = parsedRating.get().dimension().toLowerCase();
+                int rating = parsedRating.get().value();
 
                 for (RowDef def : definitions) {
                     if (matcherPredicate.test(rowLabelPart, def)) {
@@ -331,10 +326,10 @@ public class AnalyticsService {
                             .build()
             );
 
-            Matcher matcher = RATING_PATTERN.matcher(response.trim());
-            if (matcher.matches()) {
-                String rowLabelPart = matcher.group(1).trim().toLowerCase();
-                int rating = Integer.parseInt(matcher.group(2));
+            var parsedRating = isRatingAnswer(row) ? RatingResponseParser.parse(response) : java.util.Optional.<RatingResponseParser.ParsedRating>empty();
+            if (parsedRating.isPresent()) {
+                String rowLabelPart = parsedRating.get().dimension().toLowerCase();
+                int rating = parsedRating.get().value();
                 boolean matched = false;
                 for (RowDef def : moodDefs) {
                     if (matchesRow(rowLabelPart, def)) {
@@ -359,6 +354,13 @@ public class AnalyticsService {
         List<SurveyResponseDetailDTO> list = new ArrayList<>(userMap.values());
         Collections.reverse(list);
         return list;
+    }
+
+    private boolean isRatingAnswer(Object[] row) {
+        // Older repository fixtures omit these columns; real query results include question type and option ID.
+        if (row.length <= 6 || row[5] == null || row[6] == null) return row.length <= 6;
+        String questionType = row[5].toString();
+        return "MATRIX".equalsIgnoreCase(questionType) || "RADIO".equalsIgnoreCase(questionType);
     }
 
     private QuestionDefinitionHolder resolveQuestionDefinitions(

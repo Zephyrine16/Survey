@@ -17,16 +17,12 @@ import org.apache.commons.math3.stat.inference.TTest;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class StatisticalAnalysisService {
-
-    private static final Pattern RATING_PATTERN = Pattern.compile("^(.*?):\\s*(\\d+)(?:\\s*\\((.*?)\\))?$");
 
     private static final Set<String> MEALS_CATEGORIES = Set.of(
             "pasta", "waffle", "meal", "meals"
@@ -731,11 +727,12 @@ public class StatisticalAnalysisService {
         try {
             List<Object[]> rows = answerRepository.findAllItemRatingResponses();
             for (Object[] r : rows) {
+                if (!isRatingAnswer(r)) continue;
                 String resp = r[4] == null ? null : r[4].toString();
                 if (resp == null || resp.isBlank()) continue;
-                Matcher matcher = RATING_PATTERN.matcher(resp.trim());
-                if (matcher.matches()) {
-                    String dimRaw = matcher.group(1).trim();
+                var parsedRating = RatingResponseParser.parse(resp);
+                if (parsedRating.isPresent()) {
+                    String dimRaw = parsedRating.get().dimension();
                     String cleanLabel = extractLabel(dimRaw);
                     String key = cleanLabel.toLowerCase();
                     if (!key.isBlank()) {
@@ -812,6 +809,7 @@ public class StatisticalAnalysisService {
         List<RatingRecord> list = new ArrayList<>();
 
         for (Object[] r : rows) {
+            if (!isRatingAnswer(r)) continue;
             String userId = r[0] == null ? null : r[0].toString();
             Long menuItemId = asLong(r[1]);
             String itemName = r[2] == null ? "Unknown" : r[2].toString();
@@ -820,9 +818,9 @@ public class StatisticalAnalysisService {
 
             if (response == null || response.isBlank()) continue;
 
-            Matcher matcher = RATING_PATTERN.matcher(response.trim());
-            if (matcher.matches()) {
-                String dimRaw = matcher.group(1).trim();
+            var parsedRating = RatingResponseParser.parse(response);
+            if (parsedRating.isPresent()) {
+                String dimRaw = parsedRating.get().dimension();
                 String cleanLabel = extractLabel(dimRaw);
                 String normalizedKey = cleanLabel.toLowerCase();
 
@@ -833,7 +831,7 @@ public class StatisticalAnalysisService {
 
                 String dimKey = matched != null ? matched.key() : normalizedKey;
                 String dimOriginal = matched != null ? matched.label() : cleanLabel;
-                int rating = Math.clamp(Integer.parseInt(matcher.group(2)), 1, 5);
+                int rating = parsedRating.get().value();
 
                 String superCategory = resolveSupercategory(subcategory);
 
@@ -850,6 +848,13 @@ public class StatisticalAnalysisService {
             }
         }
         return list;
+    }
+
+    private boolean isRatingAnswer(Object[] row) {
+        // Older repository fixtures omit these columns; production query rows include both.
+        if (row.length <= 6 || row[5] == null || row[6] == null) return row.length <= 6;
+        String type = row[5].toString();
+        return "MATRIX".equalsIgnoreCase(type) || "RADIO".equalsIgnoreCase(type);
     }
 
     private Map<String, String> loadUserDemographics(String keyword) {

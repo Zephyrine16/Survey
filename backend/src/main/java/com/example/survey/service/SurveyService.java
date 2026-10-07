@@ -20,7 +20,10 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -36,15 +39,21 @@ public class SurveyService {
     private final SurveyProperties surveyProperties;
 
     private static final String INSERT_ANSWER_SQL = "INSERT INTO answers (user_id, menu_item_id, question_id, option_id, response) VALUES (?, ?, ?, ?, ?)";
+    private static final List<String> RATING_SCALE_LABELS = List.of(
+            "Not Suitable", "Slightly Suitable", "Moderately Suitable", "Suitable", "Very Suitable");
+    private static final Set<String> AGE_GROUPS = Set.of("18–20", "21–23", "24–26", "27–30", "31 and above");
+    private static final Set<String> DINING_FREQUENCIES = Set.of(
+            "Several times a week", "Once a week", "Several times a month", "Once a month", "Less than once a month");
 
     @Transactional
     public boolean saveSurveyIfUnderLimit(List<CategorySubmissionDTO> payload) {
-
+        List<AnswerInsertRow> rows = mapAndSanitizeRows(payload);
+        lockSubmissions();
         if (isParticipantLimitReached()) {
             return false;
         }
 
-        List<AnswerInsertRow> rows = mapAndSanitizeRows(payload);
+        if (!areItemsUnderLimit(payload)) return false;
         batchInsertAnswers(rows);
 
         return true;
@@ -58,6 +67,7 @@ public class SurveyService {
             @Nullable String ageGroup,
             @Nullable String diningFrequency
     ) {
+        lockSubmissions();
         // A client may retry after the response is lost even though the first
         // request committed. Treat that session as already submitted.
         if (retryableSession && answerRepository.existsByUserIdAndMenuItemIsNotNull(participantId)) {
@@ -67,11 +77,36 @@ public class SurveyService {
             return false;
         }
 
+        validateDemographic("Age Group", ageGroup, AGE_GROUPS);
+        validateDemographic("Dining frequency", diningFrequency, DINING_FREQUENCIES);
         List<AnswerInsertRow> rows = mapAndSanitizeRows(payload);
+        if (!areItemsUnderLimit(payload)) return false;
         appendDemographicRow(rows, participantId, "Age Group", ageGroup);
         appendDemographicRow(rows, participantId, "How often do you dine at cafés or restaurants?", diningFrequency);
         batchInsertAnswers(rows);
         return true;
+    }
+
+    private void validateDemographic(String field, @Nullable String value, Set<String> supportedValues) {
+        if (value != null && !value.isBlank() && !supportedValues.contains(value.trim())) {
+            throw new IllegalArgumentException("Unsupported " + field + " value");
+        }
+    }
+
+    private void lockSubmissions() {
+        // Transaction-scoped PostgreSQL lock serializes limit checks and writes
+        // across replicas, including simultaneous retries of the same session.
+        jdbcTemplate.execute("SELECT pg_advisory_xact_lock(740192601)");
+    }
+
+    private boolean areItemsUnderLimit(List<CategorySubmissionDTO> payload) {
+        long limit = surveyProperties.getItemRespondentLimit();
+        if (limit <= 0) return true;
+        return payload.stream().map(CategorySubmissionDTO::getMenuItemId).distinct()
+                .allMatch(id -> {
+                    Long count = answerRepository.countTotalResponsesForItem(id);
+                    return count == null || count < limit;
+                });
     }
 
     private void appendDemographicRow(
@@ -128,28 +163,89 @@ public class SurveyService {
 
     private List<AnswerInsertRow> mapAndSanitizeRows(List<CategorySubmissionDTO> payload) {
         List<AnswerInsertRow> rows = new ArrayList<>();
+        var seen = new java.util.HashSet<AnswerKey>();
+        var items = new java.util.HashSet<Long>();
+        Map<Long, String> questionTypes = new HashMap<>();
         for(CategorySubmissionDTO dto : payload) {
             if (dto == null || dto.getMenuItemId() == null
                     || !menuItemRepository.existsById(dto.getMenuItemId())) {
                 throw new IllegalArgumentException("Invalid menu item");
             }
             Long validQuestionId = resolveValidQuestionId(dto.getQuestionId());
+            if (!seen.add(new AnswerKey(dto.getMenuItemId(), validQuestionId, dto.getSelectedOptionId()))) {
+                throw new IllegalArgumentException("Duplicate answer");
+            }
+            items.add(dto.getMenuItemId());
+            if (items.size() > surveyProperties.getItemsPerParticipant()) {
+                throw new IllegalArgumentException("Too many menu items");
+            }
+            if (dto.getSelectedOptionId() == null &&
+                    (dto.getTextResponse() == null || dto.getTextResponse().isBlank())) {
+                throw new IllegalArgumentException("Answer requires an option or text response");
+            }
             if (dto.getSelectedOptionId() != null) {
                 var option = optionRepository.findById(dto.getSelectedOptionId())
                         .orElseThrow(() -> new IllegalArgumentException("Invalid option"));
                 if (option.getQuestion() == null || !validQuestionId.equals(option.getQuestion().getId())) {
                     throw new IllegalArgumentException("Option does not belong to the submitted question");
                 }
+                String questionType = questionTypes.computeIfAbsent(
+                        validQuestionId, questionRepository::findQuestionTypeById);
+                String response = dto.getTextResponse();
+                if ("MATRIX".equalsIgnoreCase(questionType)
+                        || (dto.getSelectedOptionId() != null
+                        && RatingResponseParser.looksLikeRating(response))) {
+                    response = canonicalizeMatrixRating(response, option);
+                }
+                rows.add(new AnswerInsertRow(
+                        dto.getUserId(), dto.getMenuItemId(), validQuestionId,
+                        dto.getSelectedOptionId(), sanitizeTextResponse(response)));
+            } else {
+                String questionType = questionTypes.computeIfAbsent(
+                        validQuestionId, questionRepository::findQuestionTypeById);
+                if ("MATRIX".equalsIgnoreCase(questionType)
+                        || ("RADIO".equalsIgnoreCase(questionType)
+                        && RatingResponseParser.looksLikeRating(dto.getTextResponse()))) {
+                    throw new IllegalArgumentException("Matrix rating requires a valid dimension");
+                }
+                rows.add(new AnswerInsertRow(
+                        dto.getUserId(), dto.getMenuItemId(), validQuestionId, null,
+                        sanitizeTextResponse(dto.getTextResponse())));
             }
-            rows.add(new AnswerInsertRow(
-                    dto.getUserId(),
-                    dto.getMenuItemId(),
-                    validQuestionId,
-                    dto.getSelectedOptionId(),
-                    sanitizeTextResponse(dto.getTextResponse())
-            ));
         }
         return rows;
+    }
+
+    private String canonicalizeMatrixRating(@Nullable String response,
+                                            com.example.survey.model.Option selectedOption) {
+        RatingResponseParser.ParsedRating rating = RatingResponseParser.parse(response)
+                .orElseThrow(() -> new IllegalArgumentException("Matrix rating must be between 1 and 5"));
+        String label = selectedOption.getLabel();
+        if (label == null || label.isBlank()) {
+            throw new IllegalArgumentException("Matrix dimension is invalid");
+        }
+
+        Set<String> allowedLabels = new java.util.HashSet<>();
+        allowedLabels.add(normalizeDimensionLabel(label));
+        if (selectedOption.getSubDescription() != null && !selectedOption.getSubDescription().isBlank()) {
+            allowedLabels.add(normalizeDimensionLabel(label + " " + selectedOption.getSubDescription()));
+        }
+        if (selectedOption.getIcon() != null && !selectedOption.getIcon().isBlank()) {
+            allowedLabels.add(normalizeDimensionLabel(selectedOption.getIcon() + " " + label));
+        }
+        if (!allowedLabels.contains(normalizeDimensionLabel(rating.dimension()))) {
+            throw new IllegalArgumentException("Matrix dimension does not match the selected option");
+        }
+
+        String expectedScale = RATING_SCALE_LABELS.get(rating.value() - 1);
+        if (rating.scaleLabel() != null && !expectedScale.equalsIgnoreCase(rating.scaleLabel().trim())) {
+            throw new IllegalArgumentException("Matrix rating scale label is invalid");
+        }
+        return label.trim() + ": " + rating.value() + " (" + expectedScale + ")";
+    }
+
+    private String normalizeDimensionLabel(String label) {
+        return label == null ? "" : label.trim().replaceAll("\\s+", " ").toLowerCase(java.util.Locale.ROOT);
     }
 
     private Long resolveValidQuestionId(Long submittedQuestionId) {
@@ -234,4 +330,6 @@ public class SurveyService {
             @Nullable Long selectedOptionId,
             @Nullable String textResponse
     ) {}
+
+    private record AnswerKey(Long menuItemId, Long questionId, @Nullable Long optionId) {}
 }

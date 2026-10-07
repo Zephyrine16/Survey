@@ -3,12 +3,16 @@ package com.example.survey.repository;
 import com.example.survey.model.Question;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
 @Repository
 public interface QuestionRepository extends JpaRepository<Question, Long> {
+    @Query("SELECT q.questionType FROM Question q WHERE q.id = :questionId")
+    String findQuestionTypeById(@Param("questionId") Long questionId);
+
     @Query("""
         SELECT q.id AS id, q.text AS text, q.questionType AS questionType
         FROM Question q
