@@ -54,4 +54,11 @@ class GlobalExceptionHandlerTest {
         assertFalse(response.getBody().get("error").contains("Database password"));
         assertNotNull(response.getBody().get("errorId"));
     }
+
+    @Test
+    void badRequestDoesNotExposeInternalExceptionMessage() {
+        var response = handler.handleBadRequest(new IllegalStateException("jdbc password=secret"));
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals("Invalid request", response.getBody().get("error"));
+    }
 }
