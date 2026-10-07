@@ -209,6 +209,7 @@ const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 30))
 describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubEnv('VITE_ENABLE_MAINTENANCE', 'true')
     localStorage.clear()
     ;(axios.post as any).mockImplementation((url: string) => {
       if (url === '/api/admin/login') {
@@ -360,30 +361,14 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     expect(wrapper.text()).toContain('60%')
   })
 
-  it('restores an existing admin session on a new visit', async () => {
+  it('removes legacy stored tokens and requires a fresh login', async () => {
     localStorage.setItem('admin_token', 'persisted-jwt-token')
     axios.defaults.headers.common['Authorization'] = 'Bearer persisted-jwt-token'
-
     const wrapper = mount(Dashboard)
     await flushPromises()
-
-    expect(wrapper.find('.login-wrapper').exists()).toBe(false)
-    expect(wrapper.find('.dashboard-layout').exists()).toBe(true)
-    expect(axios.get).toHaveBeenCalled()
-    expect(axios.post).not.toHaveBeenCalled()
-    expect(axios.defaults.headers.common['Authorization']).toBe('Bearer persisted-jwt-token')
-    expect(localStorage.getItem('admin_token')).toBe('persisted-jwt-token')
-    wrapper.unmount()
-  })
-
-  it('rejects a forged stored token before loading dashboard data', async () => {
-    localStorage.setItem('admin_token', 'forged-token')
-    ;(axios.get as any).mockRejectedValue({ response: { status: 403 } })
-    const wrapper = mount(Dashboard)
     expect(wrapper.find('.login-wrapper').exists()).toBe(true)
-    await flushPromises()
     expect(wrapper.find('.dashboard-layout').exists()).toBe(false)
-    expect(axios.get).toHaveBeenCalledExactlyOnceWith('/api/admin/session')
+    expect(axios.get).not.toHaveBeenCalled()
     expect(localStorage.getItem('admin_token')).toBeNull()
     expect(axios.defaults.headers.common['Authorization']).toBeUndefined()
     wrapper.unmount()
@@ -423,7 +408,7 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     wrapper.unmount()
   })
 
-  it('keeps the admin session after a page reload', async () => {
+  it('keeps tokens in memory and requires login after a page reload', async () => {
     const firstVisit = mount(Dashboard)
     await flushPromises()
     await firstVisit.find('input[type="text"]').setValue('admin')
@@ -433,16 +418,15 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
 
     expect(firstVisit.find('.dashboard-layout').exists()).toBe(true)
     expect(axios.defaults.headers.common['Authorization']).toBe('Bearer mock-jwt-token')
-    expect(localStorage.getItem('admin_token')).toBe('mock-jwt-token')
+    expect(localStorage.getItem('admin_token')).toBeNull()
     firstVisit.unmount()
 
     const nextVisit = mount(Dashboard)
     await flushPromises()
-
-    expect(nextVisit.find('.login-wrapper').exists()).toBe(false)
-    expect(nextVisit.find('.dashboard-layout').exists()).toBe(true)
-    expect(axios.defaults.headers.common['Authorization']).toBe('Bearer mock-jwt-token')
-    expect(localStorage.getItem('admin_token')).toBe('mock-jwt-token')
+    expect(nextVisit.find('.login-wrapper').exists()).toBe(true)
+    expect(nextVisit.find('.dashboard-layout').exists()).toBe(false)
+    expect(axios.defaults.headers.common['Authorization']).toBeUndefined()
+    expect(localStorage.getItem('admin_token')).toBeNull()
     expect(axios.post).toHaveBeenCalledTimes(1)
     nextVisit.unmount()
   })
@@ -677,6 +661,30 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     const labelsPosted = optionPostCalls.map((call: any) => call[1].label)
     expect(labelsPosted).not.toContain('Relaxation')
     expect(labelsPosted).toContain('Comfort')
+  })
+
+  it('hides bulk deletion controls when maintenance is disabled', async () => {
+    vi.stubEnv('VITE_ENABLE_MAINTENANCE', 'false')
+    const wrapper = mount(Dashboard)
+    await wrapper.find('input[type="text"]').setValue('admin')
+    await wrapper.find('input[type="password"]').setValue('password')
+    await wrapper.find('form.login-form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.findAll('button').some((button) => button.text().includes('Clear Data'))).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('revokes the server token before clearing browser authorization on logout', async () => {
+    const wrapper = mount(Dashboard)
+    await wrapper.find('input[type="text"]').setValue('admin')
+    await wrapper.find('input[type="password"]').setValue('password')
+    await wrapper.find('form.login-form').trigger('submit')
+    await flushPromises()
+    await (wrapper.vm as any).handleLogout()
+    expect(axios.post).toHaveBeenCalledWith('/api/admin/logout')
+    expect(axios.defaults.headers.common['Authorization']).toBeUndefined()
+    expect(wrapper.find('.login-wrapper').exists()).toBe(true)
+    wrapper.unmount()
   })
 
   it('clears all survey data and refreshes the dashboard without logging out', async () => {

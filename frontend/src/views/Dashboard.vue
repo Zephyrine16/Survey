@@ -55,7 +55,7 @@
 
           <button class="logout-btn" @click="showLogoutModal = true">🚪 Log Out</button>
 
-          <button class="danger-btn" @click="showClearModal = true">🗑️ Clear Data</button>
+          <button v-if="maintenanceEnabled" class="danger-btn" @click="showClearModal = true">🗑️ Clear Data</button>
 
           <button class="export-btn" @click="downloadReport">📥 Export Report</button>
         </div>
@@ -604,6 +604,7 @@
           </div>
           <div class="manager-header-actions">
             <button
+              v-if="maintenanceEnabled"
               class="nav-btn danger-outline"
               :disabled="menuItems.length === 0 || isDeletingAll"
               @click="showDeleteAllModal = true"
@@ -2249,23 +2250,11 @@ export interface SurveyResponseDetail {
   textFeedback?: string | null
 }
 
-// Restore the admin session before the first render so a page refresh keeps the
-// dashboard open and its initial API requests include the saved JWT.
-const getStoredAdminToken = () => {
-  if (typeof window === 'undefined') return null
-
-  try {
-    return window.localStorage.getItem('admin_token')
-  } catch {
-    return null
-  }
-}
-
-const storedAdminToken = getStoredAdminToken()
+// Admin credentials live only in memory. Remove tokens saved by older versions.
+try { window.localStorage.removeItem('admin_token') } catch { /* Storage unavailable. */ }
+delete axios.defaults.headers.common['Authorization']
 const isAuthenticated = ref(false)
-if (storedAdminToken) {
-  axios.defaults.headers.common['Authorization'] = `Bearer ${storedAdminToken}`
-}
+const maintenanceEnabled = import.meta.env.DEV && import.meta.env.VITE_ENABLE_MAINTENANCE === 'true'
 
 // Security State
 const username = ref('')
@@ -2298,11 +2287,6 @@ const handleLogin = async () => {
   }
 
   axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
-  try {
-    window.localStorage.setItem('admin_token', token)
-  } catch {
-    // Keep this session usable when browser storage is unavailable.
-  }
   isAuthenticated.value = true
   password.value = ''
   await Promise.all([fetchMenuItems(), fetchQuestions(), fetchStats()])
@@ -2310,7 +2294,14 @@ const handleLogin = async () => {
 
 const handleLogout = async () => {
   showLogoutModal.value = false
-
+  try {
+    await axios.post('/api/admin/logout')
+  } catch (error: any) {
+    if (error?.response?.status !== 401 && error?.response?.status !== 403) {
+      showToast('Could not revoke the session. Please retry logout.', 'error')
+      return
+    }
+  }
   delete axios.defaults.headers.common['Authorization']
   try {
     window.localStorage.removeItem('admin_token')
@@ -3764,20 +3755,6 @@ onMounted(() => {
     },
   )
 
-  if (storedAdminToken) {
-    void (async () => {
-      try {
-        const response = await axios.get('/api/admin/session')
-        if (response.data?.authenticated !== true) throw new Error('Invalid admin session')
-        isAuthenticated.value = true
-        await Promise.all([fetchMenuItems(), fetchQuestions(), fetchStats()])
-      } catch {
-        delete axios.defaults.headers.common['Authorization']
-        try { window.localStorage.removeItem('admin_token') } catch { /* Storage unavailable. */ }
-        isAuthenticated.value = false
-      }
-    })()
-  }
 })
 
 onUnmounted(() => {
