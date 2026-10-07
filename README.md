@@ -93,3 +93,7 @@ docker-compose down
 ```
 
 *(Note: Your database data is persisted in a Docker volume, so you won't lose your data when you bring the containers down.)*
+
+## Security and production deployment
+
+See [security deployment settings and migration rollout](docs/security-deployment.md) before deploying. Admin sessions expire within 15 minutes and are revoked on logout. Tokens are held in memory, so refreshing the dashboard requires a new login.
