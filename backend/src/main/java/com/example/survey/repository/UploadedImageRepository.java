@@ -1,6 +1,5 @@
 package com.example.survey.repository;
 
-import jakarta.annotation.PostConstruct;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -13,18 +12,6 @@ public class UploadedImageRepository {
 
     public UploadedImageRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
-    }
-
-    @PostConstruct
-    public void init() {
-        jdbcTemplate.execute("""
-            CREATE TABLE IF NOT EXISTS uploaded_images (
-                filename VARCHAR(255) PRIMARY KEY,
-                content_type VARCHAR(50) NOT NULL,
-                content BYTEA NOT NULL,
-                uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )
-        """);
     }
 
     public void save(String filename, String contentType, byte[] content) {

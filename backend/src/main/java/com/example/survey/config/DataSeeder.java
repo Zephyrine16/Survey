@@ -39,8 +39,6 @@ public class DataSeeder implements CommandLineRunner {
             return;
         }
 
-        // Ensure the tracking table exists before we query it.
-        ensureMetadataTable();
 
         // Only seed once — if a seed_metadata row already exists for "survey_questions"
         // the admin may have intentionally deleted questions; we must not re-add them.
@@ -97,14 +95,6 @@ public class DataSeeder implements CommandLineRunner {
         log.info("EYE-DINE Survey questions seeded successfully.");
     }
 
-    private void ensureMetadataTable() {
-        jdbcTemplate.execute(
-                "CREATE TABLE IF NOT EXISTS seed_metadata (" +
-                "    seed_key  VARCHAR(100) PRIMARY KEY," +
-                "    seeded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP" +
-                ")"
-        );
-    }
 
     private void ensureEvaluationOptionsIfMissing() {
         List<SeedQuestion> seedQuestions = loadSeedQuestions();

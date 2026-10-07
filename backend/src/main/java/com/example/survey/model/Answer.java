@@ -35,5 +35,6 @@ public class Answer {
     @JoinColumn(name = "option_id")
     private Option selectedOption;
 
+    @Column(columnDefinition = "TEXT")
     private String response;
 }
