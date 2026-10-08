@@ -674,16 +674,48 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     wrapper.unmount()
   })
 
-  it('revokes the server token before clearing browser authorization on logout', async () => {
+  it('clears browser authorization and revokes the captured token on logout', async () => {
     const wrapper = mount(Dashboard)
     await wrapper.find('input[type="text"]').setValue('admin')
     await wrapper.find('input[type="password"]').setValue('password')
     await wrapper.find('form.login-form').trigger('submit')
     await flushPromises()
     await (wrapper.vm as any).handleLogout()
-    expect(axios.post).toHaveBeenCalledWith('/api/admin/logout')
+    expect(axios.post).toHaveBeenCalledWith('/api/admin/logout', undefined, {
+      headers: { Authorization: 'Bearer mock-jwt-token' },
+      timeout: 5000,
+    })
     expect(axios.defaults.headers.common['Authorization']).toBeUndefined()
     expect(wrapper.find('.login-wrapper').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it.each([
+    { response: { status: 500 } },
+    new Error('Network unavailable'),
+    { code: 'ECONNABORTED' },
+  ])('signs out immediately even when revocation fails (%j)', async (failure) => {
+    const wrapper = mount(Dashboard)
+    await wrapper.find('input[type="text"]').setValue('admin')
+    await wrapper.find('input[type="password"]').setValue('password')
+    await wrapper.find('form.login-form').trigger('submit')
+    await flushPromises()
+
+    let rejectRevocation!: (error: unknown) => void
+    ;(axios.post as any).mockImplementation(() => new Promise((_, reject) => {
+      rejectRevocation = reject
+    }))
+    const logout = (wrapper.vm as any).handleLogout()
+    await wrapper.vm.$nextTick()
+    expect(axios.defaults.headers.common['Authorization']).toBeUndefined()
+    expect(wrapper.find('.login-wrapper').exists()).toBe(true)
+    expect(wrapper.find('.dashboard-layout').exists()).toBe(false)
+
+    rejectRevocation(failure)
+    await logout
+    await wrapper.vm.$nextTick()
+    expect(wrapper.text()).toContain('Signed out on this device.')
+    expect(localStorage.getItem('admin_token')).toBeNull()
     wrapper.unmount()
   })
 

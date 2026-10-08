@@ -2276,14 +2276,7 @@ const handleLogin = async () => {
 
 const handleLogout = async () => {
   showLogoutModal.value = false
-  try {
-    await axios.post('/api/admin/logout')
-  } catch (error: any) {
-    if (error?.response?.status !== 401 && error?.response?.status !== 403) {
-      showToast('Could not revoke the session. Please retry logout.', 'error')
-      return
-    }
-  }
+  const authorization = axios.defaults.headers.common['Authorization']
   delete axios.defaults.headers.common['Authorization']
   try {
     window.localStorage.removeItem('admin_token')
@@ -2291,8 +2284,20 @@ const handleLogout = async () => {
     // The in-memory session is still cleared when browser storage is unavailable.
   }
   isAuthenticated.value = false
+  password.value = ''
+  loginError.value = ''
 
-  window.location.reload()
+  if (!authorization) return
+  try {
+    await axios.post('/api/admin/logout', undefined, {
+      headers: { Authorization: authorization },
+      timeout: 5000,
+    })
+  } catch (error: any) {
+    if (error?.response?.status !== 401 && error?.response?.status !== 403) {
+      loginError.value = 'Signed out on this device. The server could not revoke the session; its token will expire automatically.'
+    }
+  }
 }
 
 // Master State
