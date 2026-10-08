@@ -779,7 +779,7 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     expect(wrapper.text()).toContain('Session expired. Please log in again.')
   })
 
-  it('renders Statistical Tests tab and switches to it', async () => {
+  it('renders Statistical Tests and preserves t-test values through the styled dropdowns', async () => {
     const mockOverview = {
       items: [{ id: 101, name: 'Chicken Alfredo', category: 'Pasta', ratingCount: 10 }],
       subcategories: ['Pasta', 'Coffee'],
@@ -863,6 +863,33 @@ describe('Dashboard.vue - Analytics View with Survey Taker Data', () => {
     expect(vm.activeAdminTab).toBe('statistics')
     expect(wrapper.find('.stats-page-layout').isVisible()).toBe(true)
     expect(wrapper.text()).toContain('Hypothesis Testing & Significance Analysis')
+
+    const chooseNextOption = async (id: string) => {
+      const dropdown = wrapper.find(`#${id}`)
+      await dropdown.trigger('keydown', { key: 'ArrowDown' })
+      await dropdown.trigger('keydown', { key: 'ArrowDown' })
+      await dropdown.trigger('keydown', { key: 'Enter' })
+    }
+
+    await chooseNextOption('ttest-comparison-mode')
+    expect(vm.tTestMode).toBe('SUBCATEGORIES')
+    expect(vm.tTestGroup1).toBe('Pasta')
+    expect(vm.tTestGroup2).toBe('Coffee')
+
+    await chooseNextOption('ttest-group-1')
+    const secondGroup = wrapper.find('#ttest-group-2')
+    await secondGroup.trigger('keydown', { key: 'ArrowDown' })
+    await secondGroup.trigger('keydown', { key: 'Enter' })
+    await chooseNextOption('ttest-evaluation-dimension')
+    await chooseNextOption('ttest-significance-level')
+
+    ;(axios.post as any).mockResolvedValueOnce({ data: mockOverview.sampleTTest })
+    await wrapper.findAll('button').find(button => button.text().includes('Calculate T-Test'))!.trigger('click')
+    await flushPromises()
+    expect(axios.post).toHaveBeenCalledWith('/analytics/statistical-tests/t-test', {
+      mode: 'SUBCATEGORIES', group1: 'Coffee', group2: 'Pasta', dimension: 'relaxation', alpha: 0.01,
+    })
+    wrapper.unmount()
   })
 })
 

@@ -1287,58 +1287,52 @@
               <span class="config-sub">Select comparison factor, groups, and significance threshold</span>
             </div>
             <div class="config-grid">
-              <div class="config-field">
-                <label>Comparison Mode</label>
-                <select v-model="tTestMode" class="form-select" @change="onTTestModeChange">
-                  <option value="SUPER_CATEGORIES">Meals vs. Beverages (Supercategories)</option>
-                  <option value="SUBCATEGORIES">Compare Two Subcategories</option>
-                  <option value="ITEMS">Compare Two Menu Items</option>
-                  <option value="AGE_GROUPS">Compare Two Age Groups</option>
-                  <option value="DINING_FREQUENCY">Compare Two Dining Frequencies</option>
-                  <option value="DIMENSIONS">Compare Two Evaluation Dimensions</option>
-                </select>
-              </div>
+              <DashboardSelect
+                id="ttest-comparison-mode"
+                label="Comparison Mode"
+                :model-value="tTestMode"
+                :options="tTestModeOptions"
+                @update:model-value="tTestMode = String($event); onTTestModeChange()"
+              />
 
               <!-- Group 1 -->
-              <div class="config-field" v-if="tTestMode !== 'SUPER_CATEGORIES'">
-                <label>Group 1</label>
-                <select v-model="tTestGroup1" class="form-select">
-                  <option v-for="opt in tTestGroup1Options" :key="opt.value" :value="opt.value">
-                    {{ opt.label }}
-                  </option>
-                </select>
-              </div>
+              <DashboardSelect
+                v-if="tTestMode !== 'SUPER_CATEGORIES'"
+                id="ttest-group-1"
+                label="Group 1"
+                :model-value="tTestGroup1"
+                :options="tTestGroup1Options"
+                @update:model-value="tTestGroup1 = String($event)"
+              />
 
               <!-- Group 2 -->
-              <div class="config-field" v-if="tTestMode !== 'SUPER_CATEGORIES'">
-                <label>Group 2</label>
-                <select v-model="tTestGroup2" class="form-select">
-                  <option v-for="opt in tTestGroup2Options" :key="opt.value" :value="opt.value">
-                    {{ opt.label }}
-                  </option>
-                </select>
-              </div>
+              <DashboardSelect
+                v-if="tTestMode !== 'SUPER_CATEGORIES'"
+                id="ttest-group-2"
+                label="Group 2"
+                :model-value="tTestGroup2"
+                :options="tTestGroup2Options"
+                @update:model-value="tTestGroup2 = String($event)"
+              />
 
               <!-- Dimension Filter -->
-              <div class="config-field" v-if="tTestMode !== 'DIMENSIONS'">
-                <label>Evaluation Dimension</label>
-                <select v-model="tTestDimension" class="form-select">
-                  <option value="all">All (Overall Suitability)</option>
-                  <option v-for="dim in availableDimensionOptions" :key="dim.key" :value="dim.key">
-                    {{ dim.icon ? `${dim.icon} ` : '' }}{{ dim.label }}
-                  </option>
-                </select>
-              </div>
+              <DashboardSelect
+                v-if="tTestMode !== 'DIMENSIONS'"
+                id="ttest-evaluation-dimension"
+                label="Evaluation Dimension"
+                :model-value="tTestDimension"
+                :options="anovaDimensionOptions"
+                @update:model-value="tTestDimension = String($event)"
+              />
 
               <!-- Alpha Level -->
-              <div class="config-field">
-                <label>Significance Level (α)</label>
-                <select v-model.number="tTestAlpha" class="form-select">
-                  <option :value="0.05">α = 0.05 (95% Confidence)</option>
-                  <option :value="0.01">α = 0.01 (99% Confidence)</option>
-                  <option :value="0.10">α = 0.10 (90% Confidence)</option>
-                </select>
-              </div>
+              <DashboardSelect
+                id="ttest-significance-level"
+                label="Significance Level (α)"
+                :model-value="tTestAlpha"
+                :options="anovaAlphaOptions"
+                @update:model-value="tTestAlpha = Number($event)"
+              />
 
               <div class="config-action">
                 <button class="nav-btn primary run-test-btn" @click="executeTTest" :disabled="statsLoading">
@@ -2987,6 +2981,15 @@ const tTestGroup1 = ref('')
 const tTestGroup2 = ref('')
 const tTestDimension = ref('all')
 const tTestAlpha = ref(0.05)
+
+const tTestModeOptions = [
+  { value: 'SUPER_CATEGORIES', label: 'Meals vs. Beverages (Supercategories)' },
+  { value: 'SUBCATEGORIES', label: 'Compare Two Subcategories' },
+  { value: 'ITEMS', label: 'Compare Two Menu Items' },
+  { value: 'AGE_GROUPS', label: 'Compare Two Age Groups' },
+  { value: 'DINING_FREQUENCY', label: 'Compare Two Dining Frequencies' },
+  { value: 'DIMENSIONS', label: 'Compare Two Evaluation Dimensions' },
+]
 
 const anovaFactor = ref('SUBCATEGORIES')
 const anovaDimension = ref('all')
