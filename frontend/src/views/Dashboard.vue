@@ -1457,61 +1457,42 @@
               <span class="config-sub">Analyze variance across 3 or more groups</span>
             </div>
             <div class="config-grid">
-              <div class="config-field">
-                <label>Grouping Factor</label>
-                <select v-model="anovaFactor" class="form-select">
-                  <option value="SUBCATEGORIES">Menu Subcategories (Pasta, Waffle, Coffee, etc.)</option>
-                  <option value="SUPER_CATEGORIES">Supercategories (Meals vs. Beverages)</option>
-                  <option value="AGE_GROUPS">Age Demographic Groups</option>
-                  <option value="DINING_FREQUENCY">Dining Frequency Segments</option>
-                  <template v-if="statisticalOverview?.evaluationQuestions?.length">
-                    <option
-                      v-for="eq in statisticalOverview.evaluationQuestions"
-                      :key="eq.factorKey"
-                      :value="eq.factorKey"
-                    >
-                      {{ eq.factorLabel }}
-                    </option>
-                  </template>
-                  <template v-else>
-                    <option value="MOOD_DIMENSIONS">Mood Dimensions (from Database)</option>
-                    <option value="WEATHER_DIMENSIONS">Weather Conditions (from Database)</option>
-                  </template>
-                  <option value="ALL_DIMENSIONS">All Evaluation Dimensions Combined</option>
-                </select>
-              </div>
+              <DashboardSelect
+                id="anova-grouping-factor"
+                label="Grouping Factor"
+                :model-value="anovaFactor"
+                :options="anovaFactorOptions"
+                @update:model-value="setAnovaFactor"
+              />
 
               <!-- Item Filter (for Mood/Weather/Questions) -->
-              <div class="config-field" v-if="isDimensionAnovaFactor">
-                <label>Filter to Specific Item (Optional)</label>
-                <select v-model="anovaItemId" class="form-select">
-                  <option :value="null">All Menu Items Combined</option>
-                  <option v-for="it in statisticalOverview?.items" :key="it.id" :value="it.id">
-                    {{ it.name }} ({{ it.ratingCount }} ratings)
-                  </option>
-                </select>
-              </div>
+              <DashboardSelect
+                v-if="isDimensionAnovaFactor"
+                id="anova-item-filter"
+                label="Filter to Specific Item (Optional)"
+                :model-value="anovaItemId"
+                :options="anovaItemOptions"
+                @update:model-value="setAnovaItemId"
+              />
 
               <!-- Dimension Filter (for Subcategories & Demographics) -->
-              <div class="config-field" v-if="!isDimensionAnovaFactor">
-                <label>Evaluation Dimension</label>
-                <select v-model="anovaDimension" class="form-select">
-                  <option value="all">All (Overall Suitability)</option>
-                  <option v-for="dim in availableDimensionOptions" :key="dim.key" :value="dim.key">
-                    {{ dim.icon ? `${dim.icon} ` : '' }}{{ dim.label }}
-                  </option>
-                </select>
-              </div>
+              <DashboardSelect
+                v-if="!isDimensionAnovaFactor"
+                id="anova-evaluation-dimension"
+                label="Evaluation Dimension"
+                :model-value="anovaDimension"
+                :options="anovaDimensionOptions"
+                @update:model-value="setAnovaDimension"
+              />
 
               <!-- Alpha Level -->
-              <div class="config-field">
-                <label>Significance Level (α)</label>
-                <select v-model.number="anovaAlpha" class="form-select">
-                  <option :value="0.05">α = 0.05 (95% Confidence)</option>
-                  <option :value="0.01">α = 0.01 (99% Confidence)</option>
-                  <option :value="0.10">α = 0.10 (90% Confidence)</option>
-                </select>
-              </div>
+              <DashboardSelect
+                id="anova-significance-level"
+                label="Significance Level (α)"
+                :model-value="anovaAlpha"
+                :options="anovaAlphaOptions"
+                @update:model-value="setAnovaAlpha"
+              />
 
               <div class="config-action">
                 <button class="nav-btn primary run-test-btn" @click="executeAnova" :disabled="statsLoading">
@@ -2193,6 +2174,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import axios from 'axios'
+import DashboardSelect from '../components/DashboardSelect.vue'
 import {
   AGE_GROUP_OPTIONS,
   DINING_FREQUENCY_OPTIONS,
@@ -3006,6 +2988,41 @@ const anovaDimension = ref('all')
 const anovaItemId = ref<number | null>(null)
 const anovaAlpha = ref(0.05)
 
+const anovaFactorOptions = computed(() => {
+  const evaluationFactors = statisticalOverview.value?.evaluationQuestions?.length
+    ? statisticalOverview.value.evaluationQuestions.map((question: any) => ({
+        value: question.factorKey,
+        label: question.factorLabel,
+      }))
+    : [
+        { value: 'MOOD_DIMENSIONS', label: 'Mood Dimensions (from Database)' },
+        { value: 'WEATHER_DIMENSIONS', label: 'Weather Conditions (from Database)' },
+      ]
+
+  return [
+    { value: 'SUBCATEGORIES', label: 'Menu Subcategories (Pasta, Waffle, Coffee, etc.)' },
+    { value: 'SUPER_CATEGORIES', label: 'Supercategories (Meals vs. Beverages)' },
+    { value: 'AGE_GROUPS', label: 'Age Demographic Groups' },
+    { value: 'DINING_FREQUENCY', label: 'Dining Frequency Segments' },
+    ...evaluationFactors,
+    { value: 'ALL_DIMENSIONS', label: 'All Evaluation Dimensions Combined' },
+  ]
+})
+
+const anovaItemOptions = computed(() => [
+  { value: null, label: 'All Menu Items Combined' },
+  ...(statisticalOverview.value?.items || []).map((item: any) => ({
+    value: item.id,
+    label: `${item.name} (${item.ratingCount} ratings)`,
+  })),
+])
+
+const anovaAlphaOptions = [
+  { value: 0.05, label: 'α = 0.05 (95% Confidence)' },
+  { value: 0.01, label: 'α = 0.01 (99% Confidence)' },
+  { value: 0.10, label: 'α = 0.10 (90% Confidence)' },
+]
+
 const availableDimensionOptions = computed(() => {
   if (statisticalOverview.value?.dimensionOptions?.length) {
     return statisticalOverview.value.dimensionOptions.map((d: any) => ({
@@ -3027,6 +3044,30 @@ const availableDimensionOptions = computed(() => {
   }
   return []
 })
+
+const anovaDimensionOptions = computed(() => [
+  { value: 'all', label: 'All (Overall Suitability)' },
+  ...availableDimensionOptions.value.map((dimension: any) => ({
+    value: dimension.key,
+    label: dimension.label,
+  })),
+])
+
+const setAnovaFactor = (value: string | number | null) => {
+  if (typeof value === 'string') anovaFactor.value = value
+}
+
+const setAnovaItemId = (value: string | number | null) => {
+  anovaItemId.value = typeof value === 'number' ? value : null
+}
+
+const setAnovaDimension = (value: string | number | null) => {
+  if (typeof value === 'string') anovaDimension.value = value
+}
+
+const setAnovaAlpha = (value: string | number | null) => {
+  if (typeof value === 'number') anovaAlpha.value = value
+}
 
 const isDimensionAnovaFactor = computed(() => {
   const f = anovaFactor.value
