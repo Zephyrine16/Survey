@@ -70,8 +70,10 @@ it('keeps ratings on their original item and updates the menu without a reload',
   const wrapper = mount(Survey)
   await wrapper.find('.primary-btn.pulse').trigger('click')
   ;(wrapper.vm as any).currentSection = 3
-  ;(wrapper.vm as any).setMoodAnswer(101, 'happy', 4)
-  ;(wrapper.vm as any).setWeatherAnswer(101, 'rainy', 5)
+  const moodRowId = (wrapper.vm as any).moodRows[0].id
+  const weatherRowId = (wrapper.vm as any).weatherRows[1].id
+  ;(wrapper.vm as any).setMoodAnswer(101, moodRowId, 4)
+  ;(wrapper.vm as any).setWeatherAnswer(101, weatherRowId, 5)
   await wrapper.vm.$nextTick()
   expect(wrapper.text()).toContain('Chicken Alfredo')
   const originalMoodRows = (wrapper.vm as any).moodRows.map((row: any) => row.label)
@@ -84,8 +86,8 @@ it('keeps ratings on their original item and updates the menu without a reload',
   expect((wrapper.vm as any).menuLoadState).toBe('ready')
   expect(wrapper.text()).toContain('Chicken Alfredo — updated')
   expect((wrapper.vm as any).menuItems[0].id).toBe(101)
-  expect((wrapper.vm as any).getMoodAnswer(101, 'happy')).toBe(4)
-  expect((wrapper.vm as any).getWeatherAnswer(101, 'rainy')).toBe(5)
+  expect((wrapper.vm as any).getMoodAnswer(101, moodRowId)).toBe(4)
+  expect((wrapper.vm as any).getWeatherAnswer(101, weatherRowId)).toBe(5)
   expect((wrapper.vm as any).moodRows.map((row: any) => row.label)).toEqual(originalMoodRows)
   expect((wrapper.vm as any).weatherRows.map((row: any) => row.label)).toEqual(originalWeatherRows)
   expect((wrapper.vm as any).moodRows[0].dbOptionId).toBe(118)
@@ -94,8 +96,8 @@ it('keeps ratings on their original item and updates the menu without a reload',
   await (wrapper.vm as any).executeFinalSubmit()
   expect(axios.post).toHaveBeenCalledWith('/submit-category', expect.objectContaining({
     answers: expect.arrayContaining([
-      expect.objectContaining({ menuItemId: 101, selectedOptionId: 118, textResponse: expect.stringContaining('Happy: 4') }),
-      expect.objectContaining({ menuItemId: 101, selectedOptionId: 107, textResponse: expect.stringContaining('Rainy: 5') }),
+      expect.objectContaining({ menuItemId: 101, selectedOptionId: 118, textResponse: expect.stringContaining('Relaxation (Wants to unwind') }),
+      expect.objectContaining({ menuItemId: 101, selectedOptionId: 107, textResponse: expect.stringContaining('Hot Dry (High daytime heat') }),
     ]),
   }))
 })

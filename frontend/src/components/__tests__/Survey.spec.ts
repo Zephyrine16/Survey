@@ -159,7 +159,7 @@ describe('Survey.vue', () => {
       await wrapper.vm.$nextTick()
 
       expect(menuAttempts).toBe(2)
-      expect(axios.get).toHaveBeenCalledWith('/questions/all')
+      expect(axios.get).toHaveBeenCalledWith('/questions/all', { timeout: 30000 })
       expect(axios.get).toHaveBeenCalledWith('/api/stats/survey-status')
       expect(wrapper.find('.menu-load-status').exists()).toBe(false)
       expect(wrapper.find('.demo-proceed-btn').attributes('disabled')).toBeUndefined()
