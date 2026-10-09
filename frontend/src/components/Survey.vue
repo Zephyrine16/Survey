@@ -304,6 +304,9 @@
           <p v-if="menuLoadState === 'cached'" class="menu-sync-notice" role="status">
             Showing a saved menu while we check current availability. You can start rating now.
           </p>
+          <p v-if="menuLoadState === 'ready' && !questionsSynced" class="menu-sync-notice" role="status">
+            The menu is ready. We’re syncing the survey questions before submission.
+          </p>
           <p v-if="menuUpdatedNotice" class="menu-sync-notice" role="status">
             {{ removedRatedItemNotice
               ? 'A rated item was removed from the menu. It was replaced because the original item can no longer accept answers. Please rate the replacement.'
@@ -660,8 +663,10 @@
             Are you completely finished rating your items? If you have nothing else to review, click
             Confirm to complete your session!
           </p>
-          <p v-if="menuLoadState !== 'ready'" class="menu-load-status" role="status">
-            Checking menu availability. You can submit as soon as the server responds.
+          <p v-if="menuLoadState !== 'ready' || !questionsSynced" class="menu-load-status" role="status">
+            {{ menuLoadState !== 'ready'
+              ? 'Checking menu availability. You can submit as soon as the server responds.'
+              : 'Syncing the survey questions with the server before submission…' }}
           </p>
           <div class="modal-actions">
             <button
@@ -670,7 +675,7 @@
             >
               Review Answers
             </button>
-            <button class="nav-btn primary" :disabled="menuLoadState !== 'ready' || isSubmitting" @click="executeFinalSubmit">
+            <button class="nav-btn primary" :disabled="menuLoadState !== 'ready' || !questionsSynced || isSubmitting" @click="executeFinalSubmit">
               {{ isSubmitting ? 'Submitting…' : 'Confirm & Submit' }}
             </button>
           </div>
@@ -798,10 +803,12 @@
             <button class="nav-btn secondary" @click="showReviewModal = false">
               Back to Survey
             </button>
-            <p v-if="menuLoadState !== 'ready'" class="menu-load-status" role="status">
-              Waiting for the menu server to verify your items before submission.
+            <p v-if="menuLoadState !== 'ready' || !questionsSynced" class="menu-load-status" role="status">
+              {{ menuLoadState !== 'ready'
+                ? 'Waiting for the menu server to verify your items before submission.'
+                : 'Syncing the survey questions with the server before submission…' }}
             </p>
-            <button class="nav-btn primary" :disabled="menuLoadState !== 'ready' || isSubmitting" @click="executeFinalSubmit">
+            <button class="nav-btn primary" :disabled="menuLoadState !== 'ready' || !questionsSynced || isSubmitting" @click="executeFinalSubmit">
               {{ isSubmitting ? 'Submitting…' : 'Confirm & Submit Data' }}
             </button>
           </div>
@@ -917,11 +924,21 @@ const optionRowId = (option: any): string =>
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_|_$/g, '') || String(option.id)
 
-const findQuestion = (items: any[], kind: 'mood' | 'weather') => items.find((question: any) =>
-  kind === 'mood'
-    ? /mood|emotion/i.test(question.text ?? '')
-    : /weather/i.test(question.text ?? ''),
-)
+const findQuestion = (items: any[], kind: 'mood' | 'weather') => {
+  const textOf = (question: any) => String(question?.text ?? '').trim()
+  const canonicalQuestion = kind === 'mood'
+    ? /^question\s*1\s*[—–-]\s*mood association\b/i
+    : /^question\s*2\s*[—–-]\s*weather association\b/i
+  const legacyQuestion = kind === 'mood'
+    ? /^which emotion or physical state most strongly makes you want to order this item\b/i
+    : /^in what weather condition does this item feel most satisfying\b/i
+
+  // A backend may contain additional item-specific questions. Match only this
+  // survey's numbered questions or its known legacy wording; a loose mood or
+  // weather substring could select an unrelated coffee-specific question.
+  return items.find((question: any) => canonicalQuestion.test(textOf(question)))
+    ?? items.find((question: any) => legacyQuestion.test(textOf(question)))
+}
 
 const rowsFromQuestion = (question: any, kind: 'mood' | 'weather') =>
   question.options.map((option: any) => ({
@@ -1024,12 +1041,14 @@ const openZoomModal = () => {
 
 const menuItems = ref<any[]>([])
 const menuLoadState = ref<'loading' | 'retrying' | 'cached' | 'ready' | 'empty'>('loading')
+const questionsSynced = ref(false)
 const menuUpdatedNotice = ref(false)
 const removedRatedItemNotice = ref(false)
 const imageRetryToken = ref(0)
 const currentItemIndex = ref(0)
 const preloadedPhotoPaths = new Set<string>()
 let menuRetryTimer: ReturnType<typeof setTimeout> | undefined
+let questionRetryTimer: ReturnType<typeof setTimeout> | undefined
 let menuRequestController: AbortController | undefined
 let menuRequestGeneration = 0
 
@@ -1067,13 +1086,16 @@ const answers = ref<
   Record<number, { moods?: Record<string, number>; weather?: Record<string, number> }>
 >({})
 
-const fetchQuestions = async () => {
+const fetchQuestions = async (generation = menuRequestGeneration): Promise<boolean> => {
   try {
-    const response = await axios.get('/questions/all')
+    const response = await axios.get('/questions/all', { timeout: 30000 })
+    if (generation !== menuRequestGeneration) return false
     const liveQuestions = Array.isArray(response.data) ? response.data : []
     const mood = findQuestion(liveQuestions, 'mood')
     const weather = findQuestion(liveQuestions, 'weather')
-    if (!mood?.options?.length || !weather?.options?.length) return
+    if (!Number.isInteger(mood?.id) || !Number.isInteger(weather?.id)) return false
+    const moodOptions = Array.isArray(mood.options) ? mood.options : []
+    const weatherOptions = Array.isArray(weather.options) ? weather.options : []
     questions.value = liveQuestions
     moodQuestion.value = hasBundledQuestionRows
       ? { ...mood, text: moodQuestion.value?.text ?? mood.text }
@@ -1087,17 +1109,32 @@ const fetchQuestions = async () => {
     const startedRating = hasBundledQuestionRows || currentSection.value === 3 ||
       Object.keys(answers.value).length > 0
     if (!startedRating) {
-      moodRows.value = rowsFromQuestion(mood, 'mood')
-      weatherRows.value = rowsFromQuestion(weather, 'weather')
+      if (moodOptions.length) moodRows.value = rowsFromQuestion(mood, 'mood')
+      else moodRows.value = moodRows.value.map((row) => ({ ...row, dbOptionId: null }))
+      if (weatherOptions.length) weatherRows.value = rowsFromQuestion(weather, 'weather')
+      else weatherRows.value = weatherRows.value.map((row) => ({ ...row, dbOptionId: null }))
     } else {
-      const liveMoodOptions = new Map(mood.options.map((option: any) => [optionRowId(option), option.id]))
-      const liveWeatherOptions = new Map(weather.options.map((option: any) => [optionRowId(option), option.id]))
+      const liveMoodOptions = new Map(moodOptions.map((option: any) => [optionRowId(option), option.id]))
+      const liveWeatherOptions = new Map(weatherOptions.map((option: any) => [optionRowId(option), option.id]))
       moodRows.value = moodRows.value.map((row) => ({ ...row, dbOptionId: liveMoodOptions.get(row.id) ?? null }))
       weatherRows.value = weatherRows.value.map((row) => ({ ...row, dbOptionId: liveWeatherOptions.get(row.id) ?? null }))
     }
+    questionsSynced.value = true
+    return true
   } catch (error: any) {
     console.error('Error fetching dynamic questions:', error)
+    return false
   }
+}
+
+const fetchQuestionsWithRetry = async (generation: number, retryCount = 0) => {
+  if (await fetchQuestions(generation) || generation !== menuRequestGeneration) return
+
+  const delay = Math.min(2000 * 2 ** retryCount, 10000)
+  questionRetryTimer = setTimeout(() => {
+    questionRetryTimer = undefined
+    void fetchQuestionsWithRetry(generation, retryCount + 1)
+  }, delay)
 }
 
 // --- Computed Properties ---
@@ -1344,7 +1381,7 @@ const loadMenuAttempt = async (generation: number, retryCount: number) => {
       showLimitModal.value = true
     } else {
       saveCachedMenu(availableItems)
-      void fetchQuestions()
+      void fetchQuestionsWithRetry(generation)
       void checkSurveyLimit()
     }
   } catch (error) {
@@ -1364,8 +1401,11 @@ const loadMenuAttempt = async (generation: number, retryCount: number) => {
 const fetchMenuItems = () => {
   menuRequestGeneration++
   if (menuRetryTimer) clearTimeout(menuRetryTimer)
+  if (questionRetryTimer) clearTimeout(questionRetryTimer)
   menuRetryTimer = undefined
+  questionRetryTimer = undefined
   menuRequestController?.abort()
+  questionsSynced.value = false
   const cachedItems = readCachedMenu()
   const initialItems = cachedItems.length > 0 ? cachedItems : bundledMenuSnapshot
   menuItems.value = shuffleArray(initialItems).slice(0, SURVEY_ITEM_LIMIT)
@@ -1453,13 +1493,9 @@ const resetSurvey = () => {
 }
 
 const executeFinalSubmit = async () => {
-  if (menuLoadState.value !== 'ready' || isSubmitting.value || showSuccessModal.value) return
+  if (menuLoadState.value !== 'ready' || !questionsSynced.value || isSubmitting.value || showSuccessModal.value) return
   isSubmitting.value = true
   try {
-    if (questions.value.length === 0) {
-      await fetchQuestions()
-    }
-
     const payload: any[] = []
     const moodQId = getMoodQuestionId()
     const weatherQId = getWeatherQuestionId()
@@ -1619,6 +1655,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   menuRequestGeneration++
   if (menuRetryTimer) clearTimeout(menuRetryTimer)
+  if (questionRetryTimer) clearTimeout(questionRetryTimer)
   menuRequestController?.abort()
   window.removeEventListener('beforeunload', handleBeforeUnload)
   window.removeEventListener('keydown', handleKeydown)

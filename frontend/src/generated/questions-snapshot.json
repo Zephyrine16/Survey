@@ -1,1 +1,26 @@
-[{"id":2,"options":[{"icon":null,"id":18,"label":"Happy","sub":null},{"icon":null,"id":19,"label":"Sad","sub":null},{"icon":null,"id":20,"label":"Stressed","sub":null},{"icon":null,"id":21,"label":"Angry","sub":null},{"icon":null,"id":22,"label":"Tired","sub":null},{"icon":null,"id":23,"label":"Anxious","sub":null},{"icon":null,"id":24,"label":"Excited","sub":null},{"icon":null,"id":25,"label":"Neutral","sub":null}],"text":"Which emotion or physical state most strongly makes you want to order this item?","type":"RADIO"},{"id":3,"options":[{"icon":"☀️","id":6,"label":"Hot Dry","sub":"(high temperatures, low rainfall, and high humidity)"},{"icon":"🌧️","id":7,"label":"Rainy","sub":null},{"icon":"⛅","id":8,"label":"Cold Dry","sub":"(lower temperatures, lower humidity, and very little rainfall)"}],"text":"In what weather condition does this item feel most satisfying?","type":"RADIO"},{"id":4,"options":[{"icon":"🍽️","id":9,"label":"Heavy Meal","sub":"(Lunch/Dinner)"},{"icon":"🥗","id":10,"label":"Light Snack","sub":"(Pica-pica/Quick bite)"},{"icon":"🥤","id":11,"label":"Drink/Refreshment","sub":null}],"text":"What is the \"vibe\" of this specific dish?","type":"RADIO"},{"id":5,"options":[{"icon":null,"id":12,"label":"Under ₱150","sub":"(Budget)"},{"icon":null,"id":13,"label":"₱150 - ₱249","sub":"(Standard)"},{"icon":null,"id":14,"label":"₱250 and above","sub":"(Premium)"}],"text":"Looking at this item, what do you think is a fair \"Student-Friendly\" price for it?","type":"RADIO"},{"id":6,"options":[],"text":"How would you describe this dish to the AI chatbot?","type":"TEXT"},{"id":7,"options":[],"text":"Age Group","type":"RADIO"},{"id":8,"options":[],"text":"How often do you dine at cafés or restaurants?","type":"RADIO"}]
+[
+  {
+    "id": 2,
+    "text": "Question 1 — Mood Association: How suitable is this item for each of the following moods?",
+    "type": "TEXT",
+    "options": [
+      { "label": "Relaxation", "sub": "(Wants to unwind, destress, or enjoy a calm and peaceful moment)" },
+      { "label": "Focus", "sub": "(Wants to concentrate, study, work, or stay mentally alert)" },
+      { "label": "Celebrate", "sub": "(Marking a milestone, special occasion, reward, or personal achievement)" },
+      { "label": "Comfort", "sub": "(Seeking warmth, familiar flavors, emotional solace, or a cozy feel)" },
+      { "label": "Welcoming", "sub": "(Feeling invited, at ease, warmly received, or creating a hospitable atmosphere)" },
+      { "label": "Socialize", "sub": "(Sharing meals, gathering with friends, family, or colleagues for conversation)" },
+      { "label": "Enjoyment", "sub": "(Savoring pure taste, indulgence, pleasure, and culinary satisfaction)" }
+    ]
+  },
+  {
+    "id": 3,
+    "text": "Question 2 — Weather Association: How suitable is this item for each of the following weather conditions?",
+    "type": "TEXT",
+    "options": [
+      { "label": "Rainy", "sub": "(Wet, gloomy, or rainy days; craving something warming, cozy, or comforting)", "icon": "🌧️" },
+      { "label": "Hot Dry", "sub": "(High daytime heat with low humidity; craving refreshing, thirst-quenching options)", "icon": "☀️" },
+      { "label": "Cool Dry", "sub": "(Breezy, mild weather, air-conditioned spaces, or cool evening breezes)", "icon": "⛅" }
+    ]
+  }
+]
